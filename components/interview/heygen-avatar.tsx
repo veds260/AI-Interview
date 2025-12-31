@@ -260,7 +260,7 @@ export default function HeyGenAvatar({
     }
   }, [onUserSpeaking]);
 
-  // Stop recording and transcribe
+  // Stop recording and transcribe using browser Web Speech API (free)
   const stopRecordingAndTranscribe = useCallback(async () => {
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
       return;
@@ -270,84 +270,135 @@ export default function HeyGenAvatar({
     setIsUserSpeaking(false);
     onUserSpeaking?.(false);
 
-    return new Promise<void>((resolve) => {
-      const mediaRecorder = mediaRecorderRef.current!;
+    // Stop media recorder
+    mediaRecorderRef.current.stop();
 
-      mediaRecorder.onstop = async () => {
-        console.log("Recording stopped, transcribing...");
+    // Stop media stream
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
 
-        // Stop media stream
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach(track => track.stop());
-          mediaStreamRef.current = null;
-        }
-
-        // Create audio blob
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: mediaRecorder.mimeType
-        });
-        audioChunksRef.current = [];
-
-        // Skip if too short (less than 0.5 second of audio)
-        if (audioBlob.size < 5000) {
-          console.log("Audio too short, skipping transcription");
-          setIsTranscribing(false);
-          setIsRecording(false);
-          resolve();
-          return;
-        }
-
-        // Send to transcription API
-        try {
-          const formData = new FormData();
-          formData.append("audio", audioBlob, "recording.webm");
-
-          const response = await fetch("/api/transcribe", {
-            method: "POST",
-            body: formData,
-          });
-
-          const result = await response.json();
-
-          if (result.text && result.text.trim()) {
-            console.log("Transcription result:", result.text);
-            onTranscriptRef.current?.(result.text, true);
-          } else if (result.mock) {
-            console.log("Transcription service not configured");
-          } else {
-            console.log("No transcription result");
-          }
-        } catch (error) {
-          console.error("Transcription error:", error);
-        }
-
-        setIsTranscribing(false);
-        setIsRecording(false);
-        resolve();
-      };
-
-      mediaRecorder.stop();
-    });
+    setIsRecording(false);
+    setIsTranscribing(false);
   }, [onUserSpeaking]);
 
-  // Toggle recording
+  // Use browser's Web Speech API for real-time transcription
+  const speechRecognitionRef = useRef<any>(null);
+
+  const startRecordingWithSpeechRecognition = useCallback(async () => {
+    // Check if Web Speech API is available
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.error("Web Speech API not supported in this browser");
+      // Fallback to regular recording
+      await startRecording();
+      return;
+    }
+
+    try {
+      // Also start audio recording for visual feedback
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+
+      // Start speech recognition
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      let finalTranscript = '';
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        // Show interim results for feedback
+        if (interimTranscript) {
+          console.log("Interim:", interimTranscript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+      };
+
+      recognition.onend = () => {
+        console.log("Speech recognition ended, final transcript:", finalTranscript);
+        if (finalTranscript.trim()) {
+          onTranscriptRef.current?.(finalTranscript.trim(), true);
+        }
+      };
+
+      recognition.start();
+      speechRecognitionRef.current = recognition;
+
+      setIsRecording(true);
+      setIsUserSpeaking(true);
+      onUserSpeaking?.(true);
+      console.log("Recording started with Web Speech API");
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+    }
+  }, [onUserSpeaking, startRecording]);
+
+  const stopRecordingWithSpeechRecognition = useCallback(() => {
+    // Stop speech recognition
+    if (speechRecognitionRef.current) {
+      speechRecognitionRef.current.stop();
+      speechRecognitionRef.current = null;
+    }
+
+    // Stop media recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+
+    // Stop media stream
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+
+    setIsRecording(false);
+    setIsUserSpeaking(false);
+    onUserSpeaking?.(false);
+    setIsTranscribing(false);
+  }, [onUserSpeaking]);
+
+  // Toggle recording - use Web Speech API for free transcription
   const toggleMute = useCallback(async () => {
     if (isMuted) {
-      await startRecording();
+      await startRecordingWithSpeechRecognition();
       setIsMuted(false);
     } else {
-      await stopRecordingAndTranscribe();
+      stopRecordingWithSpeechRecognition();
       setIsMuted(true);
     }
-  }, [isMuted, startRecording, stopRecordingAndTranscribe]);
+  }, [isMuted, startRecordingWithSpeechRecognition, stopRecordingWithSpeechRecognition]);
 
   // Submit recording (stop and transcribe)
   const submitRecording = useCallback(async () => {
     if (isRecording) {
-      await stopRecordingAndTranscribe();
+      stopRecordingWithSpeechRecognition();
       setIsMuted(true);
     }
-  }, [isRecording, stopRecordingAndTranscribe]);
+  }, [isRecording, stopRecordingWithSpeechRecognition]);
 
   // Expose methods globally
   useEffect(() => {
