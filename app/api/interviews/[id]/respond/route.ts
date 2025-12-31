@@ -2,32 +2,80 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { claude } from "@/lib/services/claude";
+
+interface ClientKnowledgeSummary {
+  bio?: string;
+  products?: string[];
+  talkingPoints?: string[];
+  voiceGuidelines?: string;
+  previousInsights?: string[];
+  recentTweets?: string[];
+}
+
+interface PreviousInterviewSummary {
+  topic?: string;
+  keyInsights: string[];
+  topicsDiscussed: string[];
+}
 
 interface SessionState {
   questionIds: string[];
   currentIndex: number;
   followUpCount?: number;
+  clientContext?: ClientKnowledgeSummary;
+  previousInterviews?: PreviousInterviewSummary[];
+  competitorTopics?: string[];
 }
 
-// Generate a dynamic follow-up question using AI
+// Generate a dynamic follow-up question using AI with rich context
 async function generateFollowUpQuestion(
   question: string,
   response: string,
-  clientContext?: {
-    name?: string;
+  sessionContext: {
+    clientName?: string;
     topics?: string[];
-    knowledgeBase?: string;
+    clientContext?: ClientKnowledgeSummary;
+    previousInterviews?: PreviousInterviewSummary[];
+    competitorTopics?: string[];
   }
 ): Promise<string | null> {
   try {
-    const contextInfo = clientContext
-      ? `
-Client: ${clientContext.name || "Unknown"}
-Topics of expertise: ${clientContext.topics?.join(", ") || "General"}
-Knowledge base: ${clientContext.knowledgeBase || "None provided"}
-`
-      : "";
+    // Build rich context from knowledge base and previous interviews
+    let contextInfo = "";
+
+    if (sessionContext.clientName) {
+      contextInfo += `Client: ${sessionContext.clientName}\n`;
+    }
+
+    if (sessionContext.topics?.length) {
+      contextInfo += `Topics of expertise: ${sessionContext.topics.join(", ")}\n`;
+    }
+
+    // Add knowledge base context
+    const kb = sessionContext.clientContext;
+    if (kb) {
+      if (kb.bio) contextInfo += `Bio: ${kb.bio}\n`;
+      if (kb.products?.length) contextInfo += `Products/Services: ${kb.products.join(", ")}\n`;
+      if (kb.talkingPoints?.length) contextInfo += `Key talking points: ${kb.talkingPoints.join("; ")}\n`;
+      if (kb.voiceGuidelines) contextInfo += `Voice style: ${kb.voiceGuidelines}\n`;
+    }
+
+    // Add previous interview insights (most important for continuity)
+    if (sessionContext.previousInterviews?.length) {
+      contextInfo += "\n=== PREVIOUS INTERVIEW INSIGHTS (use to ask deeper, related questions) ===\n";
+      sessionContext.previousInterviews.forEach((prev, i) => {
+        contextInfo += `Interview ${i + 1}${prev.topic ? ` (${prev.topic})` : ""}:\n`;
+        contextInfo += `  Topics covered: ${prev.topicsDiscussed.join(", ")}\n`;
+        prev.keyInsights.forEach((insight) => {
+          contextInfo += `  - "${insight}"\n`;
+        });
+      });
+    }
+
+    // Add competitor/trending topics
+    if (sessionContext.competitorTopics?.length) {
+      contextInfo += `\nTrending topics from competitors: ${sessionContext.competitorTopics.join(", ")}\n`;
+    }
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return null;
@@ -51,10 +99,12 @@ ${contextInfo}
 
 Guidelines:
 - Ask follow-up questions that explore the "why" and emotional journey
+- IMPORTANT: Use insights from previous interviews to ask deeper, related questions
+- Connect current answers to topics they've discussed before when relevant
 - Look for unique insights, contrarian views, or unexpected lessons
 - Try to get specific examples, numbers, or memorable quotes
 - Keep questions conversational and natural
-- Focus on extracting stories with clear narrative arcs`,
+- If a topic relates to competitor/trending topics, explore it more deeply`,
           },
           {
             role: "user",
@@ -62,7 +112,7 @@ Guidelines:
 
 The founder responded: "${response}"
 
-Generate a single, natural follow-up question that digs deeper into something interesting from their response. The follow-up should help extract content that would make great social media posts.
+Generate a single, natural follow-up question that digs deeper into something interesting from their response. Consider their previous interview insights and connect to themes they've discussed before if relevant. The follow-up should help extract content that would make great social media posts.
 
 Return ONLY the follow-up question, nothing else.`,
           },
@@ -111,31 +161,39 @@ export async function POST(
       );
     }
 
-    // Get client info for context
-    let clientContext: { name?: string; topics?: string[]; knowledgeBase?: string } | undefined;
+    // Get client name and topics for additional context
+    let clientName: string | undefined;
+    let clientTopics: string[] | undefined;
     if (interview.clientId) {
       const client = await db.query.clients.findFirst({
         where: eq(clients.id, interview.clientId),
       });
       if (client) {
-        clientContext = {
-          name: client.name,
-          topics: client.topicsOfExpertise || undefined,
-          knowledgeBase: client.knowledgeBase as string | undefined,
-        };
+        clientName = client.name;
+        clientTopics = client.topicsOfExpertise as string[] | undefined;
       }
     }
 
     const state = interview.sessionState as SessionState;
-    if (!state?.questionIds) {
+    if (!state?.questionIds || state.questionIds.length === 0) {
+      console.error("Interview has no questions:", { interviewId: id, sessionState: state });
       return NextResponse.json(
-        { error: "Invalid interview state" },
+        { error: "This interview has no questions configured. Please create a new interview." },
         { status: 400 }
       );
     }
 
+    const currentIndex = state.currentIndex || 0;
+    if (currentIndex >= state.questionIds.length) {
+      // Already completed all questions
+      return NextResponse.json({
+        completed: true,
+        message: "Interview completed",
+      });
+    }
+
     // Get the current question
-    const currentQuestionId = state.questionIds[state.currentIndex];
+    const currentQuestionId = state.questionIds[currentIndex];
     const currentQuestion = await db.query.questionBank.findFirst({
       where: eq(questionBank.id, currentQuestionId),
     });
@@ -177,7 +235,14 @@ export async function POST(
       nextQuestion = await generateFollowUpQuestion(
         currentQuestion?.question || "",
         response.trim(),
-        clientContext
+        {
+          clientName,
+          topics: clientTopics,
+          // Use rich context from session state (populated at interview creation)
+          clientContext: state.clientContext,
+          previousInterviews: state.previousInterviews,
+          competitorTopics: state.competitorTopics,
+        }
       );
       if (nextQuestion) {
         isFollowUp = true;
@@ -186,7 +251,7 @@ export async function POST(
 
     // If no follow-up or already did one, move to next bank question
     const shouldMoveToNext = !isFollowUp;
-    const nextIndex = shouldMoveToNext ? state.currentIndex + 1 : state.currentIndex;
+    const nextIndex = shouldMoveToNext ? currentIndex + 1 : currentIndex;
     const completed = nextIndex >= state.questionIds.length;
 
     // If moving to next question and not completed, get it from bank

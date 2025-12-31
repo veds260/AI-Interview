@@ -1,3 +1,6 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,9 +10,35 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ClipboardList, Archive, FileText, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ClipboardList, Archive, FileText, CheckCircle, Loader2 } from "lucide-react";
+
+interface WriterStats {
+  pending: number;
+  inProgress: number;
+  completed: number;
+  completedThisMonth: number;
+  contentBank: number;
+  recentAssignments: Array<{
+    id: string;
+    status: string;
+    assignedAt: string;
+    interviewId: string;
+    interviewTitle: string | null;
+    clientName: string | null;
+  }>;
+}
 
 export default function WriterDashboard() {
+  const { data: stats, isLoading } = useQuery<WriterStats>({
+    queryKey: ["writer-dashboard-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/writer/stats");
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -28,10 +57,16 @@ export default function WriterDashboard() {
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting your review
-            </p>
+            {isLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats?.pending || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Awaiting your review
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -41,8 +76,14 @@ export default function WriterDashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Currently working on</p>
+            {isLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats?.inProgress || 0}</div>
+                <p className="text-xs text-muted-foreground">Currently working on</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -52,8 +93,14 @@ export default function WriterDashboard() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            {isLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats?.completedThisMonth || 0}</div>
+                <p className="text-xs text-muted-foreground">This month</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -63,10 +110,16 @@ export default function WriterDashboard() {
             <Archive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Available extractions
-            </p>
+            {isLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats?.contentBank || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Available extractions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -80,11 +133,48 @@ export default function WriterDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No assignments yet. Check back soon!
-            </p>
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : stats?.recentAssignments?.length ? (
+              <div className="space-y-3">
+                {stats.recentAssignments.map((assignment) => (
+                  <Link
+                    key={assignment.id}
+                    href={`/writer/assignments/${assignment.id}`}
+                    className="flex items-center justify-between p-2 rounded hover:bg-gray-50"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">
+                        {assignment.interviewTitle || `Interview ${assignment.interviewId?.slice(0, 8)}`}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {assignment.clientName || "Unknown client"} -{" "}
+                        {new Date(assignment.assignedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge
+                      className={
+                        assignment.status === "completed"
+                          ? "bg-green-100 text-green-800"
+                          : assignment.status === "in_progress"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }
+                    >
+                      {assignment.status}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No assignments yet. Check back soon!
+              </p>
+            )}
             <Link href="/writer/assignments">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full mt-4">
                 View All Assignments
               </Button>
             </Link>

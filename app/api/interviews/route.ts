@@ -3,6 +3,23 @@ import { auth } from "@/lib/auth";
 import { db, interviews, clients, questionBank, users, competitors } from "@/lib/db";
 import { desc, eq, and, isNull, notInArray, sql } from "drizzle-orm";
 
+interface KnowledgeBase {
+  bio?: string;
+  products?: string[];
+  talkingPoints?: string[];
+  pastInterviews?: string[];
+  voiceGuidelines?: string;
+  notes?: string;
+  typefullyTweets?: Array<{ content: string }>;
+  insights?: string[];
+}
+
+interface PreviousInterviewContent {
+  topic?: string;
+  keyInsights: string[];
+  topicsDiscussed: string[];
+}
+
 export async function GET(request: Request) {
   try {
     const session = await auth();
@@ -87,28 +104,58 @@ export async function POST(request: Request) {
       client = newClient;
     }
 
-    // Get previously asked question IDs for this client
+    // Get previously asked question IDs and content for this client
     let previouslyAskedQuestionIds: string[] = [];
     let coveredCategories: string[] = [];
+    let previousInterviewContent: PreviousInterviewContent[] = [];
 
     if (client) {
       const previousInterviews = await db
-        .select({ questionsAsked: interviews.questionsAsked })
+        .select({
+          questionsAsked: interviews.questionsAsked,
+          title: interviews.title,
+        })
         .from(interviews)
         .where(
           and(
             eq(interviews.clientId, client.id),
             eq(interviews.status, "completed")
           )
-        );
+        )
+        .orderBy(desc(interviews.completedAt))
+        .limit(5); // Get last 5 interviews for context
 
-      // Extract all previously asked question IDs and categories
+      // Extract all previously asked question IDs, categories, and content
       previousInterviews.forEach((interview) => {
-        const asked = interview.questionsAsked as Array<{ questionId?: string; category?: string }> || [];
+        const asked = interview.questionsAsked as Array<{
+          questionId?: string;
+          category?: string;
+          question?: string;
+          response?: string;
+        }> || [];
+
+        const keyInsights: string[] = [];
+        const topicsDiscussed: string[] = [];
+
         asked.forEach((qa) => {
           if (qa.questionId) previouslyAskedQuestionIds.push(qa.questionId);
-          if (qa.category) coveredCategories.push(qa.category);
+          if (qa.category) {
+            coveredCategories.push(qa.category);
+            topicsDiscussed.push(qa.category);
+          }
+          // Extract key insights from responses (first 200 chars as summary)
+          if (qa.response && qa.response.length > 50) {
+            keyInsights.push(qa.response.slice(0, 200) + (qa.response.length > 200 ? "..." : ""));
+          }
         });
+
+        if (keyInsights.length > 0) {
+          previousInterviewContent.push({
+            topic: interview.title || undefined,
+            keyInsights: keyInsights.slice(0, 3), // Top 3 insights per interview
+            topicsDiscussed: [...new Set(topicsDiscussed)],
+          });
+        }
       });
     }
 
@@ -161,6 +208,61 @@ export async function POST(request: Request) {
         .limit(20);
     }
 
+    // If STILL no questions (database is empty), create default starter questions
+    if (questions.length === 0) {
+      console.log("No questions found, inserting starter questions...");
+      const starterQuestions = [
+        {
+          question: "Walk me through how you first got into your industry. What was the moment it clicked for you?",
+          category: "origin_story" as const,
+          difficulty: "easy" as const,
+          topics: ["background", "career"],
+          expectedClipPotential: 8,
+          web2Friendly: true,
+        },
+        {
+          question: "Tell me about a time you were completely wrong about something important. What did you learn?",
+          category: "failure_story" as const,
+          difficulty: "medium" as const,
+          topics: ["lessons", "mistakes"],
+          expectedClipPotential: 9,
+          web2Friendly: true,
+        },
+        {
+          question: "What do you believe about your industry that most people would strongly disagree with?",
+          category: "hot_take" as const,
+          difficulty: "medium" as const,
+          topics: ["opinion", "industry"],
+          expectedClipPotential: 10,
+          web2Friendly: false,
+        },
+        {
+          question: "What's your mental model or framework for making difficult decisions?",
+          category: "framework" as const,
+          difficulty: "deep" as const,
+          topics: ["decision-making", "strategy"],
+          expectedClipPotential: 8,
+          web2Friendly: true,
+        },
+        {
+          question: "What would you tell someone just starting out in your field that you wish you knew?",
+          category: "advice" as const,
+          difficulty: "easy" as const,
+          topics: ["advice", "beginners"],
+          expectedClipPotential: 8,
+          web2Friendly: true,
+        },
+      ];
+
+      const insertedQuestions = await db
+        .insert(questionBank)
+        .values(starterQuestions)
+        .returning();
+
+      questions = insertedQuestions;
+      console.log(`Inserted ${questions.length} starter questions`);
+    }
+
     // Get competitor topics to inform question prioritization
     let competitorTopics: string[] = [];
     if (client) {
@@ -211,6 +313,18 @@ export async function POST(request: Request) {
       });
     }
 
+    // Prepare client context for the session
+    const kb = client?.knowledgeBase as KnowledgeBase | undefined;
+    const clientKnowledgeSummary = kb ? {
+      bio: kb.bio,
+      products: kb.products,
+      talkingPoints: kb.talkingPoints,
+      voiceGuidelines: kb.voiceGuidelines,
+      previousInsights: kb.insights,
+      // Include recent tweets as reference for their voice/style
+      recentTweets: kb.typefullyTweets?.slice(0, 5).map(t => t.content),
+    } : undefined;
+
     // Create the interview
     const [newInterview] = await db
       .insert(interviews)
@@ -224,6 +338,10 @@ export async function POST(request: Request) {
         sessionState: {
           questionIds: selectedQuestions.map((q) => q.id),
           currentIndex: 0,
+          // Include context for AI to generate better follow-ups
+          clientContext: clientKnowledgeSummary,
+          previousInterviews: previousInterviewContent.slice(0, 3), // Last 3 for context
+          competitorTopics: competitorTopics.slice(0, 10), // Top trending topics
         },
       })
       .returning();

@@ -36,6 +36,8 @@ import {
   Target,
   BookOpen,
   User,
+  Upload,
+  Twitter,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -47,6 +49,12 @@ interface KnowledgeBase {
   pastInterviews?: string[];
   voiceGuidelines?: string;
   notes?: string;
+  typefullyTweets?: Array<{
+    content: string;
+    postedAt?: string;
+    likes?: number;
+    retweets?: number;
+  }>;
 }
 
 interface Client {
@@ -182,6 +190,91 @@ export default function ClientDetailPage() {
       ...formData,
       topicsOfExpertise: topics.filter((_, i) => i !== index),
     });
+  };
+
+  const handleTypefullyUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split("\n");
+        const headers = lines[0]?.split(",").map(h => h.trim().toLowerCase().replace(/"/g, ""));
+
+        const contentIdx = headers?.findIndex(h => h.includes("content") || h.includes("text") || h.includes("tweet"));
+        const dateIdx = headers?.findIndex(h => h.includes("date") || h.includes("posted") || h.includes("time"));
+        const likesIdx = headers?.findIndex(h => h.includes("like"));
+        const retweetsIdx = headers?.findIndex(h => h.includes("retweet") || h.includes("rt"));
+
+        const tweets: KnowledgeBase["typefullyTweets"] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line.trim()) continue;
+
+          // Parse CSV line (handle quoted values with commas)
+          const values: string[] = [];
+          let current = "";
+          let inQuotes = false;
+
+          for (const char of line) {
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === "," && !inQuotes) {
+              values.push(current.trim());
+              current = "";
+            } else {
+              current += char;
+            }
+          }
+          values.push(current.trim());
+
+          const content = contentIdx !== undefined && contentIdx >= 0 ? values[contentIdx]?.replace(/^"|"$/g, "") : "";
+          if (content) {
+            tweets.push({
+              content,
+              postedAt: dateIdx !== undefined && dateIdx >= 0 ? values[dateIdx] : undefined,
+              likes: likesIdx !== undefined && likesIdx >= 0 ? parseInt(values[likesIdx]) || 0 : undefined,
+              retweets: retweetsIdx !== undefined && retweetsIdx >= 0 ? parseInt(values[retweetsIdx]) || 0 : undefined,
+            });
+          }
+        }
+
+        if (tweets.length > 0) {
+          setFormData({
+            ...formData,
+            knowledgeBase: {
+              ...(formData.knowledgeBase || {}),
+              typefullyTweets: [
+                ...((formData.knowledgeBase as KnowledgeBase)?.typefullyTweets || []),
+                ...tweets,
+              ],
+            },
+          });
+          toast.success(`Imported ${tweets.length} tweets from Typefully`);
+        } else {
+          toast.error("No tweets found in CSV. Make sure it has a content/text column.");
+        }
+      } catch (err) {
+        toast.error("Failed to parse CSV file");
+        console.error(err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // Reset input
+  };
+
+  const handleClearTypefullyTweets = () => {
+    setFormData({
+      ...formData,
+      knowledgeBase: {
+        ...(formData.knowledgeBase || {}),
+        typefullyTweets: [],
+      },
+    });
+    toast.success("Cleared all Typefully tweets");
   };
 
   if (isLoading) {
@@ -652,6 +745,73 @@ export default function ClientDetailPage() {
                 <p className="whitespace-pre-wrap">
                   {(kb as KnowledgeBase).notes || "No notes added yet"}
                 </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Twitter className="h-5 w-5" />
+                    Typefully Tweets
+                  </CardTitle>
+                  <CardDescription>
+                    Upload CSV export from Typefully to analyze client&apos;s tweet style
+                  </CardDescription>
+                </div>
+                {isEditing && (
+                  <div className="flex gap-2">
+                    <label htmlFor="typefully-upload">
+                      <Button size="sm" variant="outline" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload CSV
+                        </span>
+                      </Button>
+                    </label>
+                    <input
+                      id="typefully-upload"
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={handleTypefullyUpload}
+                    />
+                    {((formData.knowledgeBase as KnowledgeBase)?.typefullyTweets?.length || 0) > 0 && (
+                      <Button size="sm" variant="outline" onClick={handleClearTypefullyTweets}>
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Clear All
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {((kb as KnowledgeBase).typefullyTweets?.length || 0) > 0 ? (
+                <ScrollArea className="h-64">
+                  <div className="space-y-3">
+                    {(kb as KnowledgeBase).typefullyTweets?.map((tweet, idx) => (
+                      <div key={idx} className="p-3 border rounded bg-gray-50">
+                        <p className="text-sm">{tweet.content}</p>
+                        <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                          {tweet.postedAt && <span>{tweet.postedAt}</span>}
+                          {tweet.likes !== undefined && <span>{tweet.likes} likes</span>}
+                          {tweet.retweets !== undefined && <span>{tweet.retweets} RTs</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <Twitter className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No tweets imported yet</p>
+                  {isEditing && (
+                    <p className="text-sm mt-1">Upload a Typefully CSV export to get started</p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
