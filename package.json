@@ -51,7 +51,8 @@
     "standardized-audio-context": "^25.3.77",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.2.1",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.9",
+    "drizzle-kit": "^0.31.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -59,7 +60,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
