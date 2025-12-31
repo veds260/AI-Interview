@@ -1,0 +1,58 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db, interviews } from "@/lib/db";
+import { eq } from "drizzle-orm";
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, id),
+    });
+
+    if (!interview) {
+      return NextResponse.json(
+        { error: "Interview not found" },
+        { status: 404 }
+      );
+    }
+
+    // Calculate total duration
+    const startTime = interview.startedAt
+      ? new Date(interview.startedAt).getTime()
+      : Date.now();
+    const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+
+    await db
+      .update(interviews)
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        totalDurationSeconds: durationSeconds,
+        updatedAt: new Date(),
+      })
+      .where(eq(interviews.id, id));
+
+    // TODO: Trigger content extraction job here
+
+    return NextResponse.json({
+      success: true,
+      message: "Interview completed",
+    });
+  } catch (error) {
+    console.error("Error completing interview:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
