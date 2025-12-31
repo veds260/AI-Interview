@@ -54,7 +54,6 @@ export async function POST(
         avgEngagement: String(data.avgEngagement),
         topics: data.topics,
         lastScrapedAt: new Date(),
-        updatedAt: new Date(),
       })
       .where(eq(competitors.id, id));
 
