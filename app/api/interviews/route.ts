@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, interviews, clients, questionBank, users } from "@/lib/db";
-import { desc, eq, and, isNull } from "drizzle-orm";
+import { db, interviews, clients, questionBank, users, competitors } from "@/lib/db";
+import { desc, eq, and, isNull, notInArray, sql } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
@@ -87,30 +87,128 @@ export async function POST(request: Request) {
       client = newClient;
     }
 
-    // Get questions for the interview (global questions or client-specific)
-    const questions = await db
+    // Get previously asked question IDs for this client
+    let previouslyAskedQuestionIds: string[] = [];
+    let coveredCategories: string[] = [];
+
+    if (client) {
+      const previousInterviews = await db
+        .select({ questionsAsked: interviews.questionsAsked })
+        .from(interviews)
+        .where(
+          and(
+            eq(interviews.clientId, client.id),
+            eq(interviews.status, "completed")
+          )
+        );
+
+      // Extract all previously asked question IDs and categories
+      previousInterviews.forEach((interview) => {
+        const asked = interview.questionsAsked as Array<{ questionId?: string; category?: string }> || [];
+        asked.forEach((qa) => {
+          if (qa.questionId) previouslyAskedQuestionIds.push(qa.questionId);
+          if (qa.category) coveredCategories.push(qa.category);
+        });
+      });
+    }
+
+    // Get questions for the interview, excluding previously asked ones
+    const baseConditions = [
+      eq(questionBank.isActive, true),
+      client ? eq(questionBank.clientId, client.id) : isNull(questionBank.clientId),
+    ];
+
+    // Add exclusion for previously asked questions if any exist
+    if (previouslyAskedQuestionIds.length > 0) {
+      baseConditions.push(notInArray(questionBank.id, previouslyAskedQuestionIds));
+    }
+
+    let questions = await db
       .select()
       .from(questionBank)
-      .where(
-        and(
-          eq(questionBank.isActive, true),
-          client
-            ? eq(questionBank.clientId, client.id)
-            : isNull(questionBank.clientId)
-        )
-      )
+      .where(and(...baseConditions))
+      .orderBy(sql`RANDOM()`)
       .limit(20);
 
-    // If no client-specific questions, get global ones
-    let selectedQuestions = questions;
+    // If no client-specific questions (or all exhausted), get global ones
     if (questions.length === 0) {
-      selectedQuestions = await db
+      const globalConditions = [
+        eq(questionBank.isActive, true),
+        isNull(questionBank.clientId),
+      ];
+
+      if (previouslyAskedQuestionIds.length > 0) {
+        globalConditions.push(notInArray(questionBank.id, previouslyAskedQuestionIds));
+      }
+
+      questions = await db
+        .select()
+        .from(questionBank)
+        .where(and(...globalConditions))
+        .orderBy(sql`RANDOM()`)
+        .limit(20);
+    }
+
+    // If still no questions (all exhausted), allow repeats but prioritize least used
+    if (questions.length === 0) {
+      questions = await db
         .select()
         .from(questionBank)
         .where(
           and(eq(questionBank.isActive, true), isNull(questionBank.clientId))
         )
+        .orderBy(questionBank.timesUsed)
         .limit(20);
+    }
+
+    // Get competitor topics to inform question prioritization
+    let competitorTopics: string[] = [];
+    if (client) {
+      const clientCompetitors = await db
+        .select({ topics: competitors.topics })
+        .from(competitors)
+        .where(eq(competitors.clientId, client.id));
+
+      competitorTopics = clientCompetitors
+        .flatMap((c) => c.topics || [])
+        .filter((t) => t);
+    }
+
+    // Prioritize categories not yet covered in previous interviews
+    const uniqueCoveredCategories = [...new Set(coveredCategories)];
+    let selectedQuestions = questions;
+
+    if (questions.length > 5) {
+      // Sort to prioritize:
+      // 1. Uncovered categories first
+      // 2. Questions related to competitor topics (trending content)
+      selectedQuestions = [...questions].sort((a, b) => {
+        const aUncovered = !uniqueCoveredCategories.includes(a.category || "");
+        const bUncovered = !uniqueCoveredCategories.includes(b.category || "");
+
+        // First priority: uncovered categories
+        if (aUncovered && !bUncovered) return -1;
+        if (!aUncovered && bUncovered) return 1;
+
+        // Second priority: questions matching competitor topics
+        const aMatchesCompetitor = (a.topics || []).some((t) =>
+          competitorTopics.some((ct) =>
+            ct.toLowerCase().includes(t.toLowerCase()) ||
+            t.toLowerCase().includes(ct.toLowerCase())
+          )
+        );
+        const bMatchesCompetitor = (b.topics || []).some((t) =>
+          competitorTopics.some((ct) =>
+            ct.toLowerCase().includes(t.toLowerCase()) ||
+            t.toLowerCase().includes(ct.toLowerCase())
+          )
+        );
+
+        if (aMatchesCompetitor && !bMatchesCompetitor) return -1;
+        if (!aMatchesCompetitor && bMatchesCompetitor) return 1;
+
+        return 0;
+      });
     }
 
     // Create the interview

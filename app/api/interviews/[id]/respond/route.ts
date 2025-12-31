@@ -39,7 +39,7 @@ Knowledge base: ${clientContext.knowledgeBase || "None provided"}
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "anthropic/claude-3.5-sonnet",
+        model: "anthropic/claude-3-haiku",
         max_tokens: 300,
         messages: [
           {

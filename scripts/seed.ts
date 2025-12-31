@@ -16,9 +16,9 @@ async function seed() {
 
   console.log("Creating admin user...");
 
-  // Create admin user
-  const adminEmail = "admin@compound.io";
-  const adminPassword = await hash("admin123", 12);
+  // Create admin user - use env variables or defaults
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@compound.io";
+  const adminPassword = await hash(process.env.ADMIN_PASSWORD || "admin123", 12);
 
   try {
     await db.insert(schema.users).values({
@@ -27,7 +27,7 @@ async function seed() {
       name: "Admin User",
       role: "admin",
     });
-    console.log(`Admin user created: ${adminEmail} / admin123`);
+    console.log(`Admin user created: ${adminEmail} / ${process.env.ADMIN_PASSWORD ? "[from env]" : "admin123"}`);
   } catch (e) {
     console.log("Admin user may already exist, skipping...");
   }
