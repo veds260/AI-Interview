@@ -51,7 +51,7 @@ export async function POST(
     await db
       .update(competitors)
       .set({
-        avgEngagement: data.avgEngagement,
+        avgEngagement: String(data.avgEngagement),
         topics: data.topics,
         lastScrapedAt: new Date(),
         updatedAt: new Date(),
