@@ -13,70 +13,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Try OpenRouter first (uses Gemini for audio transcription)
-    const openrouterKey = process.env.OPENROUTER_API_KEY;
-    if (openrouterKey) {
+    // Try Deepgram first (Nova-3 has best accuracy, same as HeyGen uses internally)
+    const deepgramKey = process.env.DEEPGRAM_API_KEY;
+    if (deepgramKey) {
       try {
-        // Convert audio to base64
         const audioBuffer = await audioFile.arrayBuffer();
-        const base64Audio = Buffer.from(audioBuffer).toString("base64");
 
-        // Determine audio format from mime type
+        // Determine content type
         const mimeType = audioFile.type || "audio/webm";
-        const formatMap: Record<string, string> = {
-          "audio/webm": "webm",
-          "audio/mp4": "m4a",
-          "audio/mpeg": "mp3",
-          "audio/wav": "wav",
-          "audio/ogg": "ogg",
-        };
-        const format = formatMap[mimeType] || "webm";
 
         const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
+          "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&language=en",
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${openrouterKey}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
-              "X-Title": "Compound Interviewer",
+              Authorization: `Token ${deepgramKey}`,
+              "Content-Type": mimeType,
             },
-            body: JSON.stringify({
-              model: "google/gemini-2.0-flash-001",
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: "Transcribe this audio exactly as spoken. Output only the transcription, nothing else. If the audio is silent or unclear, respond with an empty string.",
-                    },
-                    {
-                      type: "input_audio",
-                      input_audio: {
-                        data: base64Audio,
-                        format: format,
-                      },
-                    },
-                  ],
-                },
-              ],
-            }),
+            body: audioBuffer,
           }
         );
 
         if (response.ok) {
           const result = await response.json();
-          const text = result.choices?.[0]?.message?.content?.trim() || "";
-          console.log("OpenRouter transcription:", text);
-          return NextResponse.json({ text });
+          const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+          console.log("Deepgram transcription:", transcript);
+          return NextResponse.json({ text: transcript });
         } else {
           const errorText = await response.text();
-          console.error("OpenRouter error:", errorText);
+          console.error("Deepgram error:", errorText);
         }
-      } catch (openrouterError) {
-        console.error("OpenRouter transcription failed:", openrouterError);
+      } catch (deepgramError) {
+        console.error("Deepgram transcription failed:", deepgramError);
       }
     }
 
@@ -148,7 +116,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "No transcription service configured",
-        hint: "Add OPENROUTER_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY to enable transcription"
+        hint: "Add DEEPGRAM_API_KEY (recommended), GROQ_API_KEY, or OPENAI_API_KEY to enable transcription"
       },
       { status: 503 }
     );
