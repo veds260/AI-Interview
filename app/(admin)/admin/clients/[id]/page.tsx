@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -196,73 +197,75 @@ export default function ClientDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const lines = text.split("\n");
-        const headers = lines[0]?.split(",").map(h => h.trim().toLowerCase().replace(/"/g, ""));
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        try {
+          const data = results.data as Record<string, string>[];
+          const tweets: KnowledgeBase["typefullyTweets"] = [];
 
-        const contentIdx = headers?.findIndex(h => h.includes("content") || h.includes("text") || h.includes("tweet"));
-        const dateIdx = headers?.findIndex(h => h.includes("date") || h.includes("posted") || h.includes("time"));
-        const likesIdx = headers?.findIndex(h => h.includes("like"));
-        const retweetsIdx = headers?.findIndex(h => h.includes("retweet") || h.includes("rt"));
+          // Find the correct column names (case-insensitive)
+          const firstRow = data[0];
+          if (!firstRow) {
+            toast.error("CSV file is empty");
+            return;
+          }
 
-        const tweets: KnowledgeBase["typefullyTweets"] = [];
+          const columns = Object.keys(firstRow);
+          const contentCol = columns.find(c =>
+            c.toLowerCase().includes("content") ||
+            c.toLowerCase().includes("text") ||
+            c.toLowerCase() === "tweet"
+          );
+          const dateCol = columns.find(c =>
+            c.toLowerCase().includes("date") ||
+            c.toLowerCase().includes("posted") ||
+            c.toLowerCase().includes("created_at")
+          );
+          const likesCol = columns.find(c => c.toLowerCase().includes("like"));
+          const retweetsCol = columns.find(c =>
+            c.toLowerCase().includes("retweet") ||
+            c.toLowerCase().includes("rt_count")
+          );
 
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i];
-          if (!line.trim()) continue;
-
-          // Parse CSV line (handle quoted values with commas)
-          const values: string[] = [];
-          let current = "";
-          let inQuotes = false;
-
-          for (const char of line) {
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === "," && !inQuotes) {
-              values.push(current.trim());
-              current = "";
-            } else {
-              current += char;
+          for (const row of data) {
+            const content = contentCol ? row[contentCol]?.trim() : "";
+            if (content) {
+              tweets.push({
+                content,
+                postedAt: dateCol ? row[dateCol] : undefined,
+                likes: likesCol ? parseInt(row[likesCol]) || 0 : undefined,
+                retweets: retweetsCol ? parseInt(row[retweetsCol]) || 0 : undefined,
+              });
             }
           }
-          values.push(current.trim());
 
-          const content = contentIdx !== undefined && contentIdx >= 0 ? values[contentIdx]?.replace(/^"|"$/g, "") : "";
-          if (content) {
-            tweets.push({
-              content,
-              postedAt: dateIdx !== undefined && dateIdx >= 0 ? values[dateIdx] : undefined,
-              likes: likesIdx !== undefined && likesIdx >= 0 ? parseInt(values[likesIdx]) || 0 : undefined,
-              retweets: retweetsIdx !== undefined && retweetsIdx >= 0 ? parseInt(values[retweetsIdx]) || 0 : undefined,
+          if (tweets.length > 0) {
+            setFormData({
+              ...formData,
+              knowledgeBase: {
+                ...(formData.knowledgeBase || {}),
+                typefullyTweets: [
+                  ...((formData.knowledgeBase as KnowledgeBase)?.typefullyTweets || []),
+                  ...tweets,
+                ],
+              },
             });
+            toast.success(`Imported ${tweets.length} tweets from Typefully`);
+          } else {
+            toast.error("No tweets found in CSV. Make sure it has a content/text column.");
           }
+        } catch (err) {
+          toast.error("Failed to parse CSV file");
+          console.error(err);
         }
-
-        if (tweets.length > 0) {
-          setFormData({
-            ...formData,
-            knowledgeBase: {
-              ...(formData.knowledgeBase || {}),
-              typefullyTweets: [
-                ...((formData.knowledgeBase as KnowledgeBase)?.typefullyTweets || []),
-                ...tweets,
-              ],
-            },
-          });
-          toast.success(`Imported ${tweets.length} tweets from Typefully`);
-        } else {
-          toast.error("No tweets found in CSV. Make sure it has a content/text column.");
-        }
-      } catch (err) {
-        toast.error("Failed to parse CSV file");
+      },
+      error: (err) => {
+        toast.error("Failed to read CSV file");
         console.error(err);
       }
-    };
-    reader.readAsText(file);
+    });
     e.target.value = ""; // Reset input
   };
 
