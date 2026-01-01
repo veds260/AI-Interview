@@ -287,137 +287,206 @@ export default function HeyGenAvatar({
     setIsTranscribing(false);
   }, [onUserSpeaking]);
 
-  // Use browser's Web Speech API for real-time transcription
-  const speechRecognitionRef = useRef<any>(null);
+  // Video recording ref for user's camera
+  const userVideoRef = useRef<HTMLVideoElement>(null);
+  const videoRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
 
-  const startRecordingWithSpeechRecognition = useCallback(async () => {
-    // Check if Web Speech API is available
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      console.error("Web Speech API not supported in this browser");
-      // Fallback to regular recording
-      await startRecording();
-      return;
-    }
-
+  // Start recording with video + audio (server-side transcription)
+  const startVideoRecording = useCallback(async () => {
     try {
-      // Also start audio recording for visual feedback
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request both video and audio
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
       mediaStreamRef.current = stream;
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      });
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
+      // Show user's video preview
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = stream;
+        userVideoRef.current.play().catch(console.error);
+      }
 
-      // Start speech recognition
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      // Set up video recorder for the full stream (video + audio)
+      const videoMimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : 'video/mp4';
 
-      let finalTranscript = '';
+      const videoRecorder = new MediaRecorder(stream, { mimeType: videoMimeType });
+      videoRecorderRef.current = videoRecorder;
+      videoChunksRef.current = [];
 
-      recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-
-        // Show interim results for feedback
-        if (interimTranscript) {
-          console.log("Interim:", interimTranscript);
+      videoRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          videoChunksRef.current.push(event.data);
         }
       };
 
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        // On network error, switch to text input mode
-        if (event.error === 'network' || event.error === 'not-allowed') {
-          setUseTextInput(true);
-          setIsRecording(false);
-          setIsUserSpeaking(false);
-          onUserSpeaking?.(false);
-          // Stop the media stream
-          if (mediaStreamRef.current) {
-            mediaStreamRef.current.getTracks().forEach(track => track.stop());
-            mediaStreamRef.current = null;
-          }
+      videoRecorder.start(1000); // Collect data every second
+
+      // Also set up audio-only recorder for transcription
+      const audioStream = new MediaStream(stream.getAudioTracks());
+      const audioMimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
+      const audioRecorder = new MediaRecorder(audioStream, { mimeType: audioMimeType });
+      mediaRecorderRef.current = audioRecorder;
+      audioChunksRef.current = [];
+
+      audioRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
       };
 
-      recognition.onend = () => {
-        console.log("Speech recognition ended, final transcript:", finalTranscript);
-        if (finalTranscript.trim()) {
-          onTranscriptRef.current?.(finalTranscript.trim(), true);
-        } else if (!useTextInput) {
-          // No transcript and no text input mode - might need text input
-          setUseTextInput(true);
-        }
-      };
-
-      recognition.start();
-      speechRecognitionRef.current = recognition;
+      audioRecorder.start(1000);
 
       setIsRecording(true);
       setIsUserSpeaking(true);
       onUserSpeaking?.(true);
-      console.log("Recording started with Web Speech API");
+      console.log("Recording started with video + audio");
     } catch (error) {
-      console.error("Failed to start recording:", error);
-    }
-  }, [onUserSpeaking, startRecording]);
+      console.error("Failed to start video recording:", error);
+      // Fallback to audio-only if video fails
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = audioStream;
 
-  const stopRecordingWithSpeechRecognition = useCallback(() => {
-    // Stop speech recognition
-    if (speechRecognitionRef.current) {
-      speechRecognitionRef.current.stop();
-      speechRecognitionRef.current = null;
-    }
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        const recorder = new MediaRecorder(audioStream, { mimeType });
+        mediaRecorderRef.current = recorder;
+        audioChunksRef.current = [];
 
-    // Stop media recorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
 
-    // Stop media stream
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
+        recorder.start(1000);
+        setIsRecording(true);
+        setIsUserSpeaking(true);
+        onUserSpeaking?.(true);
+        console.log("Recording started with audio only (video unavailable)");
+      } catch (audioError) {
+        console.error("Failed to start any recording:", audioError);
+        setUseTextInput(true);
+      }
     }
-
-    setIsRecording(false);
-    setIsUserSpeaking(false);
-    onUserSpeaking?.(false);
-    setIsTranscribing(false);
   }, [onUserSpeaking]);
 
-  // Toggle recording - use Web Speech API for free transcription
+  // Stop recording and transcribe using server-side Whisper
+  const stopVideoRecordingAndTranscribe = useCallback(async () => {
+    setIsTranscribing(true);
+    setIsUserSpeaking(false);
+    onUserSpeaking?.(false);
+
+    // Stop video recorder
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== "inactive") {
+      videoRecorderRef.current.stop();
+    }
+
+    // Stop audio recorder and wait for it to finish
+    return new Promise<void>((resolve) => {
+      if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
+        setIsRecording(false);
+        setIsTranscribing(false);
+        resolve();
+        return;
+      }
+
+      const audioRecorder = mediaRecorderRef.current;
+
+      audioRecorder.onstop = async () => {
+        console.log("Recording stopped, sending to server for transcription...");
+
+        // Stop user video preview
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = null;
+        }
+
+        // Stop all tracks
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach(track => track.stop());
+          mediaStreamRef.current = null;
+        }
+
+        // Create audio blob for transcription
+        const audioBlob = new Blob(audioChunksRef.current, { type: audioRecorder.mimeType });
+        audioChunksRef.current = [];
+
+        // Create video blob for storage (if available)
+        if (videoChunksRef.current.length > 0) {
+          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+          videoChunksRef.current = [];
+          // TODO: Upload video blob for later clipping
+          console.log("Video recorded:", videoBlob.size, "bytes");
+        }
+
+        // Skip if audio too short
+        if (audioBlob.size < 5000) {
+          console.log("Audio too short, skipping transcription");
+          setIsTranscribing(false);
+          setIsRecording(false);
+          resolve();
+          return;
+        }
+
+        // Send to server for transcription
+        try {
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "recording.webm");
+
+          const response = await fetch("/api/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (result.text && result.text.trim()) {
+            console.log("Server transcription result:", result.text);
+            onTranscriptRef.current?.(result.text, true);
+          } else if (result.error) {
+            console.error("Transcription error:", result.error, result.hint);
+            // Show text input as fallback
+            setUseTextInput(true);
+          }
+        } catch (error) {
+          console.error("Transcription request failed:", error);
+          setUseTextInput(true);
+        }
+
+        setIsTranscribing(false);
+        setIsRecording(false);
+        resolve();
+      };
+
+      audioRecorder.stop();
+    });
+  }, [onUserSpeaking]);
+
+  // Toggle recording - use video + audio with server transcription
   const toggleMute = useCallback(async () => {
     if (isMuted) {
-      await startRecordingWithSpeechRecognition();
+      await startVideoRecording();
       setIsMuted(false);
     } else {
-      stopRecordingWithSpeechRecognition();
+      await stopVideoRecordingAndTranscribe();
       setIsMuted(true);
     }
-  }, [isMuted, startRecordingWithSpeechRecognition, stopRecordingWithSpeechRecognition]);
+  }, [isMuted, startVideoRecording, stopVideoRecordingAndTranscribe]);
 
   // Submit recording (stop and transcribe)
   const submitRecording = useCallback(async () => {
     if (isRecording) {
-      stopRecordingWithSpeechRecognition();
+      await stopVideoRecordingAndTranscribe();
       setIsMuted(true);
     }
-  }, [isRecording, stopRecordingWithSpeechRecognition]);
+  }, [isRecording, stopVideoRecordingAndTranscribe]);
 
   // Submit text response (fallback when speech recognition fails)
   const submitTextResponse = useCallback(() => {
@@ -479,6 +548,24 @@ export default function HeyGenAvatar({
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-2" />
               <p className="text-white text-sm">{statusMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* User video preview (picture-in-picture) */}
+        {isRecording && (
+          <div className="absolute top-3 right-3 w-32 h-24 rounded-lg overflow-hidden border-2 border-red-500 shadow-lg">
+            <video
+              ref={userVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover mirror"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+            <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-red-600/80 px-1.5 py-0.5 rounded text-white text-xs">
+              <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+              REC
             </div>
           </div>
         )}
