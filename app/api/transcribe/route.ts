@@ -13,7 +13,74 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Try Groq Whisper first (fast and has free tier)
+    // Try OpenRouter first (uses Gemini for audio transcription)
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    if (openrouterKey) {
+      try {
+        // Convert audio to base64
+        const audioBuffer = await audioFile.arrayBuffer();
+        const base64Audio = Buffer.from(audioBuffer).toString("base64");
+
+        // Determine audio format from mime type
+        const mimeType = audioFile.type || "audio/webm";
+        const formatMap: Record<string, string> = {
+          "audio/webm": "webm",
+          "audio/mp4": "m4a",
+          "audio/mpeg": "mp3",
+          "audio/wav": "wav",
+          "audio/ogg": "ogg",
+        };
+        const format = formatMap[mimeType] || "webm";
+
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${openrouterKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
+              "X-Title": "Compound Interviewer",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.0-flash-001",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: "Transcribe this audio exactly as spoken. Output only the transcription, nothing else. If the audio is silent or unclear, respond with an empty string.",
+                    },
+                    {
+                      type: "input_audio",
+                      input_audio: {
+                        data: base64Audio,
+                        format: format,
+                      },
+                    },
+                  ],
+                },
+              ],
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          const text = result.choices?.[0]?.message?.content?.trim() || "";
+          console.log("OpenRouter transcription:", text);
+          return NextResponse.json({ text });
+        } else {
+          const errorText = await response.text();
+          console.error("OpenRouter error:", errorText);
+        }
+      } catch (openrouterError) {
+        console.error("OpenRouter transcription failed:", openrouterError);
+      }
+    }
+
+    // Fallback to Groq Whisper (fast and has free tier)
     const groqKey = process.env.GROQ_API_KEY;
     if (groqKey) {
       try {
@@ -81,7 +148,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "No transcription service configured",
-        hint: "Add GROQ_API_KEY (free) or OPENAI_API_KEY to enable transcription"
+        hint: "Add OPENROUTER_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY to enable transcription"
       },
       { status: 503 }
     );
