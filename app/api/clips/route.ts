@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { videoClips, interviews, clients } from "@/lib/db/schema";
+import { videoClips, interviews, clients, users } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
@@ -53,10 +53,13 @@ export async function GET(req: NextRequest) {
         transcript: videoClips.transcript,
         createdAt: videoClips.createdAt,
         interviewId: videoClips.interviewId,
+        clientId: videoClips.clientId,
         interviewTitle: interviews.title,
+        clientName: clients.name,
       })
       .from(videoClips)
       .leftJoin(interviews, eq(videoClips.interviewId, interviews.id))
+      .leftJoin(clients, eq(videoClips.clientId, clients.id))
       .where(whereClause)
       .orderBy(desc(videoClips.createdAt))
       .limit(limit);

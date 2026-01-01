@@ -20,6 +20,7 @@ import {
   Target,
   History,
   Film,
+  HardDrive,
 } from "lucide-react";
 
 interface NavItem {
@@ -35,6 +36,7 @@ const adminNavItems: NavItem[] = [
   { label: "Questions", href: "/admin/questions", icon: <ClipboardList className="h-5 w-5" /> },
   { label: "Interviews", href: "/admin/interviews", icon: <MessageSquare className="h-5 w-5" /> },
   { label: "Extractions", href: "/admin/extractions", icon: <FileText className="h-5 w-5" /> },
+  { label: "Video Clips", href: "/admin/clips", icon: <HardDrive className="h-5 w-5" /> },
   { label: "Writers", href: "/admin/writers", icon: <PenTool className="h-5 w-5" /> },
   { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
 ];
