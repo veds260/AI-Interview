@@ -59,6 +59,7 @@ export default function VideoInterviewPage() {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processingResponseRef = useRef(false);
+  const pendingQuestionToSpeak = useRef<string | null>(null);
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -127,27 +128,35 @@ export default function VideoInterviewPage() {
               const res = await fetch(`/api/interviews/${interviewId}/continue`, {
                 method: "POST",
               });
-              const data = await res.json();
-              if (data.nextQuestion) {
-                setCurrentQuestion(data.nextQuestion);
+              const continueData = await res.json();
+              if (continueData.nextQuestion) {
+                setCurrentQuestion(continueData.nextQuestion);
                 setMessages(prev => [...prev, {
                   role: "interviewer",
-                  content: data.nextQuestion,
+                  content: continueData.nextQuestion,
                   timestamp: new Date(),
                 }]);
-                setProgress(data.progress || 0);
-                // Speak the new question after avatar is ready
+                setProgress(continueData.progress || 0);
+
+                // Store the question to speak - will be spoken when avatar is ready
+                pendingQuestionToSpeak.current = continueData.nextQuestion;
+
+                // Also try speaking after a delay in case avatar is already ready
                 setTimeout(() => {
-                  (window as any).heygenSpeak?.(data.nextQuestion);
-                }, 1500);
-              } else if (data.completed) {
+                  if (pendingQuestionToSpeak.current) {
+                    console.log("Attempting to speak after delay:", pendingQuestionToSpeak.current);
+                    (window as any).heygenSpeak?.(pendingQuestionToSpeak.current);
+                    pendingQuestionToSpeak.current = null;
+                  }
+                }, 3000);
+              } else if (continueData.completed) {
                 setInterviewComplete(true);
                 setShowCompleteDialog(true);
               }
             } catch (err) {
               console.error("Error getting next question:", err);
             }
-          }, 1000);
+          }, 500);
         } else if (question) {
           setCurrentQuestion(question);
           setShouldAutoSpeak(shouldSpeak);
@@ -183,6 +192,15 @@ export default function VideoInterviewPage() {
   // Handle avatar ready
   const handleAvatarReady = useCallback(() => {
     setIsConnected(true);
+    // If there's a pending question to speak (from resume), speak it now
+    if (pendingQuestionToSpeak.current) {
+      const questionToSpeak = pendingQuestionToSpeak.current;
+      pendingQuestionToSpeak.current = null;
+      setTimeout(() => {
+        console.log("Avatar ready, speaking pending question:", questionToSpeak);
+        (window as any).heygenSpeak?.(questionToSpeak);
+      }, 500);
+    }
   }, []);
 
   // Handle user transcript from HeyGen's voice chat STT
