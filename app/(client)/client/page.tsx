@@ -157,7 +157,13 @@ export default function ClientDashboard() {
               {stats.recentInterviews.map((interview) => (
                 <Link
                   key={interview.id}
-                  href={`/client/interviews/${interview.id}`}
+                  href={
+                    interview.status === "completed"
+                      ? "/client/interviews"
+                      : interview.mode === "live_video"
+                      ? `/client/interview/video/${interview.id}`
+                      : `/client/interview/text/${interview.id}`
+                  }
                   className="flex items-center justify-between p-2 rounded hover:bg-gray-50"
                 >
                   <div>

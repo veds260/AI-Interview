@@ -142,7 +142,7 @@ export default function WriterDashboard() {
                 {stats.recentAssignments.map((assignment) => (
                   <Link
                     key={assignment.id}
-                    href={`/writer/assignments/${assignment.id}`}
+                    href="/writer/assignments"
                     className="flex items-center justify-between p-2 rounded hover:bg-gray-50"
                   >
                     <div>
