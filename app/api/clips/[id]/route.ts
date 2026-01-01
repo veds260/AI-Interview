@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { videoClips } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+
+const bucketName = process.env.R2_BUCKET_NAME || "ai-interview";
 
 // Initialize R2 client
 const getR2Client = () => {
@@ -20,7 +23,16 @@ const getR2Client = () => {
   });
 };
 
-// Get single clip
+// Extract key from URL or return as-is if already a key
+function getFileKey(videoUrl: string): string {
+  if (videoUrl.startsWith("http")) {
+    const match = videoUrl.match(/clips\/[\w-]+\.webm$/);
+    return match ? match[0] : videoUrl;
+  }
+  return videoUrl;
+}
+
+// Get single clip with presigned URL
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,7 +53,21 @@ export async function GET(
       return NextResponse.json({ error: "Clip not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ clip });
+    // Generate presigned URL
+    const r2Client = getR2Client();
+    let signedUrl = clip.videoUrl;
+
+    if (r2Client) {
+      try {
+        const key = getFileKey(clip.videoUrl);
+        const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+        signedUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
+      } catch (e) {
+        console.error("Failed to sign URL:", e);
+      }
+    }
+
+    return NextResponse.json({ clip: { ...clip, videoUrl: signedUrl } });
   } catch (error) {
     console.error("Error fetching clip:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -75,21 +101,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Clip not found" }, { status: 404 });
     }
 
-    // Extract the file key from the URL
-    const videoUrl = clip.videoUrl;
-    let fileKey: string | null = null;
+    // Extract the file key from URL or use directly if already a key
+    const fileKey = getFileKey(clip.videoUrl);
 
-    // Parse the key from URL (format: .../clips/timestamp-randomid.webm)
-    const match = videoUrl.match(/clips\/[\w-]+\.webm$/);
-    if (match) {
-      fileKey = match[0];
-    }
-
-    // Delete from R2 if configured and we have a key
+    // Delete from R2 if configured
     const r2Client = getR2Client();
     if (r2Client && fileKey) {
       try {
-        const bucketName = process.env.R2_BUCKET_NAME || "compound-interviewer";
         await r2Client.send(
           new DeleteObjectCommand({
             Bucket: bucketName,

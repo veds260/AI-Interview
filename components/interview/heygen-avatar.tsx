@@ -423,33 +423,29 @@ export default function HeyGenAvatar({
         const audioBlob = new Blob(audioChunksRef.current, { type: audioRecorder.mimeType });
         audioChunksRef.current = [];
 
-        // Create video blob for storage and upload
-        let videoUrl: string | null = null;
+        // Create video blob for storage and upload IN BACKGROUND (don't block UX)
         if (videoChunksRef.current.length > 0) {
           const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
           videoChunksRef.current = [];
           console.log("Video recorded:", videoBlob.size, "bytes");
 
-          // Upload video to storage
-          try {
-            const videoFormData = new FormData();
-            videoFormData.append("video", videoBlob, `clip-${Date.now()}.webm`);
+          // Upload video in background - don't await, don't block transcription
+          const videoFormData = new FormData();
+          videoFormData.append("video", videoBlob, `clip-${Date.now()}.webm`);
 
-            const uploadRes = await fetch("/api/clips/upload", {
-              method: "POST",
-              body: videoFormData,
-            });
-
-            if (uploadRes.ok) {
-              const uploadResult = await uploadRes.json();
-              videoUrl = uploadResult.url;
-              console.log("Video uploaded:", videoUrl);
-            } else {
-              console.error("Video upload failed:", await uploadRes.text());
-            }
-          } catch (uploadError) {
-            console.error("Video upload error:", uploadError);
-          }
+          fetch("/api/clips/upload", {
+            method: "POST",
+            body: videoFormData,
+          })
+            .then((res) => res.json())
+            .then((result) => {
+              if (result.url) {
+                console.log("Video uploaded in background:", result.url);
+              } else if (result.error) {
+                console.log("Video upload skipped:", result.hint || result.error);
+              }
+            })
+            .catch((err) => console.error("Background video upload error:", err));
         }
 
         // Skip if audio too short

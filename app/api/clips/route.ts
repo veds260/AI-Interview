@@ -3,6 +3,37 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { videoClips, interviews, clients, users } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+// Initialize R2 client for presigned URLs
+const r2Client = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY || "",
+    secretAccessKey: process.env.R2_SECRET_KEY || "",
+  },
+});
+
+const bucketName = process.env.R2_BUCKET_NAME || "ai-interview";
+
+// Generate presigned URL for a video key
+async function getPresignedVideoUrl(key: string): Promise<string> {
+  // If it's already a full URL (legacy), extract the key
+  if (key.startsWith("http")) {
+    const urlParts = key.split("/");
+    key = urlParts.slice(3).join("/"); // Extract path after domain
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+  });
+
+  // URL valid for 1 hour
+  return getSignedUrl(r2Client, command, { expiresIn: 3600 });
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,7 +95,20 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(videoClips.createdAt))
       .limit(limit);
 
-    return NextResponse.json({ clips });
+    // Generate presigned URLs for each clip
+    const clipsWithUrls = await Promise.all(
+      clips.map(async (clip) => {
+        try {
+          const signedUrl = await getPresignedVideoUrl(clip.videoUrl);
+          return { ...clip, videoUrl: signedUrl };
+        } catch (e) {
+          console.error(`Failed to sign URL for clip ${clip.id}:`, e);
+          return clip; // Return original if signing fails
+        }
+      })
+    );
+
+    return NextResponse.json({ clips: clipsWithUrls });
   } catch (error) {
     console.error("Error fetching clips:", error);
     return NextResponse.json(

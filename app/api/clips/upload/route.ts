@@ -57,12 +57,8 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // Construct public URL (assumes bucket has public access or custom domain)
-    const publicUrl = process.env.R2_PUBLIC_URL
-      ? `${process.env.R2_PUBLIC_URL}/${filename}`
-      : `https://${bucketName}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${filename}`;
-
-    console.log("Video uploaded to R2:", publicUrl);
+    // Store just the key - we'll generate presigned URLs when fetching
+    console.log("Video uploaded to R2:", filename);
 
     // Get clientId from interview if available
     let clientId: string | null = null;
@@ -78,7 +74,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create video clip record
+    // Create video clip record - store the key, not full URL
     let clipId: string | null = null;
     try {
       const [clip] = await db
@@ -87,7 +83,7 @@ export async function POST(req: NextRequest) {
           interviewId: interviewId || undefined,
           messageId: messageId || undefined,
           clientId: clientId || undefined,
-          videoUrl: publicUrl,
+          videoUrl: filename, // Store key, generate presigned URL on fetch
           fileSizeBytes: buffer.length,
         })
         .returning({ id: videoClips.id });
@@ -98,12 +94,12 @@ export async function POST(req: NextRequest) {
       console.error("Failed to create video clip record:", dbError);
     }
 
-    // Update interview recording URL if interviewId provided
+    // Update interview recording URL if interviewId provided (store key)
     if (interviewId) {
       try {
         await db
           .update(interviews)
-          .set({ recordingUrl: publicUrl })
+          .set({ recordingUrl: filename })
           .where(eq(interviews.id, interviewId));
         console.log("Updated interview recording URL");
       } catch (dbError) {
@@ -111,12 +107,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update message audio URL if messageId provided
+    // Update message audio URL if messageId provided (store key)
     if (messageId) {
       try {
         await db
           .update(interviewMessages)
-          .set({ audioUrl: publicUrl })
+          .set({ audioUrl: filename })
           .where(eq(interviewMessages.id, messageId));
         console.log("Updated message audio URL");
       } catch (dbError) {
@@ -125,7 +121,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      url: publicUrl,
+      key: filename,
       filename,
       size: buffer.length,
       clipId,
