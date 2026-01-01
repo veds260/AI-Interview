@@ -9,8 +9,10 @@ import {
   Volume2,
   VolumeX,
   Send,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface HeyGenAvatarProps {
   onReady?: () => void;
@@ -56,6 +58,8 @@ export default function HeyGenAvatar({
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Initializing...");
   const [useFallback, setUseFallback] = useState(false);
+  const [useTextInput, setUseTextInput] = useState(false);
+  const [textResponse, setTextResponse] = useState("");
 
   // Initialize HeyGen - video avatar + TTS only
   useEffect(() => {
@@ -336,12 +340,27 @@ export default function HeyGenAvatar({
 
       recognition.onerror = (event: any) => {
         console.error("Speech recognition error:", event.error);
+        // On network error, switch to text input mode
+        if (event.error === 'network' || event.error === 'not-allowed') {
+          setUseTextInput(true);
+          setIsRecording(false);
+          setIsUserSpeaking(false);
+          onUserSpeaking?.(false);
+          // Stop the media stream
+          if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(track => track.stop());
+            mediaStreamRef.current = null;
+          }
+        }
       };
 
       recognition.onend = () => {
         console.log("Speech recognition ended, final transcript:", finalTranscript);
         if (finalTranscript.trim()) {
           onTranscriptRef.current?.(finalTranscript.trim(), true);
+        } else if (!useTextInput) {
+          // No transcript and no text input mode - might need text input
+          setUseTextInput(true);
         }
       };
 
@@ -399,6 +418,14 @@ export default function HeyGenAvatar({
       setIsMuted(true);
     }
   }, [isRecording, stopRecordingWithSpeechRecognition]);
+
+  // Submit text response (fallback when speech recognition fails)
+  const submitTextResponse = useCallback(() => {
+    if (textResponse.trim()) {
+      onTranscriptRef.current?.(textResponse.trim(), true);
+      setTextResponse("");
+    }
+  }, [textResponse]);
 
   // Expose methods globally
   useEffect(() => {
@@ -485,47 +512,91 @@ export default function HeyGenAvatar({
 
       {/* Controls */}
       {isConnected && (
-        <div className="flex justify-center gap-2 mt-3">
-          {isMuted ? (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={toggleMute}
-              disabled={isTranscribing || isAvatarSpeaking}
-              className="gap-1.5"
-            >
-              <MicOff className="w-4 h-4" />
-              Start Recording
-            </Button>
+        <div className="mt-3">
+          {useTextInput ? (
+            /* Text input fallback when speech recognition fails */
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-yellow-500 text-xs justify-center">
+                <MessageSquare className="w-3 h-3" />
+                <span>Voice unavailable - type your response instead</span>
+              </div>
+              <Textarea
+                placeholder="Type your response here..."
+                value={textResponse}
+                onChange={(e) => setTextResponse(e.target.value)}
+                rows={3}
+                className="resize-none text-sm"
+                disabled={isAvatarSpeaking}
+              />
+              <div className="flex justify-between items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setUseTextInput(false);
+                    setIsMuted(true);
+                  }}
+                  className="text-xs"
+                >
+                  <Mic className="w-3 h-3 mr-1" />
+                  Try voice again
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={submitTextResponse}
+                  disabled={!textResponse.trim() || isAvatarSpeaking}
+                  className="gap-1.5 bg-green-600 hover:bg-green-700"
+                >
+                  <Send className="w-4 h-4" />
+                  Submit
+                </Button>
+              </div>
+            </div>
           ) : (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={submitRecording}
-              disabled={isTranscribing}
-              className="gap-1.5 bg-green-600 hover:bg-green-700"
-            >
-              <Send className="w-4 h-4" />
-              {isTranscribing ? "Processing..." : "Submit Answer"}
-            </Button>
-          )}
+            /* Voice controls */
+            <div className="flex justify-center gap-2">
+              {isMuted ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={toggleMute}
+                  disabled={isTranscribing || isAvatarSpeaking}
+                  className="gap-1.5"
+                >
+                  <MicOff className="w-4 h-4" />
+                  Start Recording
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={submitRecording}
+                  disabled={isTranscribing}
+                  className="gap-1.5 bg-green-600 hover:bg-green-700"
+                >
+                  <Send className="w-4 h-4" />
+                  {isTranscribing ? "Processing..." : "Submit Answer"}
+                </Button>
+              )}
 
-          {isAvatarSpeaking && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={interruptSpeech}
-              className="gap-1.5"
-            >
-              <VolumeX className="w-4 h-4" />
-              Stop
-            </Button>
+              {isAvatarSpeaking && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={interruptSpeech}
+                  className="gap-1.5"
+                >
+                  <VolumeX className="w-4 h-4" />
+                  Stop
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}
 
       {/* Recording hint */}
-      {isConnected && (
+      {isConnected && !useTextInput && (
         <p className="text-center text-xs text-gray-500 mt-2">
           {isMuted
             ? isAvatarSpeaking
