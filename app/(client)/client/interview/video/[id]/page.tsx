@@ -48,6 +48,7 @@ export default function VideoInterviewPage() {
   const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null);
+  const [shouldAutoSpeak, setShouldAutoSpeak] = useState(true); // Control auto-speak on resume
   const [messages, setMessages] = useState<Message[]>([]);
   const [progress, setProgress] = useState(0);
   const [showEndDialog, setShowEndDialog] = useState(false);
@@ -86,25 +87,56 @@ export default function VideoInterviewPage() {
         }));
 
         const question = data.currentQuestion;
-        setCurrentQuestion(question);
+        setMessages(existingMessages);
 
-        // Check if current question is already in messages
-        const hasCurrentQuestion = existingMessages.some(
-          (m: Message) => m.role === "interviewer" && m.content === question
-        );
+        // Check if the current question was already answered
+        // Find the last occurrence of this question and check if there's a user response after it
+        let questionAlreadyAnswered = false;
+        for (let i = existingMessages.length - 1; i >= 0; i--) {
+          const msg = existingMessages[i];
+          if (msg.role === "interviewer" && msg.content === question) {
+            // Found the question - check if there's a user response after it
+            const hasResponseAfter = existingMessages.slice(i + 1).some(
+              (m: Message) => m.role === "user"
+            );
+            if (hasResponseAfter) {
+              questionAlreadyAnswered = true;
+            }
+            break;
+          }
+        }
 
-        // Add current question only if not already in messages
-        if (question && !hasCurrentQuestion) {
-          setMessages([
-            ...existingMessages,
-            {
-              role: "interviewer",
-              content: question,
-              timestamp: new Date(),
-            },
-          ]);
+        // Also check if the last message is from user (meaning they answered something)
+        const lastMessage = existingMessages[existingMessages.length - 1];
+        const lastMessageIsUserResponse = lastMessage?.role === "user";
+
+        // Determine if we should auto-speak the question
+        const shouldSpeak = question && !questionAlreadyAnswered && !lastMessageIsUserResponse;
+
+        if (question) {
+          setCurrentQuestion(question);
+          setShouldAutoSpeak(shouldSpeak);
+
+          // Add question to messages if not there and we should speak it
+          if (shouldSpeak) {
+            const hasQuestion = existingMessages.some(
+              (m: Message) => m.role === "interviewer" && m.content === question
+            );
+            if (!hasQuestion) {
+              setMessages([...existingMessages, {
+                role: "interviewer",
+                content: question,
+                timestamp: new Date(),
+              }]);
+            }
+          }
+
+          if (!shouldSpeak) {
+            console.log("Resuming interview - not auto-speaking because question may be answered or out of sync");
+          }
         } else {
-          setMessages(existingMessages);
+          setCurrentQuestion(null);
+          setShouldAutoSpeak(false);
         }
 
         const state = data.interview.sessionState;
@@ -313,7 +345,7 @@ export default function VideoInterviewPage() {
             onAvatarSpeaking={setIsAvatarSpeaking}
             onUserSpeaking={setIsUserSpeaking}
             onTranscript={handleTranscript}
-            initialQuestion={currentQuestion || undefined}
+            initialQuestion={shouldAutoSpeak ? currentQuestion || undefined : undefined}
           />
 
           {/* Controls */}
