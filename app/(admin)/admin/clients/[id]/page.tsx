@@ -504,7 +504,7 @@ export default function ClientDetailPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, voiceStyle: e.target.value })
                       }
-                      rows={4}
+                      rows={8}
                       placeholder="Describe the client's voice, tone, and communication style..."
                     />
                   </div>
@@ -583,7 +583,7 @@ export default function ClientDetailPage() {
                       },
                     })
                   }
-                  rows={4}
+                  rows={8}
                   placeholder="Client's bio, background, and story..."
                 />
               ) : (
@@ -710,7 +710,7 @@ export default function ClientDetailPage() {
                       },
                     })
                   }
-                  rows={4}
+                  rows={8}
                   placeholder="Tone, style preferences, words to use/avoid..."
                 />
               ) : (
@@ -741,7 +741,7 @@ export default function ClientDetailPage() {
                       },
                     })
                   }
-                  rows={4}
+                  rows={8}
                   placeholder="Any other important notes..."
                 />
               ) : (
@@ -797,7 +797,7 @@ export default function ClientDetailPage() {
                   <div className="space-y-3">
                     {(kb as KnowledgeBase).typefullyTweets?.map((tweet, idx) => (
                       <div key={idx} className="p-3 border rounded bg-gray-50">
-                        <p className="text-sm">{tweet.content}</p>
+                        <p className="text-sm whitespace-pre-wrap">{tweet.content}</p>
                         <div className="flex gap-4 mt-2 text-xs text-gray-500">
                           {tweet.postedAt && <span>{tweet.postedAt}</span>}
                           {tweet.likes !== undefined && <span>{tweet.likes} likes</span>}
