@@ -22,6 +22,7 @@ interface SessionState {
   questionIds: string[];
   currentIndex: number;
   followUpCount?: number;
+  pendingFollowUp?: string;
   clientContext?: ClientKnowledgeSummary;
   previousInterviews?: PreviousInterviewSummary[];
   competitorTopics?: string[];
@@ -198,18 +199,22 @@ export async function POST(
       });
     }
 
-    // Get the current question
+    // Get the current question (check for pending follow-up first)
     const currentQuestionId = state.questionIds[currentIndex];
     const currentQuestion = await db.query.questionBank.findFirst({
       where: eq(questionBank.id, currentQuestionId),
     });
 
+    // If there's a pending follow-up, use that as the actual question
+    const actualQuestion = state.pendingFollowUp || currentQuestion?.question || "Question";
+    const isAnsweringFollowUp = !!state.pendingFollowUp;
+
     // Save the interviewer question message
     await db.insert(interviewMessages).values({
       interviewId: id,
       role: "interviewer",
-      content: currentQuestion?.question || "Question",
-      questionId: currentQuestionId,
+      content: actualQuestion,
+      questionId: isAnsweringFollowUp ? undefined : currentQuestionId,
       targetedContentType: currentQuestion?.category,
     });
 
@@ -223,11 +228,12 @@ export async function POST(
     // Update questions asked
     const questionsAsked = (interview.questionsAsked as object[]) || [];
     questionsAsked.push({
-      questionId: currentQuestionId,
-      question: currentQuestion?.question,
+      questionId: isAnsweringFollowUp ? undefined : currentQuestionId,
+      question: actualQuestion,
       response: response.trim(),
       category: currentQuestion?.category,
       timestamp: new Date().toISOString(),
+      isFollowUp: isAnsweringFollowUp,
     });
 
     // Decide: generate AI follow-up or move to next bank question
@@ -276,6 +282,8 @@ export async function POST(
           ...state,
           currentIndex: nextIndex,
           followUpCount: isFollowUp ? 1 : 0, // Reset for new base question
+          // Store follow-up for resume, clear when moving to next question
+          pendingFollowUp: isFollowUp ? nextQuestion : undefined,
         },
         questionsAsked,
         questionsCount: (interview.questionsCount || 0) + 1,

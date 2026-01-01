@@ -6,6 +6,8 @@ import { eq, asc, inArray } from "drizzle-orm";
 interface SessionState {
   questionIds: string[];
   currentIndex: number;
+  pendingFollowUp?: string; // Store follow-up question for resume
+  followUpCount?: number;
 }
 
 export async function GET(
@@ -42,7 +44,10 @@ export async function GET(
     const state = interview.sessionState as SessionState;
     let currentQuestion = null;
 
-    if (state?.questionIds && state.currentIndex < state.questionIds.length) {
+    // Check if there's a pending follow-up question (for resume)
+    if (state?.pendingFollowUp) {
+      currentQuestion = state.pendingFollowUp;
+    } else if (state?.questionIds && state.currentIndex < state.questionIds.length) {
       const questionId = state.questionIds[state.currentIndex];
       const question = await db.query.questionBank.findFirst({
         where: eq(questionBank.id, questionId),

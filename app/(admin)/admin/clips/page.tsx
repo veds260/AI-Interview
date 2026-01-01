@@ -92,7 +92,7 @@ export default function AdminClipsPage() {
   const [clientFilter, setClientFilter] = useState<string>("all");
 
   // Fetch clients for filter dropdown
-  const { data: clientsData } = useQuery<{ clients: Client[] }>({
+  const { data: clientsList } = useQuery<Client[]>({
     queryKey: ["clients-list"],
     queryFn: async () => {
       const res = await fetch("/api/clients");
@@ -233,7 +233,7 @@ export default function AdminClipsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Clients</SelectItem>
-              {clientsData?.clients?.map((client) => (
+              {clientsList?.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
                 </SelectItem>
