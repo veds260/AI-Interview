@@ -15,7 +15,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Video, PenTool } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type UserRole = "client" | "writer";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,6 +27,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("client");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +52,7 @@ export default function RegisterPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, role }),
       });
 
       const data = await response.json();
@@ -98,6 +102,43 @@ export default function RegisterPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <Label>I am a...</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole("client")}
+                  disabled={loading}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                    role === "client"
+                      ? "border-red-500 bg-red-50 text-red-700"
+                      : "border-gray-200 hover:border-gray-300 text-gray-600"
+                  )}
+                >
+                  <Video className="h-6 w-6" />
+                  <span className="font-medium">Founder</span>
+                  <span className="text-xs text-gray-500">Take interviews</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole("writer")}
+                  disabled={loading}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                    role === "writer"
+                      ? "border-red-500 bg-red-50 text-red-700"
+                      : "border-gray-200 hover:border-gray-300 text-gray-600"
+                  )}
+                >
+                  <PenTool className="h-6 w-6" />
+                  <span className="font-medium">Writer</span>
+                  <span className="text-xs text-gray-500">Create content</span>
+                </button>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>

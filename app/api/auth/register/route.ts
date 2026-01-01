@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { db, users } from "@/lib/db";
+import { db, users, clients } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, role } = await request.json();
 
     // Validation
     if (!email || !password) {
@@ -21,6 +21,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Validate role (only client or writer allowed for self-registration)
+    const validRoles = ["client", "writer"];
+    const userRole = validRoles.includes(role) ? role : "client";
 
     // Check if user exists
     const existingUser = await db.query.users.findFirst({
@@ -44,9 +48,17 @@ export async function POST(request: Request) {
         name,
         email: email.toLowerCase(),
         passwordHash,
-        role: "client", // Default role for self-registration
+        role: userRole,
       })
       .returning({ id: users.id, email: users.email, role: users.role });
+
+    // If client role, also create a client record
+    if (userRole === "client") {
+      await db.insert(clients).values({
+        userId: newUser.id,
+        name: name || email.split("@")[0],
+      });
+    }
 
     return NextResponse.json(
       {

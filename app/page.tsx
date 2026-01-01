@@ -29,9 +29,9 @@ export default async function HomePage() {
           className="h-10 w-auto"
           priority
         />
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
           <Link href="/login">
-            <Button variant="ghost" className="text-white hover:bg-gray-800">Sign in</Button>
+            <span className="text-gray-300 hover:text-white transition-colors cursor-pointer">Sign in</span>
           </Link>
           <Link href="/register">
             <Button className="bg-red-600 hover:bg-red-700">Get Started</Button>
@@ -56,7 +56,7 @@ export default async function HomePage() {
               </Button>
             </Link>
             <Link href="/login">
-              <Button size="lg" variant="outline" className="px-8 text-white border-gray-600 hover:bg-gray-800">
+              <Button size="lg" variant="outline" className="px-8 border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400">
                 Sign In
               </Button>
             </Link>

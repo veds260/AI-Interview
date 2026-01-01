@@ -80,6 +80,20 @@ interface Assignment {
     brandName: string | null;
     voiceStyle: string | null;
     topicsOfExpertise: string[] | null;
+    knowledgeBase: {
+      bio?: string;
+      products?: string[];
+      talkingPoints?: string[];
+      pastInterviews?: string[];
+      voiceGuidelines?: string;
+      notes?: string;
+      typefullyTweets?: Array<{
+        content: string;
+        postedAt?: string;
+        likes?: number;
+        retweets?: number;
+      }>;
+    } | null;
   } | null;
   extractionsCount: number;
   extractions: any[];
@@ -502,8 +516,9 @@ export default function AssignmentsPage() {
               </TabsContent>
 
               <TabsContent value="client">
+                <ScrollArea className="h-96">
                 {selectedAssignment.client ? (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pr-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <h4 className="font-medium text-sm text-gray-500">Name</h4>
@@ -536,12 +551,92 @@ export default function AssignmentsPage() {
                         </div>
                       </div>
                     ) : null}
+
+                    {/* Knowledge Base Section */}
+                    {selectedAssignment.client.knowledgeBase && (
+                      <>
+                        <Separator className="my-4" />
+                        <h3 className="font-semibold text-lg">Knowledge Base</h3>
+
+                        {selectedAssignment.client.knowledgeBase.bio && (
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-500">Bio</h4>
+                            <p className="bg-blue-50 p-3 rounded mt-1 text-sm">
+                              {selectedAssignment.client.knowledgeBase.bio}
+                            </p>
+                          </div>
+                        )}
+
+                        {selectedAssignment.client.knowledgeBase.voiceGuidelines && (
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-500">Voice Guidelines</h4>
+                            <p className="bg-purple-50 p-3 rounded mt-1 text-sm whitespace-pre-wrap">
+                              {selectedAssignment.client.knowledgeBase.voiceGuidelines}
+                            </p>
+                          </div>
+                        )}
+
+                        {selectedAssignment.client.knowledgeBase.products?.length ? (
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-500">Products/Services</h4>
+                            <ul className="list-disc list-inside bg-gray-50 p-3 rounded mt-1 text-sm">
+                              {selectedAssignment.client.knowledgeBase.products.map((product, idx) => (
+                                <li key={idx}>{product}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {selectedAssignment.client.knowledgeBase.talkingPoints?.length ? (
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-500">Key Talking Points</h4>
+                            <ul className="list-disc list-inside bg-green-50 p-3 rounded mt-1 text-sm">
+                              {selectedAssignment.client.knowledgeBase.talkingPoints.map((point, idx) => (
+                                <li key={idx}>{point}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {selectedAssignment.client.knowledgeBase.notes && (
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-500">Additional Notes</h4>
+                            <p className="bg-yellow-50 p-3 rounded mt-1 text-sm whitespace-pre-wrap">
+                              {selectedAssignment.client.knowledgeBase.notes}
+                            </p>
+                          </div>
+                        )}
+
+                        {selectedAssignment.client.knowledgeBase.typefullyTweets?.length ? (
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-500">
+                              Sample Posts ({selectedAssignment.client.knowledgeBase.typefullyTweets.length})
+                            </h4>
+                            <div className="space-y-2 mt-1">
+                              {selectedAssignment.client.knowledgeBase.typefullyTweets.slice(0, 5).map((tweet, idx) => (
+                                <div key={idx} className="bg-gray-50 p-3 rounded text-sm border-l-2 border-blue-400">
+                                  <p>{tweet.content}</p>
+                                  {(tweet.likes || tweet.retweets) && (
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      {tweet.likes && `${tweet.likes} likes`}
+                                      {tweet.likes && tweet.retweets && " • "}
+                                      {tweet.retweets && `${tweet.retweets} retweets`}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 ) : (
                   <p className="text-gray-400 text-center py-8">
                     No client information available
                   </p>
                 )}
+                </ScrollArea>
               </TabsContent>
             </Tabs>
           )}

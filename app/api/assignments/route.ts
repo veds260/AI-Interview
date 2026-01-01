@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
             brandName: item.client.brandName,
             voiceStyle: item.client.voiceStyle,
             topicsOfExpertise: item.client.topicsOfExpertise,
+            knowledgeBase: item.client.knowledgeBase,
           } : null,
           extractionsCount: extractions.length,
           extractions: extractions,
