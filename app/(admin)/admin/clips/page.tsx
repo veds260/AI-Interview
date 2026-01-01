@@ -111,9 +111,11 @@ export default function AdminClipsPage() {
   });
 
   // Filter clips by client
-  const filteredClips = clipsData?.clips?.filter(
-    (clip) => clientFilter === "all" || clip.clientId === clientFilter
-  ) || [];
+  const filteredClips = clipsData?.clips?.filter((clip) => {
+    if (clientFilter === "all") return true;
+    if (clientFilter === "unassigned") return !clip.clientId;
+    return clip.clientId === clientFilter;
+  }) || [];
 
   const { data: stats, isLoading: statsLoading } = useQuery<StorageStats>({
     queryKey: ["storage-stats"],
@@ -232,7 +234,8 @@ export default function AdminClipsPage() {
               <SelectValue placeholder="All Clients" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
+              <SelectItem value="all">All Clips</SelectItem>
+              <SelectItem value="unassigned">Unassigned (No Client)</SelectItem>
               {clientsList?.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
