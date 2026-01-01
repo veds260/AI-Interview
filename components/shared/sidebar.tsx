@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { signOut, useSession } from "next-auth/react";
@@ -76,11 +77,15 @@ export function Sidebar() {
 
   return (
     <div className="flex h-screen w-64 flex-col bg-gray-900 text-white">
-      <div className="flex h-16 items-center gap-2 px-6 border-b border-gray-800">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">C</span>
-        </div>
-        <span className="font-semibold">{title}</span>
+      <div className="flex h-16 items-center px-4 border-b border-gray-800">
+        <Image
+          src="/logo.svg"
+          alt="Compound"
+          width={140}
+          height={32}
+          className="h-8 w-auto"
+          priority
+        />
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">

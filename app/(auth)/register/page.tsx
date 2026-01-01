@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,16 +67,29 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Create an account
-          </CardTitle>
-          <CardDescription className="text-center">
-            Get started with Compound Interviewer
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="bg-gray-900 py-6 px-4">
+        <div className="max-w-md mx-auto">
+          <Image
+            src="/logo.svg"
+            alt="Compound"
+            width={180}
+            height={42}
+            className="h-10 w-auto"
+            priority
+          />
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">
+              Create an account
+            </CardTitle>
+            <CardDescription className="text-center">
+              Get started with Compound
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
@@ -159,7 +173,8 @@ export default function RegisterPage() {
             </Link>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

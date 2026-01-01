@@ -33,10 +33,29 @@ export async function GET(request: Request) {
     let allInterviews;
 
     if (session.user.role === "admin") {
-      // Admins see all interviews
+      // Admins see all interviews with client name
       allInterviews = await db
-        .select()
+        .select({
+          id: interviews.id,
+          clientId: interviews.clientId,
+          clientName: clients.name,
+          mode: interviews.mode,
+          status: interviews.status,
+          title: interviews.title,
+          questionsCount: interviews.questionsCount,
+          extractionsCount: interviews.extractionsCount,
+          startedAt: interviews.startedAt,
+          completedAt: interviews.completedAt,
+          createdAt: interviews.createdAt,
+          transcript: interviews.transcript,
+          recordingUrl: interviews.recordingUrl,
+          questionsAsked: interviews.questionsAsked,
+          shareToken: interviews.shareToken,
+          shareTokenExpiresAt: interviews.shareTokenExpiresAt,
+          sessionState: interviews.sessionState,
+        })
         .from(interviews)
+        .leftJoin(clients, eq(interviews.clientId, clients.id))
         .orderBy(desc(interviews.createdAt));
     } else {
       // Clients see their own interviews

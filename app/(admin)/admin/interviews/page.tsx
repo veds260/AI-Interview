@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,6 +49,8 @@ import {
   Share2,
   Link,
   Check,
+  Search,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +60,7 @@ import { toast } from "sonner";
 interface Interview {
   id: string;
   clientId: string | null;
+  clientName?: string | null;
   mode: string;
   status: string;
   title: string | null;
@@ -66,6 +76,25 @@ interface Interview {
   shareTokenExpiresAt: string | null;
 }
 
+interface Client {
+  id: string;
+  name: string;
+}
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "completed", label: "Completed" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "paused", label: "Paused" },
+  { value: "pending", label: "Pending" },
+];
+
+const MODE_OPTIONS = [
+  { value: "all", label: "All Modes" },
+  { value: "live_video", label: "Live Video" },
+  { value: "text", label: "Text" },
+];
+
 export default function AdminInterviewsPage() {
   const queryClient = useQueryClient();
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
@@ -75,6 +104,23 @@ export default function AdminInterviewsPage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [modeFilter, setModeFilter] = useState("all");
+
+  // Fetch clients for filter
+  const { data: clientsData } = useQuery<Client[]>({
+    queryKey: ["clients-list"],
+    queryFn: async () => {
+      const res = await fetch("/api/clients");
+      if (!res.ok) throw new Error("Failed to fetch clients");
+      const data = await res.json();
+      return data.clients || data;
+    },
+  });
+
   const { data: interviews = [], isLoading } = useQuery<Interview[]>({
     queryKey: ["admin-interviews"],
     queryFn: async () => {
@@ -83,6 +129,39 @@ export default function AdminInterviewsPage() {
       return res.json();
     },
   });
+
+  // Filter interviews
+  const filteredInterviews = useMemo(() => {
+    return interviews.filter((interview) => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = interview.title?.toLowerCase().includes(query);
+        const matchesClient = interview.clientName?.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesClient) return false;
+      }
+
+      // Client filter
+      if (clientFilter !== "all" && interview.clientId !== clientFilter) return false;
+
+      // Status filter
+      if (statusFilter !== "all" && interview.status !== statusFilter) return false;
+
+      // Mode filter
+      if (modeFilter !== "all" && interview.mode !== modeFilter) return false;
+
+      return true;
+    });
+  }, [interviews, searchQuery, clientFilter, statusFilter, modeFilter]);
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setClientFilter("all");
+    setStatusFilter("all");
+    setModeFilter("all");
+  };
+
+  const hasActiveFilters = searchQuery || clientFilter !== "all" || statusFilter !== "all" || modeFilter !== "all";
 
   const { data: writers = [] } = useQuery<any[]>({
     queryKey: ["writers"],
@@ -271,7 +350,7 @@ export default function AdminInterviewsPage() {
             <CardTitle className="text-sm font-medium">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{interviews.length}</div>
+            <div className="text-2xl font-bold">{filteredInterviews.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -280,7 +359,7 @@ export default function AdminInterviewsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {interviews.filter((i) => i.status === "completed").length}
+              {filteredInterviews.filter((i) => i.status === "completed").length}
             </div>
           </CardContent>
         </Card>
@@ -290,7 +369,7 @@ export default function AdminInterviewsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {interviews.filter((i) => i.status === "in_progress").length}
+              {filteredInterviews.filter((i) => i.status === "in_progress").length}
             </div>
           </CardContent>
         </Card>
@@ -300,17 +379,78 @@ export default function AdminInterviewsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {interviews.filter((i) => (i.extractionsCount || 0) > 0).length}
+              {filteredInterviews.filter((i) => (i.extractionsCount || 0) > 0).length}
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search by title or client..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Clients" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clientsData?.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={modeFilter} onValueChange={setModeFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Modes" />
+          </SelectTrigger>
+          <SelectContent>
+            {MODE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="h-4 w-4 mr-1" />
+            Clear
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>All Interviews</CardTitle>
           <CardDescription>
-            {interviews.length} interview{interviews.length !== 1 ? "s" : ""} total
+            {filteredInterviews.length} interview{filteredInterviews.length !== 1 ? "s" : ""}
+            {hasActiveFilters && ` (filtered from ${interviews.length} total)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -318,14 +458,17 @@ export default function AdminInterviewsPage() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ) : interviews.length === 0 ? (
+          ) : filteredInterviews.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No interviews yet. Clients will appear here after they complete interviews.
+              {hasActiveFilters
+                ? "No interviews match your filters."
+                : "No interviews yet. Clients will appear here after they complete interviews."}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Client</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Mode</TableHead>
                   <TableHead>Status</TableHead>
@@ -336,8 +479,13 @@ export default function AdminInterviewsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {interviews.map((interview) => (
+                {filteredInterviews.map((interview) => (
                   <TableRow key={interview.id}>
+                    <TableCell>
+                      <span className="font-medium text-sm">
+                        {interview.clientName || "—"}
+                      </span>
+                    </TableCell>
                     <TableCell className="font-medium">
                       {interview.title || `Interview ${interview.id.slice(0, 8)}`}
                     </TableCell>

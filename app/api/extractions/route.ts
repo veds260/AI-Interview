@@ -41,9 +41,39 @@ export async function GET(request: Request) {
       conditions.push(eq(contentExtractions.clientId, clientId));
     }
 
+    const interviewId = searchParams.get("interviewId");
+    if (interviewId) {
+      conditions.push(eq(contentExtractions.interviewId, interviewId));
+    }
+
+    // Join with clients and interviews to get names
     const extractions = await db
-      .select()
+      .select({
+        id: contentExtractions.id,
+        interviewId: contentExtractions.interviewId,
+        clientId: contentExtractions.clientId,
+        contentType: contentExtractions.contentType,
+        topics: contentExtractions.topics,
+        questionAsked: contentExtractions.questionAsked,
+        rawResponse: contentExtractions.rawResponse,
+        keyQuote: contentExtractions.keyQuote,
+        summary: contentExtractions.summary,
+        tweetDraft: contentExtractions.tweetDraft,
+        linkedinDraft: contentExtractions.linkedinDraft,
+        threadOutline: contentExtractions.threadOutline,
+        suggestedFormats: contentExtractions.suggestedFormats,
+        status: contentExtractions.status,
+        web2Friendly: contentExtractions.web2Friendly,
+        technicalDepth: contentExtractions.technicalDepth,
+        controversyLevel: contentExtractions.controversyLevel,
+        storytellingPotential: contentExtractions.storytellingPotential,
+        createdAt: contentExtractions.createdAt,
+        clientName: clients.name,
+        interviewTitle: interviews.title,
+      })
       .from(contentExtractions)
+      .leftJoin(clients, eq(contentExtractions.clientId, clients.id))
+      .leftJoin(interviews, eq(contentExtractions.interviewId, interviews.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(contentExtractions.createdAt));
 

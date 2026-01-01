@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -134,8 +135,21 @@ export default function SharedInterviewViewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Logo Header */}
+      <div className="bg-gray-900 py-4 px-4 mb-8">
+        <div className="max-w-4xl mx-auto">
+          <Image
+            src="/logo.svg"
+            alt="Compound"
+            width={150}
+            height={35}
+            className="h-8 w-auto"
+          />
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 pb-8">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -18,42 +19,44 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800">
       <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">C</span>
-          </div>
-          <span className="font-semibold text-xl">Compound Interviewer</span>
-        </div>
+        <Image
+          src="/logo.svg"
+          alt="Compound"
+          width={180}
+          height={42}
+          className="h-10 w-auto"
+          priority
+        />
         <div className="flex gap-4">
           <Link href="/login">
-            <Button variant="ghost">Sign in</Button>
+            <Button variant="ghost" className="text-white hover:bg-gray-800">Sign in</Button>
           </Link>
           <Link href="/register">
-            <Button>Get Started</Button>
+            <Button className="bg-red-600 hover:bg-red-700">Get Started</Button>
           </Link>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-20">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-5xl font-bold tracking-tight text-gray-900 mb-6">
+          <h1 className="text-5xl font-bold tracking-tight text-white mb-6">
             Extract Content from Founders with AI
           </h1>
-          <p className="text-xl text-gray-600 mb-10">
+          <p className="text-xl text-gray-300 mb-10">
             Conduct structured AI-powered interviews to systematically extract
             stories, hot takes, and expertise. Transform founder insights into
             tweets, threads, and long-form content.
           </p>
           <div className="flex gap-4 justify-center">
             <Link href="/register">
-              <Button size="lg" className="px-8">
+              <Button size="lg" className="px-8 bg-red-600 hover:bg-red-700">
                 Start Interviewing
               </Button>
             </Link>
             <Link href="/login">
-              <Button size="lg" variant="outline" className="px-8">
+              <Button size="lg" variant="outline" className="px-8 text-white border-gray-600 hover:bg-gray-800">
                 Sign In
               </Button>
             </Link>
@@ -61,10 +64,10 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-24 grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+          <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <div className="w-12 h-12 bg-red-900/50 rounded-lg flex items-center justify-center mb-4">
               <svg
-                className="w-6 h-6 text-blue-600"
+                className="w-6 h-6 text-red-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -77,17 +80,17 @@ export default async function HomePage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-lg mb-2">AI Avatar Interviews</h3>
-            <p className="text-gray-600">
+            <h3 className="font-semibold text-lg mb-2 text-white">AI Avatar Interviews</h3>
+            <p className="text-gray-400">
               Live video interviews with AI avatars that ask targeted questions
               and adapt based on responses.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+          <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <div className="w-12 h-12 bg-red-900/50 rounded-lg flex items-center justify-center mb-4">
               <svg
-                className="w-6 h-6 text-green-600"
+                className="w-6 h-6 text-red-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -100,17 +103,17 @@ export default async function HomePage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-lg mb-2">Content Extraction</h3>
-            <p className="text-gray-600">
+            <h3 className="font-semibold text-lg mb-2 text-white">Content Extraction</h3>
+            <p className="text-gray-400">
               Automatically extract stories, hot takes, frameworks, and advice.
               Get tweet drafts and thread outlines.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+          <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <div className="w-12 h-12 bg-red-900/50 rounded-lg flex items-center justify-center mb-4">
               <svg
-                className="w-6 h-6 text-purple-600"
+                className="w-6 h-6 text-red-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -123,8 +126,8 @@ export default async function HomePage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-lg mb-2">Writer Dashboard</h3>
-            <p className="text-gray-600">
+            <h3 className="font-semibold text-lg mb-2 text-white">Writer Dashboard</h3>
+            <p className="text-gray-400">
               Organized content bank for writers. Filter by topic, type, and
               format. Export ready-to-use content.
             </p>

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,18 +129,32 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Suspense
-        fallback={
-          <Card className="w-full max-w-md">
-            <CardContent className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </CardContent>
-          </Card>
-        }
-      >
-        <LoginForm />
-      </Suspense>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="bg-gray-900 py-6 px-4">
+        <div className="max-w-md mx-auto">
+          <Image
+            src="/logo.svg"
+            alt="Compound"
+            width={180}
+            height={42}
+            className="h-10 w-auto"
+            priority
+          />
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <Suspense
+          fallback={
+            <Card className="w-full max-w-md">
+              <CardContent className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </CardContent>
+            </Card>
+          }
+        >
+          <LoginForm />
+        </Suspense>
+      </div>
     </div>
   );
 }

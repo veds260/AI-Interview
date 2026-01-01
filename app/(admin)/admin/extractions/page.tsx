@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
@@ -46,6 +47,8 @@ import {
   Save,
   FileText,
   Eye,
+  Search,
+  X,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -66,6 +69,7 @@ const CONTENT_TYPES = [
 interface Extraction {
   id: string;
   interviewId: string;
+  clientId: string | null;
   contentType: string;
   topics: string[] | null;
   questionAsked: string | null;
@@ -82,11 +86,27 @@ interface Extraction {
   controversyLevel: number | null;
   storytellingPotential: number | null;
   createdAt: string;
+  clientName: string | null;
+  interviewTitle: string | null;
+}
+
+interface Client {
+  id: string;
+  name: string;
+}
+
+interface Interview {
+  id: string;
+  title: string | null;
+  clientId: string | null;
 }
 
 export default function AdminExtractionsPage() {
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [interviewFilter, setInterviewFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedExtraction, setSelectedExtraction] = useState<Extraction | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -95,17 +115,66 @@ export default function AdminExtractionsPage() {
     linkedinDraft: "",
   });
 
+  // Fetch clients for filter dropdown
+  const { data: clientsData } = useQuery<Client[]>({
+    queryKey: ["clients-list"],
+    queryFn: async () => {
+      const res = await fetch("/api/clients");
+      if (!res.ok) throw new Error("Failed to fetch clients");
+      const data = await res.json();
+      return data.clients || data;
+    },
+  });
+
+  // Fetch interviews for filter dropdown
+  const { data: interviewsData } = useQuery<Interview[]>({
+    queryKey: ["interviews-list", clientFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (clientFilter !== "all") params.append("clientId", clientFilter);
+      const res = await fetch(`/api/interviews?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch interviews");
+      const data = await res.json();
+      return data.interviews || data;
+    },
+  });
+
   const { data: extractions = [], isLoading } = useQuery<Extraction[]>({
-    queryKey: ["admin-extractions", typeFilter],
+    queryKey: ["admin-extractions", typeFilter, clientFilter, interviewFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
+      if (clientFilter !== "all") params.append("clientId", clientFilter);
+      if (interviewFilter !== "all") params.append("interviewId", interviewFilter);
 
       const res = await fetch(`/api/extractions?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch extractions");
       return res.json();
     },
   });
+
+  // Filter by search query locally
+  const filteredExtractions = useMemo(() => {
+    if (!searchQuery.trim()) return extractions;
+    const query = searchQuery.toLowerCase();
+    return extractions.filter(
+      (e) =>
+        e.keyQuote?.toLowerCase().includes(query) ||
+        e.summary?.toLowerCase().includes(query) ||
+        e.questionAsked?.toLowerCase().includes(query) ||
+        e.clientName?.toLowerCase().includes(query) ||
+        e.interviewTitle?.toLowerCase().includes(query)
+    );
+  }, [extractions, searchQuery]);
+
+  const clearFilters = () => {
+    setTypeFilter("all");
+    setClientFilter("all");
+    setInterviewFilter("all");
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters = typeFilter !== "all" || clientFilter !== "all" || interviewFilter !== "all" || searchQuery;
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -157,11 +226,11 @@ export default function AdminExtractionsPage() {
     }
   };
 
-  // Stats
-  const extractedCount = extractions.filter((e) => e.status === "extracted").length;
-  const usedCount = extractions.filter((e) => e.status === "used").length;
-  const withTweet = extractions.filter((e) => e.tweetDraft).length;
-  const withLinkedin = extractions.filter((e) => e.linkedinDraft).length;
+  // Stats (use filtered extractions)
+  const extractedCount = filteredExtractions.filter((e) => e.status === "extracted").length;
+  const usedCount = filteredExtractions.filter((e) => e.status === "used").length;
+  const withTweet = filteredExtractions.filter((e) => e.tweetDraft).length;
+  const withLinkedin = filteredExtractions.filter((e) => e.linkedinDraft).length;
 
   return (
     <div className="space-y-6">
@@ -181,7 +250,7 @@ export default function AdminExtractionsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{extractions.length}</div>
+            <div className="text-2xl font-bold">{filteredExtractions.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -216,9 +285,51 @@ export default function AdminExtractionsPage() {
         </Card>
       </div>
 
-      <div className="flex gap-4">
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search quotes, summaries..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <Select value={clientFilter} onValueChange={(val) => {
+          setClientFilter(val);
+          setInterviewFilter("all"); // Reset interview when client changes
+        }}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Clients" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clientsData?.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={interviewFilter} onValueChange={setInterviewFilter}>
           <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Interviews" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Interviews</SelectItem>
+            {interviewsData?.map((interview) => (
+              <SelectItem key={interview.id} value={interview.id}>
+                {interview.title || `Interview ${interview.id.slice(0, 8)}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Content Type" />
           </SelectTrigger>
           <SelectContent>
@@ -229,13 +340,21 @@ export default function AdminExtractionsPage() {
             ))}
           </SelectContent>
         </Select>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="h-4 w-4 mr-1" />
+            Clear filters
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>All Extractions</CardTitle>
           <CardDescription>
-            {extractions.length} extraction{extractions.length !== 1 ? "s" : ""} total
+            {filteredExtractions.length} extraction{filteredExtractions.length !== 1 ? "s" : ""}
+            {hasActiveFilters && ` (filtered from ${extractions.length} total)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -243,16 +362,20 @@ export default function AdminExtractionsPage() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ) : extractions.length === 0 ? (
+          ) : filteredExtractions.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No extractions yet. Process completed interviews to extract content.
+              {hasActiveFilters
+                ? "No extractions match your filters."
+                : "No extractions yet. Process completed interviews to extract content."}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Interview</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="w-[35%]">Key Quote</TableHead>
+                  <TableHead className="w-[25%]">Key Quote</TableHead>
                   <TableHead>Drafts</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -260,15 +383,25 @@ export default function AdminExtractionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {extractions.map((extraction) => (
+                {filteredExtractions.map((extraction) => (
                   <TableRow key={extraction.id}>
+                    <TableCell>
+                      <span className="font-medium text-sm">
+                        {extraction.clientName || "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-gray-600 truncate max-w-[150px] block">
+                        {extraction.interviewTitle || `#${extraction.interviewId?.slice(0, 6)}`}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {getTypeLabel(extraction.contentType)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">
-                      <p className="line-clamp-2">
+                      <p className="line-clamp-2 text-sm">
                         &quot;{extraction.keyQuote}&quot;
                       </p>
                     </TableCell>
