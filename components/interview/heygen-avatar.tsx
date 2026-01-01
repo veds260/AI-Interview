@@ -291,6 +291,15 @@ export default function HeyGenAvatar({
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const videoRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
+  const [userStream, setUserStream] = useState<MediaStream | null>(null);
+
+  // Attach user video stream when the video element becomes available
+  useEffect(() => {
+    if (userVideoRef.current && userStream) {
+      userVideoRef.current.srcObject = userStream;
+      userVideoRef.current.play().catch(console.error);
+    }
+  }, [userStream, isRecording]);
 
   // Start recording with video + audio (server-side transcription)
   const startVideoRecording = useCallback(async () => {
@@ -301,12 +310,7 @@ export default function HeyGenAvatar({
         audio: true,
       });
       mediaStreamRef.current = stream;
-
-      // Show user's video preview
-      if (userVideoRef.current) {
-        userVideoRef.current.srcObject = stream;
-        userVideoRef.current.play().catch(console.error);
-      }
+      setUserStream(stream); // Trigger useEffect to attach to video element
 
       // Set up video recorder for the full stream (video + audio)
       const videoMimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
@@ -407,6 +411,7 @@ export default function HeyGenAvatar({
         if (userVideoRef.current) {
           userVideoRef.current.srcObject = null;
         }
+        setUserStream(null);
 
         // Stop all tracks
         if (mediaStreamRef.current) {
@@ -418,12 +423,33 @@ export default function HeyGenAvatar({
         const audioBlob = new Blob(audioChunksRef.current, { type: audioRecorder.mimeType });
         audioChunksRef.current = [];
 
-        // Create video blob for storage (if available)
+        // Create video blob for storage and upload
+        let videoUrl: string | null = null;
         if (videoChunksRef.current.length > 0) {
           const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
           videoChunksRef.current = [];
-          // TODO: Upload video blob for later clipping
           console.log("Video recorded:", videoBlob.size, "bytes");
+
+          // Upload video to storage
+          try {
+            const videoFormData = new FormData();
+            videoFormData.append("video", videoBlob, `clip-${Date.now()}.webm`);
+
+            const uploadRes = await fetch("/api/clips/upload", {
+              method: "POST",
+              body: videoFormData,
+            });
+
+            if (uploadRes.ok) {
+              const uploadResult = await uploadRes.json();
+              videoUrl = uploadResult.url;
+              console.log("Video uploaded:", videoUrl);
+            } else {
+              console.error("Video upload failed:", await uploadRes.text());
+            }
+          } catch (uploadError) {
+            console.error("Video upload error:", uploadError);
+          }
         }
 
         // Skip if audio too short

@@ -249,6 +249,37 @@ export const contentExtractions = pgTable("content_extractions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Video Clips (individual recordings from interviews)
+export const videoClips = pgTable("video_clips", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  interviewId: uuid("interview_id").references(() => interviews.id, {
+    onDelete: "cascade",
+  }),
+  messageId: uuid("message_id").references(() => interviewMessages.id, {
+    onDelete: "set null",
+  }),
+  clientId: uuid("client_id").references(() => clients.id, {
+    onDelete: "set null",
+  }),
+
+  // Video info
+  videoUrl: text("video_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  durationSeconds: integer("duration_seconds"),
+  fileSizeBytes: integer("file_size_bytes"),
+
+  // Metadata
+  title: varchar("title", { length: 255 }),
+  description: text("description"),
+  transcript: text("transcript"),
+
+  // For clipping
+  startTimestamp: decimal("start_timestamp", { precision: 10, scale: 3 }),
+  endTimestamp: decimal("end_timestamp", { precision: 10, scale: 3 }),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Writer Assignments
 export const interviewAssignments = pgTable("interview_assignments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -374,3 +405,5 @@ export type ContentExtraction = typeof contentExtractions.$inferSelect;
 export type NewContentExtraction = typeof contentExtractions.$inferInsert;
 export type InterviewAssignment = typeof interviewAssignments.$inferSelect;
 export type NewInterviewAssignment = typeof interviewAssignments.$inferInsert;
+export type VideoClip = typeof videoClips.$inferSelect;
+export type NewVideoClip = typeof videoClips.$inferInsert;

@@ -19,6 +19,7 @@ import {
   Archive,
   Target,
   History,
+  Film,
 } from "lucide-react";
 
 interface NavItem {
@@ -42,6 +43,7 @@ const clientNavItems: NavItem[] = [
   { label: "Dashboard", href: "/client", icon: <LayoutDashboard className="h-5 w-5" /> },
   { label: "Start Interview", href: "/client/interview/start", icon: <Video className="h-5 w-5" /> },
   { label: "My Interviews", href: "/client/interviews", icon: <History className="h-5 w-5" /> },
+  { label: "My Clips", href: "/client/clips", icon: <Film className="h-5 w-5" /> },
   { label: "Profile", href: "/client/profile", icon: <UserCircle className="h-5 w-5" /> },
 ];
 
