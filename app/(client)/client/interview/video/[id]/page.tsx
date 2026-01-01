@@ -90,11 +90,14 @@ export default function VideoInterviewPage() {
         setMessages(existingMessages);
 
         // Check if the current question was already answered
-        // Find the last occurrence of this question and check if there's a user response after it
+        // Find if this question exists in messages and has a response after it
         let questionAlreadyAnswered = false;
+        let questionExistsInMessages = false;
+
         for (let i = existingMessages.length - 1; i >= 0; i--) {
           const msg = existingMessages[i];
           if (msg.role === "interviewer" && msg.content === question) {
+            questionExistsInMessages = true;
             // Found the question - check if there's a user response after it
             const hasResponseAfter = existingMessages.slice(i + 1).some(
               (m: Message) => m.role === "user"
@@ -106,33 +109,56 @@ export default function VideoInterviewPage() {
           }
         }
 
-        // Also check if the last message is from user (meaning they answered something)
-        const lastMessage = existingMessages[existingMessages.length - 1];
-        const lastMessageIsUserResponse = lastMessage?.role === "user";
+        // If question is NEW (not in messages), always speak it
+        // If question exists but wasn't answered, speak it
+        // If question was answered, we need to get the next question
+        const shouldSpeak = question && !questionAlreadyAnswered;
 
-        // Determine if we should auto-speak the question
-        const shouldSpeak = question && !questionAlreadyAnswered && !lastMessageIsUserResponse;
+        if (questionAlreadyAnswered) {
+          console.log("Question already answered, fetching next question...");
+          // The user already answered this - we need to get the next question
+          setMessages(existingMessages);
+          setCurrentQuestion(null);
+          setShouldAutoSpeak(false);
 
-        if (question) {
+          // Call continue endpoint to get the next question
+          setTimeout(async () => {
+            try {
+              const res = await fetch(`/api/interviews/${interviewId}/continue`, {
+                method: "POST",
+              });
+              const data = await res.json();
+              if (data.nextQuestion) {
+                setCurrentQuestion(data.nextQuestion);
+                setMessages(prev => [...prev, {
+                  role: "interviewer",
+                  content: data.nextQuestion,
+                  timestamp: new Date(),
+                }]);
+                setProgress(data.progress || 0);
+                // Speak the new question after avatar is ready
+                setTimeout(() => {
+                  (window as any).heygenSpeak?.(data.nextQuestion);
+                }, 1500);
+              } else if (data.completed) {
+                setInterviewComplete(true);
+                setShowCompleteDialog(true);
+              }
+            } catch (err) {
+              console.error("Error getting next question:", err);
+            }
+          }, 1000);
+        } else if (question) {
           setCurrentQuestion(question);
           setShouldAutoSpeak(shouldSpeak);
 
-          // Add question to messages if not there and we should speak it
-          if (shouldSpeak) {
-            const hasQuestion = existingMessages.some(
-              (m: Message) => m.role === "interviewer" && m.content === question
-            );
-            if (!hasQuestion) {
-              setMessages([...existingMessages, {
-                role: "interviewer",
-                content: question,
-                timestamp: new Date(),
-              }]);
-            }
-          }
-
-          if (!shouldSpeak) {
-            console.log("Resuming interview - not auto-speaking because question may be answered or out of sync");
+          // Add question to messages if not there
+          if (!questionExistsInMessages) {
+            setMessages([...existingMessages, {
+              role: "interviewer",
+              content: question,
+              timestamp: new Date(),
+            }]);
           }
         } else {
           setCurrentQuestion(null);
