@@ -110,22 +110,20 @@ export async function POST(request: Request) {
     let previousInterviewContent: PreviousInterviewContent[] = [];
 
     if (client) {
+      // Get ALL previous interviews (not just completed) to avoid repeating questions
       const previousInterviews = await db
         .select({
           questionsAsked: interviews.questionsAsked,
           title: interviews.title,
+          status: interviews.status,
+          createdAt: interviews.createdAt,
         })
         .from(interviews)
-        .where(
-          and(
-            eq(interviews.clientId, client.id),
-            eq(interviews.status, "completed")
-          )
-        )
-        .orderBy(desc(interviews.completedAt))
-        .limit(5); // Get last 5 interviews for context
+        .where(eq(interviews.clientId, client.id))
+        .orderBy(desc(interviews.createdAt))
+        .limit(10); // Get last 10 interviews for context
 
-      // Extract all previously asked question IDs, categories, and content
+      // Extract all previously asked question IDs, categories, and FULL content
       previousInterviews.forEach((interview) => {
         const asked = interview.questionsAsked as Array<{
           questionId?: string;
@@ -143,16 +141,16 @@ export async function POST(request: Request) {
             coveredCategories.push(qa.category);
             topicsDiscussed.push(qa.category);
           }
-          // Extract key insights from responses (first 200 chars as summary)
-          if (qa.response && qa.response.length > 50) {
-            keyInsights.push(qa.response.slice(0, 200) + (qa.response.length > 200 ? "..." : ""));
+          // Include FULL Q&A pair for context (not just snippets)
+          if (qa.question && qa.response && qa.response.length > 30) {
+            keyInsights.push(`Q: "${qa.question}" → A: "${qa.response}"`);
           }
         });
 
         if (keyInsights.length > 0) {
           previousInterviewContent.push({
             topic: interview.title || undefined,
-            keyInsights: keyInsights.slice(0, 3), // Top 3 insights per interview
+            keyInsights: keyInsights, // Include ALL Q&As, not just top 3
             topicsDiscussed: [...new Set(topicsDiscussed)],
           });
         }
@@ -338,10 +336,16 @@ export async function POST(request: Request) {
         sessionState: {
           questionIds: selectedQuestions.map((q) => q.id),
           currentIndex: 0,
-          // Include context for AI to generate better follow-ups
+          // Include FULL context for AI to generate better follow-ups and remember past conversations
           clientContext: clientKnowledgeSummary,
-          previousInterviews: previousInterviewContent.slice(0, 3), // Last 3 for context
+          previousInterviews: previousInterviewContent.slice(0, 5), // Last 5 interviews with full Q&A
           competitorTopics: competitorTopics.slice(0, 10), // Top trending topics
+          // Track what was already discussed to avoid repeats
+          alreadyAskedQuestionTexts: previousInterviewContent
+            .flatMap(p => p.keyInsights)
+            .map(insight => insight.split("→")[0]?.replace('Q: "', '').replace('"', '').trim())
+            .filter(Boolean)
+            .slice(0, 50), // Last 50 questions text for semantic matching
         },
       })
       .returning();

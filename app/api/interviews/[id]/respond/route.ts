@@ -60,16 +60,18 @@ async function generateFollowUpQuestion(
       if (kb.voiceGuidelines) contextInfo += `Voice style: ${kb.voiceGuidelines}\n`;
     }
 
-    // Add previous interview insights (most important for continuity)
+    // Add previous interview insights with FULL Q&A (critical for continuity)
     if (sessionContext.previousInterviews?.length) {
-      contextInfo += "\n=== PREVIOUS INTERVIEW INSIGHTS (use to ask deeper, related questions) ===\n";
+      contextInfo += "\n=== PREVIOUS INTERVIEWS - FULL HISTORY (you MUST reference this when relevant) ===\n";
       sessionContext.previousInterviews.forEach((prev, i) => {
-        contextInfo += `Interview ${i + 1}${prev.topic ? ` (${prev.topic})` : ""}:\n`;
-        contextInfo += `  Topics covered: ${prev.topicsDiscussed.join(", ")}\n`;
+        contextInfo += `\n--- Interview ${i + 1}${prev.topic ? ` (${prev.topic})` : ""} ---\n`;
+        contextInfo += `Topics covered: ${prev.topicsDiscussed.join(", ")}\n`;
+        contextInfo += "Previous Q&A:\n";
         prev.keyInsights.forEach((insight) => {
-          contextInfo += `  - "${insight}"\n`;
+          contextInfo += `${insight}\n`;
         });
       });
+      contextInfo += "\n=== END PREVIOUS INTERVIEWS ===\n";
     }
 
     // Add competitor/trending topics
@@ -92,19 +94,21 @@ async function generateFollowUpQuestion(
         messages: [
           {
             role: "system",
-            content: `You are an expert interviewer extracting compelling stories and insights from founders.
+            content: `You are an expert interviewer having an ongoing conversation with a founder across multiple sessions.
 Your goal is to dig deeper into interesting responses to extract content that can become viral tweets, threads, and posts.
 
 ${contextInfo}
 
-Guidelines:
-- Ask follow-up questions that explore the "why" and emotional journey
-- IMPORTANT: Use insights from previous interviews to ask deeper, related questions
-- Connect current answers to topics they've discussed before when relevant
-- Look for unique insights, contrarian views, or unexpected lessons
-- Try to get specific examples, numbers, or memorable quotes
-- Keep questions conversational and natural
-- If a topic relates to competitor/trending topics, explore it more deeply`,
+CRITICAL GUIDELINES:
+1. You have FULL MEMORY of all previous interviews above. REFERENCE them when relevant.
+2. If the founder mentions something they discussed before, acknowledge it: "Yes, you mentioned [topic] last time..."
+3. If they ask what they said before, QUOTE their previous answer from the history above.
+4. If they point out a topic was already covered, apologize and ask about a DIFFERENT aspect or a NEW topic.
+5. NEVER ask the exact same question as in previous interviews.
+6. Connect current answers to themes from past sessions to show continuity.
+7. Look for unique insights, contrarian views, or unexpected lessons.
+8. Try to get specific examples, numbers, or memorable quotes.
+9. Keep questions conversational and natural.`,
           },
           {
             role: "user",
@@ -112,9 +116,11 @@ Guidelines:
 
 The founder responded: "${response}"
 
-Generate a single, natural follow-up question that digs deeper into something interesting from their response. Consider their previous interview insights and connect to themes they've discussed before if relevant. The follow-up should help extract content that would make great social media posts.
+IMPORTANT: If the founder is asking about what they said before, complaining about a repeated question, or referencing past discussions, address that FIRST using the previous interview history above.
 
-Return ONLY the follow-up question, nothing else.`,
+Otherwise, generate a single, natural follow-up question that digs deeper. Connect to themes from their previous interviews when relevant.
+
+Return ONLY your response (either addressing their concern OR a follow-up question), nothing else.`,
           },
         ],
       }),
