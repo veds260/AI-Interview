@@ -78,18 +78,33 @@ export default function VideoInterviewPage() {
           return;
         }
 
+        // Load existing messages from previous session
+        const existingMessages = (data.messages || []).map((m: any) => ({
+          role: m.role === "client" ? "user" : "interviewer",
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+        }));
+
         const question = data.currentQuestion;
         setCurrentQuestion(question);
 
-        // Add initial question to messages
-        if (question) {
+        // Check if current question is already in messages
+        const hasCurrentQuestion = existingMessages.some(
+          (m: Message) => m.role === "interviewer" && m.content === question
+        );
+
+        // Add current question only if not already in messages
+        if (question && !hasCurrentQuestion) {
           setMessages([
+            ...existingMessages,
             {
               role: "interviewer",
               content: question,
               timestamp: new Date(),
             },
           ]);
+        } else {
+          setMessages(existingMessages);
         }
 
         const state = data.interview.sessionState;

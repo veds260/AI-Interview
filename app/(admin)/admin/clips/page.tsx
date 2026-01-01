@@ -31,6 +31,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Video,
   Play,
   Trash2,
@@ -39,9 +46,15 @@ import {
   User,
   Loader2,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+
+interface Client {
+  id: string;
+  name: string;
+}
 
 interface VideoClip {
   id: string;
@@ -76,6 +89,17 @@ export default function AdminClipsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clipToDelete, setClipToDelete] = useState<VideoClip | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [clientFilter, setClientFilter] = useState<string>("all");
+
+  // Fetch clients for filter dropdown
+  const { data: clientsData } = useQuery<{ clients: Client[] }>({
+    queryKey: ["clients-list"],
+    queryFn: async () => {
+      const res = await fetch("/api/clients");
+      if (!res.ok) throw new Error("Failed to fetch clients");
+      return res.json();
+    },
+  });
 
   const { data: clipsData, isLoading: clipsLoading } = useQuery<{ clips: VideoClip[] }>({
     queryKey: ["admin-clips"],
@@ -85,6 +109,11 @@ export default function AdminClipsPage() {
       return res.json();
     },
   });
+
+  // Filter clips by client
+  const filteredClips = clipsData?.clips?.filter(
+    (clip) => clientFilter === "all" || clip.clientId === clientFilter
+  ) || [];
 
   const { data: stats, isLoading: statsLoading } = useQuery<StorageStats>({
     queryKey: ["storage-stats"],
@@ -140,10 +169,10 @@ export default function AdminClipsPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedClips.size === clipsData?.clips.length) {
+    if (selectedClips.size === filteredClips.length) {
       setSelectedClips(new Set());
     } else {
-      setSelectedClips(new Set(clipsData?.clips.map((c) => c.id) || []));
+      setSelectedClips(new Set(filteredClips.map((c) => c.id)));
     }
   };
 
@@ -191,6 +220,35 @@ export default function AdminClipsPage() {
           <p className="text-gray-500 mt-1">
             Manage recorded interview clips and storage
           </p>
+        </div>
+      </div>
+
+      {/* Filter */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Filter by client:</span>
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All Clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {clientsData?.clients?.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {clientFilter !== "all" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setClientFilter("all")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -263,13 +321,17 @@ export default function AdminClipsPage() {
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-      ) : !clipsData?.clips?.length ? (
+      ) : !filteredClips.length ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Video className="h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium">No clips yet</h3>
+            <h3 className="text-lg font-medium">
+              {clientFilter !== "all" ? "No clips for this client" : "No clips yet"}
+            </h3>
             <p className="text-sm text-gray-500 mt-1">
-              Video recordings from interviews will appear here
+              {clientFilter !== "all"
+                ? "Try selecting a different client or clearing the filter"
+                : "Video recordings from interviews will appear here"}
             </p>
           </CardContent>
         </Card>
@@ -277,10 +339,12 @@ export default function AdminClipsPage() {
         <Card>
           <CardHeader className="border-b">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">All Clips ({clipsData.clips.length})</CardTitle>
+              <CardTitle className="text-lg">
+                {clientFilter !== "all" ? "Filtered" : "All"} Clips ({filteredClips.length})
+              </CardTitle>
               <div className="flex items-center gap-2">
                 <Checkbox
-                  checked={selectedClips.size === clipsData.clips.length}
+                  checked={selectedClips.size === filteredClips.length && filteredClips.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm text-gray-500">Select all</span>
@@ -289,7 +353,7 @@ export default function AdminClipsPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {clipsData.clips.map((clip) => (
+              {filteredClips.map((clip) => (
                 <div
                   key={clip.id}
                   className="flex items-center gap-4 p-4 hover:bg-gray-50"
