@@ -23,6 +23,7 @@ interface HeyGenAvatarProps {
   initialQuestion?: string;
   knowledgeBase?: string;
   tokenEndpoint?: string;
+  interviewId?: string;
 }
 
 export default function HeyGenAvatar({
@@ -34,6 +35,7 @@ export default function HeyGenAvatar({
   initialQuestion,
   knowledgeBase,
   tokenEndpoint = "/api/avatar/heygen-token",
+  interviewId,
 }: HeyGenAvatarProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamingAvatarRef = useRef<any>(null);
@@ -432,6 +434,9 @@ export default function HeyGenAvatar({
           // Upload video in background - don't await, don't block transcription
           const videoFormData = new FormData();
           videoFormData.append("video", videoBlob, `clip-${Date.now()}.webm`);
+          if (interviewId) {
+            videoFormData.append("interviewId", interviewId);
+          }
 
           fetch("/api/clips/upload", {
             method: "POST",

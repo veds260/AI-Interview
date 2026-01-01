@@ -390,6 +390,7 @@ export default function VideoInterviewPage() {
             onUserSpeaking={setIsUserSpeaking}
             onTranscript={handleTranscript}
             initialQuestion={shouldAutoSpeak ? currentQuestion || undefined : undefined}
+            interviewId={interviewId}
           />
 
           {/* Controls */}

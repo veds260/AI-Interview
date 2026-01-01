@@ -489,6 +489,7 @@ export default function PublicInterviewPage() {
               onTranscript={handleTranscript}
               initialQuestion={currentQuestion || undefined}
               tokenEndpoint={`/api/interviews/share/${token}/heygen-token`}
+              interviewId={interview?.id}
             />
 
             {/* Controls */}
@@ -726,6 +727,7 @@ function HeyGenAvatarWrapper({
   onTranscript,
   initialQuestion,
   tokenEndpoint,
+  interviewId,
 }: {
   onReady?: () => void;
   onAvatarSpeaking?: (isSpeaking: boolean) => void;
@@ -733,6 +735,7 @@ function HeyGenAvatarWrapper({
   onTranscript?: (text: string, isFinal: boolean) => void;
   initialQuestion?: string;
   tokenEndpoint?: string;
+  interviewId?: string;
 }) {
   const [HeyGenAvatar, setHeyGenAvatar] = useState<any>(null);
 
@@ -759,6 +762,7 @@ function HeyGenAvatarWrapper({
       onTranscript={onTranscript}
       initialQuestion={initialQuestion}
       tokenEndpoint={tokenEndpoint}
+      interviewId={interviewId}
     />
   );
 }
