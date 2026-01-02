@@ -22,6 +22,7 @@ import {
   History,
   Film,
   HardDrive,
+  DollarSign,
 } from "lucide-react";
 
 interface NavItem {
@@ -39,6 +40,7 @@ const adminNavItems: NavItem[] = [
   { label: "Extractions", href: "/admin/extractions", icon: <FileText className="h-5 w-5" /> },
   { label: "Video Clips", href: "/admin/clips", icon: <HardDrive className="h-5 w-5" /> },
   { label: "Writers", href: "/admin/writers", icon: <PenTool className="h-5 w-5" /> },
+  { label: "API Costs", href: "/admin/costs", icon: <DollarSign className="h-5 w-5" /> },
   { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
 ];
 

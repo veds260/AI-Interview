@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import HeyGenAvatar from "@/components/interview/heygen-avatar";
+import { perfTracker } from "@/lib/utils/performance-tracker";
 
 // Simple TTS function using Web Speech API
 function speakText(text: string, onEnd?: () => void) {
@@ -99,11 +100,15 @@ function VideoInterviewContent() {
   // Initialize interview
   useEffect(() => {
     const initInterview = async () => {
+      perfTracker.start("Interview Init");
+      perfTracker.start("Fetch Interview Data");
       try {
         const res = await fetch(`/api/interviews/${interviewId}`);
+        perfTracker.end("Fetch Interview Data");
         if (!res.ok) throw new Error("Failed to load interview");
 
         const data = await res.json();
+        perfTracker.mark("Interview data loaded", `Mode: ${audioOnly ? "audio-only" : "video"}, Questions: ${data.interview.sessionState?.questionIds?.length || 0}`);
 
         if (data.interview.status === "completed") {
           router.push("/client/interviews");
@@ -265,6 +270,8 @@ function VideoInterviewContent() {
       }
 
       processingResponseRef.current = true;
+      perfTracker.start("Process Response");
+      perfTracker.mark("User response received", `Length: ${cleanText.length} chars`);
 
       // Add user message
       setMessages((prev) => [
@@ -274,27 +281,30 @@ function VideoInterviewContent() {
 
       try {
         // Submit response to backend
+        perfTracker.start("API: Submit Response");
         const res = await fetch(`/api/interviews/${interviewId}/respond`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ response: cleanText }), // Use cleanText, not text
+          body: JSON.stringify({ response: cleanText }),
         });
+        perfTracker.end("API: Submit Response");
 
         if (!res.ok) throw new Error("Failed to submit response");
 
         const data = await res.json();
+        perfTracker.mark("Response data", `isFollowUp: ${data.isFollowUp}, completed: ${data.completed}`);
 
         if (data.completed) {
           setInterviewComplete(true);
           setShowCompleteDialog(true);
 
-          // Thank the user
           const thankYou =
             "Thank you so much for sharing! Your insights are valuable. Take care!";
           setMessages((prev) => [
             ...prev,
             { role: "interviewer", content: thankYou, timestamp: new Date() },
           ]);
+          perfTracker.start("TTS: Thank You");
           speak(thankYou);
         } else if (data.nextQuestion) {
           setCurrentQuestion(data.nextQuestion);
@@ -311,13 +321,17 @@ function VideoInterviewContent() {
           ]);
 
           // Speak the next question
+          perfTracker.end("Process Response");
           setTimeout(() => {
+            perfTracker.start("TTS: Next Question");
+            perfTracker.mark("Speaking question", `Length: ${data.nextQuestion.length} chars`);
             speak(data.nextQuestion);
-          }, 500);
+          }, 300); // Reduced from 500ms
         }
       } catch (error) {
         console.error("Error submitting response:", error);
         toast.error("Failed to process your response");
+        perfTracker.mark("Error", String(error));
       } finally {
         processingResponseRef.current = false;
       }

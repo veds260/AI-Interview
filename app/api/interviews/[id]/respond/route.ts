@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
 
 interface ClientKnowledgeSummary {
   bio?: string;
@@ -38,7 +39,8 @@ async function generateFollowUpQuestion(
     clientContext?: ClientKnowledgeSummary;
     previousInterviews?: PreviousInterviewSummary[];
     competitorTopics?: string[];
-  }
+  },
+  trackingContext?: { interviewId: string; clientId?: string }
 ): Promise<string | null> {
   try {
     // Build separate sections for knowledge base vs previous interviews
@@ -86,6 +88,7 @@ async function generateFollowUpQuestion(
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return null;
 
+    const startTime = Date.now();
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -121,10 +124,39 @@ Ask ONE short follow-up (under 20 words). Just the question, nothing else.`,
       }),
     });
 
-    if (!res.ok) return null;
+    const endTime = Date.now();
+
+    if (!res.ok) {
+      await trackApiCall({
+        interviewId: trackingContext?.interviewId,
+        clientId: trackingContext?.clientId,
+        provider: "openrouter",
+        model: "anthropic/claude-3-haiku",
+        endpoint: "follow-up",
+        durationMs: endTime - startTime,
+        success: false,
+        errorMessage: `HTTP ${res.status}`,
+      });
+      return null;
+    }
 
     const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || null;
+    const result = data.choices?.[0]?.message?.content?.trim() || null;
+
+    // Track successful API call
+    await trackApiCall({
+      interviewId: trackingContext?.interviewId,
+      clientId: trackingContext?.clientId,
+      provider: "openrouter",
+      model: "anthropic/claude-3-haiku",
+      endpoint: "follow-up",
+      inputTokens: data.usage?.prompt_tokens || estimateTokens(response),
+      outputTokens: data.usage?.completion_tokens || estimateTokens(result || ""),
+      durationMs: endTime - startTime,
+      success: true,
+    });
+
+    return result;
   } catch (error) {
     console.error("Failed to generate follow-up:", error);
     return null;
@@ -282,7 +314,8 @@ export async function POST(
           clientContext: state.clientContext,
           previousInterviews: state.previousInterviews,
           competitorTopics: state.competitorTopics,
-        }
+        },
+        { interviewId: id, clientId: interview.clientId || undefined }
       );
       if (nextQuestion) {
         isFollowUp = true;

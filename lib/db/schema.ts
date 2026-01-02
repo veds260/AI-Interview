@@ -298,6 +298,35 @@ export const interviewAssignments = pgTable("interview_assignments", {
   completedAt: timestamp("completed_at"),
 });
 
+// API Usage Tracking
+export const apiUsage = pgTable("api_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  // Context
+  interviewId: uuid("interview_id").references(() => interviews.id, { onDelete: "cascade" }),
+  clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
+
+  // API details
+  provider: varchar("provider", { length: 50 }).notNull(), // openrouter, heygen, deepgram, openai
+  model: varchar("model", { length: 100 }), // claude-3-haiku, etc
+  endpoint: varchar("endpoint", { length: 255 }), // follow-up, personalize, transcribe, tts
+
+  // Usage metrics
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  durationMs: integer("duration_ms"),
+
+  // Cost (in USD, stored as cents for precision)
+  costCents: decimal("cost_cents", { precision: 10, scale: 4 }),
+
+  // Request details
+  requestPayload: jsonb("request_payload"), // For debugging
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   client: one(clients, {
@@ -407,3 +436,5 @@ export type InterviewAssignment = typeof interviewAssignments.$inferSelect;
 export type NewInterviewAssignment = typeof interviewAssignments.$inferInsert;
 export type VideoClip = typeof videoClips.$inferSelect;
 export type NewVideoClip = typeof videoClips.$inferInsert;
+export type ApiUsage = typeof apiUsage.$inferSelect;
+export type NewApiUsage = typeof apiUsage.$inferInsert;

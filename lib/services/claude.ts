@@ -5,6 +5,8 @@
  * Documentation: https://openrouter.ai/docs
  */
 
+import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
+
 export interface ContentExtraction {
   contentType: string;
   topics: string[];
@@ -41,13 +43,15 @@ class ClaudeService {
       name?: string;
       topics?: string[];
       voiceStyle?: string;
-    }
+    },
+    trackingContext?: { interviewId?: string; clientId?: string }
   ): Promise<ContentExtraction | null> {
     if (!this.isConfigured()) {
       console.warn("OpenRouter API not configured. Returning mock extraction.");
       return this.mockExtraction(question, response);
     }
 
+    const startTime = Date.now();
     try {
       const contextInfo = clientContext
         ? `
@@ -57,21 +61,7 @@ class ClaudeService {
       `
         : "";
 
-      const result = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.apiKey}`,
-          "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
-          "X-Title": "Compound Interviewer",
-        },
-        body: JSON.stringify({
-          model: this.model,
-          max_tokens: 2000,
-          messages: [
-            {
-              role: "user",
-              content: `Extract structured content from this founder interview response.
+      const promptContent = `Extract structured content from this founder interview response.
               ${contextInfo}
 
               Question Asked: ${question}
@@ -94,19 +84,60 @@ class ClaudeService {
                 "storytellingPotential": 1-5
               }
 
-              Return ONLY the JSON object, no other text.`,
+              Return ONLY the JSON object, no other text.`;
+
+      const result = await fetch(this.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKey}`,
+          "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
+          "X-Title": "Compound Interviewer",
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 2000,
+          messages: [
+            {
+              role: "user",
+              content: promptContent,
             },
           ],
         }),
       });
 
+      const endTime = Date.now();
+
       if (!result.ok) {
         const errorText = await result.text();
+        await trackApiCall({
+          interviewId: trackingContext?.interviewId,
+          clientId: trackingContext?.clientId,
+          provider: "openrouter",
+          model: this.model,
+          endpoint: "extraction",
+          durationMs: endTime - startTime,
+          success: false,
+          errorMessage: `HTTP ${result.status}: ${errorText}`,
+        });
         throw new Error(`OpenRouter API error: ${result.status} - ${errorText}`);
       }
 
       const data = await result.json();
       const content = data.choices?.[0]?.message?.content;
+
+      // Track successful API call
+      await trackApiCall({
+        interviewId: trackingContext?.interviewId,
+        clientId: trackingContext?.clientId,
+        provider: "openrouter",
+        model: this.model,
+        endpoint: "extraction",
+        inputTokens: data.usage?.prompt_tokens || estimateTokens(promptContent),
+        outputTokens: data.usage?.completion_tokens || estimateTokens(content || ""),
+        durationMs: endTime - startTime,
+        success: true,
+      });
 
       if (!content) {
         return this.mockExtraction(question, response);
