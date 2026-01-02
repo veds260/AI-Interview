@@ -25,7 +25,8 @@ function InterviewStartContent() {
     "live_video" | "text_chat" | null
   >(preselectedMode as "live_video" | "text_chat" | null);
   const [isCreating, setIsCreating] = useState(false);
-  const [audioOnly, setAudioOnly] = useState(false);
+  // Default to audio-only for faster startup (HeyGen video takes 5-10s to connect)
+  const [audioOnly, setAudioOnly] = useState(true);
 
   const handleStartInterview = async () => {
     if (!selectedMode) {
@@ -137,8 +138,13 @@ function InterviewStartContent() {
             {selectedMode === "live_video" && (
               <div className="mt-4 pt-4 border-t flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                 <Label htmlFor="audio-only" className="text-sm cursor-pointer">
-                  <span className="font-medium">Audio-only mode</span>
-                  <span className="block text-xs text-gray-500">Faster, no video avatar</span>
+                  <span className="font-medium flex items-center gap-1">
+                    {audioOnly ? "Audio mode" : "Video avatar mode"}
+                    {audioOnly && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Recommended</span>}
+                  </span>
+                  <span className="block text-xs text-gray-500">
+                    {audioOnly ? "Instant start, high-quality voice" : "Takes 5-10s to connect, has watermark"}
+                  </span>
                 </Label>
                 <Switch
                   id="audio-only"
