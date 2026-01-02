@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
+import { elevenlabs } from "@/lib/services/elevenlabs";
 
 interface ClientKnowledgeSummary {
   bio?: string;
@@ -408,31 +409,49 @@ export async function POST(
       });
     }
 
-    await db
-      .update(interviews)
-      .set({
-        sessionState: {
-          ...state,
-          currentIndex: nextIndex,
-          followUpCount: isFollowUp ? 1 : 0, // Reset for new base question
-          // Clear pending follow-up since we used it (or didn't have one)
-          pendingFollowUp: undefined,
-        },
-        questionsAsked,
-        questionsCount: (interview.questionsCount || 0) + 1,
-        status: completed ? "completed" : "in_progress",
-        completedAt: completed ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(interviews.id, id));
+    // Run DB update and audio generation in PARALLEL for speed
+    const [, , nextQuestionAudioUrl] = await Promise.all([
+      // 1. Update interview state
+      db
+        .update(interviews)
+        .set({
+          sessionState: {
+            ...state,
+            currentIndex: nextIndex,
+            followUpCount: isFollowUp ? 1 : 0,
+            pendingFollowUp: undefined,
+          },
+          questionsAsked,
+          questionsCount: (interview.questionsCount || 0) + 1,
+          status: completed ? "completed" : "in_progress",
+          completedAt: completed ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(interviews.id, id)),
 
-    // Update question usage count (only for bank questions with IDs)
-    if (shouldMoveToNext && currentQuestionData?.id) {
-      await db
-        .update(questionBank)
-        .set({ timesUsed: sql`COALESCE(times_used, 0) + 1` })
-        .where(eq(questionBank.id, currentQuestionData.id));
-    }
+      // 2. Update question usage count
+      shouldMoveToNext && currentQuestionData?.id
+        ? db
+            .update(questionBank)
+            .set({ timesUsed: sql`COALESCE(times_used, 0) + 1` })
+            .where(eq(questionBank.id, currentQuestionData.id))
+        : Promise.resolve(),
+
+      // 3. Generate audio for next question (runs in parallel!)
+      nextQuestion && elevenlabs.isConfigured() && !completed
+        ? elevenlabs.textToSpeech(nextQuestion).then(buffer => {
+            if (buffer) {
+              const base64 = Buffer.from(buffer).toString("base64");
+              console.log("[Respond] Audio generated for next question");
+              return `data:audio/mpeg;base64,${base64}`;
+            }
+            return null;
+          }).catch(err => {
+            console.error("[Respond] Audio generation failed:", err);
+            return null;
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (completed) {
       return NextResponse.json({
@@ -444,6 +463,7 @@ export async function POST(
     return NextResponse.json({
       completed: false,
       nextQuestion,
+      nextQuestionAudioUrl,
       isFollowUp,
       progress: ((nextIndex + 1) / totalQuestions) * 100,
     });

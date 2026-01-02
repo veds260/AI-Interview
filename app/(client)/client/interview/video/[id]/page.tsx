@@ -32,26 +32,58 @@ import { toast } from "sonner";
 import HeyGenAvatar from "@/components/interview/heygen-avatar";
 import { perfTracker } from "@/lib/utils/performance-tracker";
 
+// Preload audio for a question (returns promise that resolves to audio URL)
+async function preloadAudio(text: string, interviewId: string): Promise<string | null> {
+  try {
+    console.log("[TTS Preload] Starting for:", text.substring(0, 40) + "...");
+    const res = await fetch("/api/avatar/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, interviewId }),
+    });
+    const data = await res.json();
+    if (data.audioUrl) {
+      console.log("[TTS Preload] Ready:", text.substring(0, 40) + "...");
+      return data.audioUrl;
+    }
+    return null;
+  } catch (error) {
+    console.error("[TTS Preload] Failed:", error);
+    return null;
+  }
+}
+
 // ElevenLabs TTS function with fallback to browser TTS
 async function speakWithElevenLabs(
   text: string,
   interviewId: string,
   onStart?: () => void,
   onEnd?: () => void,
-  preloadedAudioUrl?: string // Pre-generated audio URL for instant playback
+  preloadedAudioUrl?: string, // Pre-generated audio URL for instant playback
+  preloadingMap?: Map<string, Promise<string | null>> // Map of preloading promises
 ): Promise<void> {
   if (typeof window === "undefined") return;
 
-  console.log("[TTS] Starting ElevenLabs TTS for:", text.substring(0, 50) + "...");
+  console.log("[TTS] Starting for:", text.substring(0, 50) + "...");
   onStart?.();
 
-  // If we have pre-generated audio, play it instantly
-  if (preloadedAudioUrl) {
-    console.log("[TTS] Using pre-generated audio for instant playback");
+  // Check for pre-generated audio first
+  let audioUrl = preloadedAudioUrl;
+
+  // If not preloaded, check if it's currently being preloaded
+  if (!audioUrl && preloadingMap?.has(text)) {
+    console.log("[TTS] Waiting for preloaded audio...");
+    audioUrl = await preloadingMap.get(text) || undefined;
+    preloadingMap.delete(text);
+  }
+
+  // If we have audio (preloaded or waited for), play it instantly
+  if (audioUrl) {
+    console.log("[TTS] Using preloaded audio - instant playback!");
     perfTracker.start("TTS: Audio Playback");
-    const audio = new Audio(preloadedAudioUrl);
+    const audio = new Audio(audioUrl);
     audio.onended = () => {
-      console.log("[TTS] ElevenLabs audio finished");
+      console.log("[TTS] Audio finished");
       perfTracker.end("TTS: Audio Playback");
       onEnd?.();
     };
@@ -63,6 +95,7 @@ async function speakWithElevenLabs(
     return;
   }
 
+  // No preloaded audio, fetch now
   try {
     perfTracker.start("TTS: ElevenLabs API");
     const res = await fetch("/api/avatar/speak", {
@@ -73,30 +106,27 @@ async function speakWithElevenLabs(
 
     const data = await res.json();
     perfTracker.end("TTS: ElevenLabs API");
-    console.log("[TTS] API Response:", { hasAudioUrl: !!data.audioUrl, message: data.message });
 
     if (data.audioUrl) {
-      console.log("[TTS] Playing ElevenLabs audio...");
+      console.log("[TTS] Playing audio...");
       perfTracker.start("TTS: Audio Playback");
       const audio = new Audio(data.audioUrl);
       audio.onended = () => {
-        console.log("[TTS] ElevenLabs audio finished");
+        console.log("[TTS] Audio finished");
         perfTracker.end("TTS: Audio Playback");
         onEnd?.();
       };
       audio.onerror = (e) => {
         console.error("[TTS] Audio playback error:", e);
-        perfTracker.mark("TTS: Audio Error", "Falling back to browser TTS");
         fallbackBrowserTTS(text, onEnd);
       };
       await audio.play();
     } else {
-      // ElevenLabs not configured, use browser TTS
-      console.log("[TTS] No audio URL, using browser TTS. Message:", data.message);
+      console.log("[TTS] No audio URL, using browser TTS");
       fallbackBrowserTTS(text, onEnd);
     }
   } catch (error) {
-    console.error("[TTS] ElevenLabs API error:", error);
+    console.error("[TTS] API error:", error);
     fallbackBrowserTTS(text, onEnd);
   }
 }
@@ -168,6 +198,7 @@ function VideoInterviewContent() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const preloadedAudioRef = useRef<string | null>(null); // Pre-generated audio URL
+  const preloadingAudioRef = useRef<Map<string, Promise<string | null>>>(new Map()); // Audio being preloaded
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -315,11 +346,23 @@ function VideoInterviewContent() {
         interviewId,
         () => setIsAvatarSpeaking(true),
         () => setIsAvatarSpeaking(false),
-        preloadedUrl || undefined
+        preloadedUrl || undefined,
+        preloadingAudioRef.current
       );
     } else {
       (window as any).heygenSpeak?.(text);
     }
+  }, [audioOnly, interviewId]);
+
+  // Preload audio for a question in background
+  const preloadQuestionAudio = useCallback((text: string) => {
+    if (!audioOnly || !text) return;
+    // Don't preload if already preloading this text
+    if (preloadingAudioRef.current.has(text)) return;
+
+    console.log("[Preload] Starting background audio generation...");
+    const promise = preloadAudio(text, interviewId);
+    preloadingAudioRef.current.set(text, promise);
   }, [audioOnly, interviewId]);
 
   // Handle avatar ready (or auto-ready for audio-only)
@@ -435,6 +478,12 @@ function VideoInterviewContent() {
         } else if (data.nextQuestion) {
           setCurrentQuestion(data.nextQuestion);
           setProgress(data.progress || progress);
+
+          // Store pre-generated audio URL if available
+          if (data.nextQuestionAudioUrl) {
+            preloadedAudioRef.current = data.nextQuestionAudioUrl;
+            console.log("[TTS] Got pre-generated audio from API");
+          }
 
           // Add next question to messages
           setMessages((prev) => [
