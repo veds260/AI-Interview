@@ -35,37 +35,14 @@ function InterviewStartContent() {
     }
 
     setIsCreating(true);
-    try {
-      const res = await fetch("/api/interviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: selectedMode }),
-      });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to create interview");
-      }
-
-      const interview = await res.json();
-
-      // Store pre-generated audio for instant playback
-      if (interview.firstQuestionAudioUrl) {
-        localStorage.setItem(`interview_audio_${interview.id}`, interview.firstQuestionAudioUrl);
-      }
-
-      if (selectedMode === "text_chat") {
-        router.push(`/client/interview/text/${interview.id}`);
-      } else {
-        // Video or audio-only interview
-        const audioParam = audioOnly ? "?audioOnly=true" : "";
-        router.push(`/client/interview/video/${interview.id}${audioParam}`);
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start interview"
-      );
-      setIsCreating(false);
+    // Navigate IMMEDIATELY - interview will be created on the interview page
+    // This gives instant feedback to the user
+    if (selectedMode === "text_chat") {
+      router.push(`/client/interview/text/new`);
+    } else {
+      const audioParam = audioOnly ? "?audioOnly=true" : "";
+      router.push(`/client/interview/video/new${audioParam}`);
     }
   };
 
