@@ -24,6 +24,10 @@ const PRICING = {
   // OpenAI TTS (per 1K characters)
   "openai/tts-1": { per1kChars: 0.015 },
   "openai/tts-1-hd": { per1kChars: 0.03 },
+  // ElevenLabs Turbo v2 (~$50/1M chars = $0.05/1K chars)
+  // Source: https://elevenlabs.io/pricing/api
+  elevenlabs: { per1kChars: 0.05 },
+  "elevenlabs/turbo-v2": { per1kChars: 0.05 },
 };
 
 interface TrackApiCallParams {

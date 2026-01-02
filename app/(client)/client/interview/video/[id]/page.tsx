@@ -32,19 +32,63 @@ import { toast } from "sonner";
 import HeyGenAvatar from "@/components/interview/heygen-avatar";
 import { perfTracker } from "@/lib/utils/performance-tracker";
 
-// Simple TTS function using Web Speech API
-function speakText(text: string, onEnd?: () => void) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
+// ElevenLabs TTS function with fallback to browser TTS
+async function speakWithElevenLabs(
+  text: string,
+  interviewId: string,
+  onStart?: () => void,
+  onEnd?: () => void
+): Promise<void> {
+  if (typeof window === "undefined") return;
 
-  // Cancel any ongoing speech
+  onStart?.();
+
+  try {
+    perfTracker.start("TTS: ElevenLabs API");
+    const res = await fetch("/api/avatar/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, interviewId }),
+    });
+
+    const data = await res.json();
+    perfTracker.end("TTS: ElevenLabs API");
+
+    if (data.audioUrl) {
+      perfTracker.start("TTS: Audio Playback");
+      const audio = new Audio(data.audioUrl);
+      audio.onended = () => {
+        perfTracker.end("TTS: Audio Playback");
+        onEnd?.();
+      };
+      audio.onerror = () => {
+        perfTracker.mark("TTS: Audio Error", "Falling back to browser TTS");
+        fallbackBrowserTTS(text, onEnd);
+      };
+      await audio.play();
+    } else {
+      // ElevenLabs not configured, use browser TTS
+      fallbackBrowserTTS(text, onEnd);
+    }
+  } catch (error) {
+    console.error("ElevenLabs TTS error:", error);
+    fallbackBrowserTTS(text, onEnd);
+  }
+}
+
+// Fallback to browser TTS if ElevenLabs fails
+function fallbackBrowserTTS(text: string, onEnd?: () => void) {
+  if (!window.speechSynthesis) {
+    onEnd?.();
+    return;
+  }
+
   window.speechSynthesis.cancel();
-
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
 
-  // Try to use a good voice
   const voices = window.speechSynthesis.getVoices();
   const preferredVoice = voices.find(v =>
     v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel")
@@ -52,7 +96,6 @@ function speakText(text: string, onEnd?: () => void) {
   if (preferredVoice) utterance.voice = preferredVoice;
 
   if (onEnd) utterance.onend = onEnd;
-
   window.speechSynthesis.speak(utterance);
 }
 
@@ -215,15 +258,19 @@ function VideoInterviewContent() {
     initInterview();
   }, [interviewId, router]);
 
-  // Speak function - uses HeyGen for video mode, Web Speech API for audio-only
+  // Speak function - uses HeyGen for video mode, ElevenLabs for audio-only
   const speak = useCallback((text: string) => {
     if (audioOnly) {
-      setIsAvatarSpeaking(true);
-      speakText(text, () => setIsAvatarSpeaking(false));
+      speakWithElevenLabs(
+        text,
+        interviewId,
+        () => setIsAvatarSpeaking(true),
+        () => setIsAvatarSpeaking(false)
+      );
     } else {
       (window as any).heygenSpeak?.(text);
     }
-  }, [audioOnly]);
+  }, [audioOnly, interviewId]);
 
   // Handle avatar ready (or auto-ready for audio-only)
   const handleAvatarReady = useCallback(() => {
