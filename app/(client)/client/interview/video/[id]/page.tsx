@@ -318,17 +318,46 @@ function VideoInterviewContent() {
     async (text: string, isFinal: boolean) => {
       if (!isFinal || processingResponseRef.current || !text.trim()) return;
 
-      // Filter out short filler words/sounds (less than 15 chars or common fillers)
       const cleanText = text.trim();
-      const fillerWords = ['oh', 'ah', 'um', 'uh', 'hmm', 'hm', 'er', 'erm', 'like', 'yeah', 'yes', 'no', 'okay', 'ok'];
-      if (cleanText.length < 15 || fillerWords.includes(cleanText.toLowerCase())) {
-        console.log("Ignoring filler/short response:", cleanText);
-        return;
-      }
 
       // IMPORTANT: Don't process if the text is similar to the current question (echo protection)
       if (currentQuestion && cleanText.toLowerCase().includes(currentQuestion.toLowerCase().substring(0, 30))) {
         console.log("Ignoring echo of current question");
+        return;
+      }
+
+      // Handle short responses - ask for clarification instead of ignoring
+      const pureFillerWords = ['oh', 'ah', 'um', 'uh', 'hmm', 'hm', 'er', 'erm'];
+      const shortAnswerWords = ['yes', 'no', 'yeah', 'nah', 'okay', 'ok', 'sure', 'maybe', 'nope', 'yep'];
+
+      if (pureFillerWords.includes(cleanText.toLowerCase())) {
+        // Pure filler sounds - just ignore these
+        console.log("Ignoring pure filler sound:", cleanText);
+        return;
+      }
+
+      if (cleanText.length < 15 || shortAnswerWords.includes(cleanText.toLowerCase())) {
+        // Short answer - ask for clarification
+        console.log("Short response detected, asking for clarification:", cleanText);
+
+        const clarificationPrompts = [
+          "Could you tell me a bit more about that?",
+          "I'd love to hear more details. Can you expand on that?",
+          "That's interesting! What made you feel that way?",
+          "Could you elaborate a little more?",
+          "Would you like to share more, or should we move to the next question?",
+        ];
+        const clarification = clarificationPrompts[Math.floor(Math.random() * clarificationPrompts.length)];
+
+        // Add the short response to messages
+        setMessages((prev) => [
+          ...prev,
+          { role: "user", content: cleanText, timestamp: new Date() },
+          { role: "interviewer", content: clarification, timestamp: new Date() },
+        ]);
+
+        // Speak the clarification
+        speak(clarification);
         return;
       }
 
