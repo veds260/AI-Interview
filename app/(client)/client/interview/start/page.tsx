@@ -49,6 +49,11 @@ function InterviewStartContent() {
 
       const interview = await res.json();
 
+      // Store pre-generated audio for instant playback
+      if (interview.firstQuestionAudioUrl) {
+        localStorage.setItem(`interview_audio_${interview.id}`, interview.firstQuestionAudioUrl);
+      }
+
       if (selectedMode === "text_chat") {
         router.push(`/client/interview/text/${interview.id}`);
       } else {

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db, interviews, clients, questionBank, users, competitors } from "@/lib/db";
 import { desc, eq, and, isNull, notInArray, sql } from "drizzle-orm";
 import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
+import { elevenlabs } from "@/lib/services/elevenlabs";
 
 interface KnowledgeBase {
   bio?: string;
@@ -595,33 +596,55 @@ export async function POST(request: Request) {
       }));
     }
 
-    // Create the interview with new question structure
-    const [newInterview] = await db
-      .insert(interviews)
-      .values({
-        clientId: client?.id || null,
-        mode: mode as "live_video" | "text_chat",
-        status: "in_progress",
-        title: `Interview - ${new Date().toLocaleDateString()}`,
-        startedAt: new Date(),
-        questionsAsked: [],
-        sessionState: {
-          // Store full question objects (with or without IDs)
-          questions: sessionQuestions,
-          currentIndex: 0,
-          useCustomQuestions,
-          // Keep questionIds for backwards compatibility (only for bank questions)
-          questionIds: sessionQuestions.filter(q => q.id).map(q => q.id),
-          // Context for follow-ups
-          clientContext: clientKnowledgeSummary,
-          previousInterviews: previousInterviewContent.slice(0, 5),
-          competitorTopics: competitorTopics.slice(0, 10),
-          alreadyAskedQuestionTexts: alreadyAskedQuestionTexts.slice(0, 50),
-        },
-      })
-      .returning();
+    // Get the first question text for pre-generating audio
+    const firstQuestion = sessionQuestions[0]?.question || "";
 
-    return NextResponse.json(newInterview, { status: 201 });
+    // Pre-generate first question's audio in PARALLEL with DB insert (for instant playback)
+    const [newInterview, firstQuestionAudio] = await Promise.all([
+      db
+        .insert(interviews)
+        .values({
+          clientId: client?.id || null,
+          mode: mode as "live_video" | "text_chat",
+          status: "in_progress",
+          title: `Interview - ${new Date().toLocaleDateString()}`,
+          startedAt: new Date(),
+          questionsAsked: [],
+          sessionState: {
+            // Store full question objects (with or without IDs)
+            questions: sessionQuestions,
+            currentIndex: 0,
+            useCustomQuestions,
+            // Keep questionIds for backwards compatibility (only for bank questions)
+            questionIds: sessionQuestions.filter(q => q.id).map(q => q.id),
+            // Context for follow-ups
+            clientContext: clientKnowledgeSummary,
+            previousInterviews: previousInterviewContent.slice(0, 5),
+            competitorTopics: competitorTopics.slice(0, 10),
+            alreadyAskedQuestionTexts: alreadyAskedQuestionTexts.slice(0, 50),
+          },
+        })
+        .returning()
+        .then(result => result[0]),
+      // Pre-generate audio for first question (runs in parallel)
+      firstQuestion && elevenlabs.isConfigured()
+        ? elevenlabs.textToSpeech(firstQuestion).then(buffer => {
+            if (buffer) {
+              const base64 = Buffer.from(buffer).toString("base64");
+              return `data:audio/mpeg;base64,${base64}`;
+            }
+            return null;
+          }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    console.log(`[Interview] Created with ${firstQuestionAudio ? "pre-generated" : "no"} audio`);
+
+    // Return interview with pre-generated audio URL
+    return NextResponse.json({
+      ...newInterview,
+      firstQuestionAudioUrl: firstQuestionAudio,
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creating interview:", error);
     return NextResponse.json(

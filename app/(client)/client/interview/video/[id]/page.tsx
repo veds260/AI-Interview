@@ -38,28 +38,30 @@ async function speakWithElevenLabs(
   interviewId: string,
   onStart?: () => void,
   onEnd?: () => void,
-  useInstantTTS?: boolean
+  preloadedAudioUrl?: string // Pre-generated audio URL for instant playback
 ): Promise<void> {
   if (typeof window === "undefined") return;
 
-  // Use instant browser TTS for first question to eliminate startup delay
-  if (useInstantTTS) {
-    console.log("[TTS] First question - using instant browser TTS");
-    onStart?.();
-    fallbackBrowserTTS(text, onEnd);
-
-    // Preload ElevenLabs in background for next questions
-    fetch("/api/avatar/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: "warm up", interviewId }),
-    }).catch(() => {}); // Ignore errors, just warming up
-
-    return;
-  }
-
   console.log("[TTS] Starting ElevenLabs TTS for:", text.substring(0, 50) + "...");
   onStart?.();
+
+  // If we have pre-generated audio, play it instantly
+  if (preloadedAudioUrl) {
+    console.log("[TTS] Using pre-generated audio for instant playback");
+    perfTracker.start("TTS: Audio Playback");
+    const audio = new Audio(preloadedAudioUrl);
+    audio.onended = () => {
+      console.log("[TTS] ElevenLabs audio finished");
+      perfTracker.end("TTS: Audio Playback");
+      onEnd?.();
+    };
+    audio.onerror = (e) => {
+      console.error("[TTS] Audio playback error:", e);
+      fallbackBrowserTTS(text, onEnd);
+    };
+    await audio.play();
+    return;
+  }
 
   try {
     perfTracker.start("TTS: ElevenLabs API");
@@ -165,7 +167,7 @@ function VideoInterviewContent() {
   const pendingQuestionToSpeak = useRef<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const isFirstQuestionRef = useRef(true); // Use instant TTS for first question
+  const preloadedAudioRef = useRef<string | null>(null); // Pre-generated audio URL
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -176,6 +178,16 @@ function VideoInterviewContent() {
   useEffect(() => {
     const initInterview = async () => {
       perfTracker.start("Interview Init");
+
+      // Check for pre-generated audio in localStorage (for instant playback)
+      const pregenAudioKey = `interview_audio_${interviewId}`;
+      const pregenAudio = localStorage.getItem(pregenAudioKey);
+      if (pregenAudio) {
+        preloadedAudioRef.current = pregenAudio;
+        localStorage.removeItem(pregenAudioKey); // Clean up after use
+        console.log("[TTS] Found pre-generated audio, will use for first question");
+      }
+
       perfTracker.start("Fetch Interview Data");
       try {
         const res = await fetch(`/api/interviews/${interviewId}`);
@@ -293,17 +305,17 @@ function VideoInterviewContent() {
   // Speak function - uses HeyGen for video mode, ElevenLabs for audio-only
   const speak = useCallback((text: string) => {
     if (audioOnly) {
-      // Use instant browser TTS for first question, then ElevenLabs for rest
-      const useInstant = isFirstQuestionRef.current;
-      if (isFirstQuestionRef.current) {
-        isFirstQuestionRef.current = false;
+      // Check if we have pre-generated audio for this question
+      const preloadedUrl = preloadedAudioRef.current;
+      if (preloadedUrl) {
+        preloadedAudioRef.current = null; // Clear after use
       }
       speakWithElevenLabs(
         text,
         interviewId,
         () => setIsAvatarSpeaking(true),
         () => setIsAvatarSpeaking(false),
-        useInstant
+        preloadedUrl || undefined
       );
     } else {
       (window as any).heygenSpeak?.(text);
