@@ -190,6 +190,7 @@ function VideoInterviewContent() {
   const [error, setError] = useState<string | null>(null);
   const [interviewComplete, setInterviewComplete] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [heygenFallback, setHeygenFallback] = useState(false); // Track if HeyGen fell back to static UI
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -333,9 +334,10 @@ function VideoInterviewContent() {
     initInterview();
   }, [interviewId, router]);
 
-  // Speak function - uses HeyGen for video mode, ElevenLabs for audio-only
+  // Speak function - uses HeyGen for video mode, ElevenLabs for audio-only or HeyGen fallback
   const speak = useCallback((text: string) => {
-    if (audioOnly) {
+    // Use ElevenLabs for audio-only mode OR when HeyGen failed (fallback mode)
+    if (audioOnly || heygenFallback) {
       // Check if we have pre-generated audio for this question
       const preloadedUrl = preloadedAudioRef.current;
       if (preloadedUrl) {
@@ -350,9 +352,10 @@ function VideoInterviewContent() {
         preloadingAudioRef.current
       );
     } else {
+      // Use HeyGen avatar TTS
       (window as any).heygenSpeak?.(text);
     }
-  }, [audioOnly, interviewId]);
+  }, [audioOnly, heygenFallback, interviewId]);
 
   // Preload audio for a question in background
   const preloadQuestionAudio = useCallback((text: string) => {
@@ -389,6 +392,18 @@ function VideoInterviewContent() {
       speak(currentQuestion);
     }
   }, [audioOnly, isConnected, isLoading, currentQuestion, speak]);
+
+  // When HeyGen falls back, speak the first question using ElevenLabs
+  useEffect(() => {
+    if (heygenFallback && isConnected && currentQuestion && shouldAutoSpeak && !isAvatarSpeaking) {
+      console.log("[Fallback] HeyGen fell back, speaking first question with ElevenLabs");
+      // Small delay to ensure state is settled
+      const timer = setTimeout(() => {
+        speak(currentQuestion);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [heygenFallback, isConnected, currentQuestion, shouldAutoSpeak, isAvatarSpeaking, speak]);
 
   // Handle user transcript from HeyGen's voice chat STT
   const handleTranscript = useCallback(
@@ -684,6 +699,10 @@ function VideoInterviewContent() {
             <HeyGenAvatar
               onReady={handleAvatarReady}
               onError={(err) => console.error("Avatar error:", err)}
+              onFallback={() => {
+                console.log("[HeyGen] Falling back to ElevenLabs TTS");
+                setHeygenFallback(true);
+              }}
               onAvatarSpeaking={setIsAvatarSpeaking}
               onUserSpeaking={setIsUserSpeaking}
               onTranscript={handleTranscript}

@@ -99,7 +99,7 @@ function NewVideoInterviewContent() {
 
   return (
     <motion.div
-      className="flex flex-col items-center justify-center min-h-[60vh] gap-8 px-4"
+      className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] gap-8 px-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >

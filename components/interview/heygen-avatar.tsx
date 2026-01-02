@@ -31,6 +31,7 @@ if (typeof window !== "undefined") {
 interface HeyGenAvatarProps {
   onReady?: () => void;
   onError?: (error: string) => void;
+  onFallback?: () => void; // Called when HeyGen fails and we fall back to static UI
   onUserSpeaking?: (isSpeaking: boolean) => void;
   onAvatarSpeaking?: (isSpeaking: boolean) => void;
   onTranscript?: (text: string, isFinal: boolean) => void;
@@ -43,6 +44,7 @@ interface HeyGenAvatarProps {
 export default function HeyGenAvatar({
   onReady,
   onError,
+  onFallback,
   onUserSpeaking,
   onAvatarSpeaking,
   onTranscript,
@@ -92,9 +94,10 @@ export default function HeyGenAvatar({
         ]);
 
         if (!tokenData.configured || !tokenData.token) {
-          console.log("HeyGen not configured, using fallback");
+          console.log("HeyGen not configured, using fallback with ElevenLabs TTS");
           setUseFallback(true);
           setIsLoading(false);
+          onFallback?.(); // Notify parent to use ElevenLabs TTS
           onReady?.();
           return;
         }
@@ -194,6 +197,7 @@ export default function HeyGenAvatar({
         if (!mounted) return;
         setUseFallback(true);
         setIsLoading(false);
+        onFallback?.(); // Notify parent to use ElevenLabs TTS
         onError?.(error instanceof Error ? error.message : "Unknown error");
         onReady?.();
       }
@@ -553,17 +557,33 @@ export default function HeyGenAvatar({
     };
   }, [speakText, interruptSpeech, toggleMute, isConnected]);
 
-  // Fallback UI
+  // Set up fallback mode globals when HeyGen fails
+  useEffect(() => {
+    if (useFallback && typeof window !== "undefined") {
+      // Expose a speak method that does nothing (parent will use ElevenLabs)
+      (window as any).heygenSpeak = () => {
+        console.log("[HeyGen Fallback] speak called - parent should use ElevenLabs");
+      };
+      (window as any).heygenIsConnected = () => true; // Pretend we're connected so parent uses fallback TTS
+    }
+  }, [useFallback]);
+
+  // Fallback UI - when HeyGen fails, we still provide voice functionality via ElevenLabs
+  // This is handled by the parent component (video/[id]/page.tsx) which falls back to audio-only mode
   if (useFallback) {
     return (
       <div className="aspect-video bg-gray-900 rounded-lg relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-3">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-3 transition-all ${
+              isAvatarSpeaking ? "bg-blue-500/30 animate-pulse" : "bg-gradient-to-br from-blue-500 to-purple-600"
+            }`}>
               <Video className="w-10 h-10 text-white" />
             </div>
             <p className="text-white text-sm font-medium">AI Interviewer</p>
-            <p className="text-gray-400 text-xs mt-1">Voice mode</p>
+            <p className="text-gray-400 text-xs mt-1">
+              {isAvatarSpeaking ? "Speaking..." : "Voice mode (HeyGen unavailable)"}
+            </p>
           </div>
         </div>
       </div>
