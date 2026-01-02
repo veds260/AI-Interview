@@ -79,7 +79,9 @@ class ElevenLabsService {
       );
 
       if (!response.ok) {
-        throw new Error(`ElevenLabs TTS API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`ElevenLabs TTS error ${response.status}:`, errorText);
+        throw new Error(`ElevenLabs TTS API error: ${response.status} - ${errorText}`);
       }
 
       return await response.arrayBuffer();
