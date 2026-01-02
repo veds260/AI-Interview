@@ -1,9 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Mic, Video, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, MessageSquare, AlertCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,21 +11,17 @@ import Link from "next/link";
 // Status messages for perceived progress
 const STATUS_MESSAGES = [
   { text: "Preparing your interview...", delay: 0 },
-  { text: "Setting up personalized questions...", delay: 800 },
-  { text: "Initializing audio system...", delay: 1600 },
-  { text: "Almost ready...", delay: 2400 },
+  { text: "Setting up personalized questions...", delay: 600 },
+  { text: "Almost ready...", delay: 1200 },
 ];
 
-function NewVideoInterviewContent() {
+function NewTextInterviewContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const audioOnly = searchParams.get("audioOnly") === "true";
-
   const [statusIndex, setStatusIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const creatingRef = useRef(false);
 
-  // Animate through status messages for perceived progress
+  // Animate through status messages
   useEffect(() => {
     const timers = STATUS_MESSAGES.slice(1).map((msg, i) =>
       setTimeout(() => setStatusIndex(i + 1), msg.delay)
@@ -42,7 +38,7 @@ function NewVideoInterviewContent() {
         const res = await fetch("/api/interviews", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "live_video" }),
+          body: JSON.stringify({ mode: "text_chat" }),
         });
 
         if (!res.ok) {
@@ -51,18 +47,7 @@ function NewVideoInterviewContent() {
         }
 
         const interview = await res.json();
-
-        // Store pre-generated audio for instant playback
-        if (interview.firstQuestionAudioUrl) {
-          localStorage.setItem(
-            `interview_audio_${interview.id}`,
-            interview.firstQuestionAudioUrl
-          );
-        }
-
-        // Replace current URL so back button doesn't return here
-        const audioParam = audioOnly ? "?audioOnly=true" : "";
-        router.replace(`/client/interview/video/${interview.id}${audioParam}`);
+        router.replace(`/client/interview/text/${interview.id}`);
       } catch (err) {
         console.error("Failed to create interview:", err);
         setError(err instanceof Error ? err.message : "Failed to create interview");
@@ -71,7 +56,7 @@ function NewVideoInterviewContent() {
     };
 
     createInterview();
-  }, [router, audioOnly]);
+  }, [router]);
 
   if (error) {
     return (
@@ -103,13 +88,13 @@ function NewVideoInterviewContent() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* Animated avatar/icon with ripple effect */}
+      {/* Animated icon */}
       <div className="relative">
         {/* Ripple circles */}
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="absolute inset-0 rounded-full border-2 border-blue-400"
+            className="absolute inset-0 rounded-full border-2 border-green-400"
             initial={{ scale: 1, opacity: 0.6 }}
             animate={{
               scale: [1, 1.8, 2.5],
@@ -126,7 +111,7 @@ function NewVideoInterviewContent() {
 
         {/* Main icon container */}
         <motion.div
-          className="w-28 h-28 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative z-10 shadow-xl"
+          className="w-28 h-28 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center relative z-10 shadow-xl"
           animate={{
             scale: [1, 1.02, 1],
           }}
@@ -136,11 +121,7 @@ function NewVideoInterviewContent() {
             ease: "easeInOut",
           }}
         >
-          {audioOnly ? (
-            <Mic className="w-14 h-14 text-white" />
-          ) : (
-            <Video className="w-14 h-14 text-white" />
-          )}
+          <MessageSquare className="w-14 h-14 text-white" />
         </motion.div>
 
         {/* Spinner badge */}
@@ -150,11 +131,11 @@ function NewVideoInterviewContent() {
           animate={{ scale: 1 }}
           transition={{ delay: 0.3, type: "spring" }}
         >
-          <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
         </motion.div>
       </div>
 
-      {/* Status text with smooth transitions */}
+      {/* Status text */}
       <div className="text-center space-y-2">
         <motion.h2
           className="text-2xl font-semibold text-gray-800"
@@ -162,7 +143,7 @@ function NewVideoInterviewContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          {audioOnly ? "Audio Interview" : "Video Interview"}
+          Text Interview
         </motion.h2>
 
         <div className="h-6 relative">
@@ -181,12 +162,12 @@ function NewVideoInterviewContent() {
         </div>
       </div>
 
-      {/* Animated loading dots */}
+      {/* Loading dots */}
       <div className="flex gap-2.5">
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="w-2.5 h-2.5 rounded-full bg-blue-500"
+            className="w-2.5 h-2.5 rounded-full bg-green-500"
             animate={{
               y: [0, -12, 0],
               scale: [1, 1.2, 1],
@@ -201,68 +182,43 @@ function NewVideoInterviewContent() {
         ))}
       </div>
 
-      {/* Skeleton preview of interview UI */}
+      {/* Skeleton preview */}
       <motion.div
         className="w-full max-w-xl bg-white/80 backdrop-blur rounded-2xl shadow-lg p-6 space-y-5 border border-gray-100"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5 }}
       >
-        {/* Question skeleton */}
-        <div className="space-y-2">
-          <motion.div
-            className="h-3 w-20 rounded bg-gray-200"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          />
-          <motion.div
-            className="h-5 w-full rounded bg-gray-100"
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: 0.1 }}
-          />
-          <motion.div
-            className="h-5 w-2/3 rounded bg-gray-100"
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
-          />
-        </div>
-
-        {/* Waveform skeleton */}
-        <div className="flex items-center justify-center gap-1 py-6">
-          {Array.from({ length: 16 }).map((_, i) => (
+        {/* Chat skeleton */}
+        <div className="space-y-4">
+          {/* Interviewer message */}
+          <div className="flex justify-start">
             <motion.div
-              key={i}
-              className="w-1 rounded-full bg-blue-200"
-              animate={{
-                height: [12, 28, 20, 36, 12],
-              }}
-              transition={{
-                duration: 1.2,
-                repeat: Infinity,
-                delay: i * 0.06,
-                ease: "easeInOut",
-              }}
-            />
-          ))}
+              className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-100"
+              animate={{ opacity: [0.5, 0.8, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              <div className="h-3 w-16 rounded bg-gray-200 mb-2" />
+              <div className="h-4 w-48 rounded bg-gray-200" />
+              <div className="h-4 w-32 rounded bg-gray-200 mt-1" />
+            </motion.div>
+          </div>
         </div>
 
-        {/* Controls skeleton */}
-        <div className="flex justify-center gap-5">
+        {/* Input skeleton */}
+        <div className="border-t pt-4 space-y-3">
           <motion.div
-            className="h-11 w-11 rounded-full bg-gray-200"
-            animate={{ opacity: [0.4, 0.7, 0.4] }}
+            className="h-24 w-full rounded-lg bg-gray-100"
+            animate={{ opacity: [0.4, 0.6, 0.4] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           />
-          <motion.div
-            className="h-11 w-11 rounded-full bg-gray-200"
-            animate={{ opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: 0.15 }}
-          />
-          <motion.div
-            className="h-11 w-11 rounded-full bg-gray-200"
-            animate={{ opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-          />
+          <div className="flex justify-end">
+            <motion.div
+              className="h-10 w-20 rounded-lg bg-gray-200"
+              animate={{ opacity: [0.4, 0.7, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+          </div>
         </div>
       </motion.div>
     </motion.div>
@@ -272,16 +228,16 @@ function NewVideoInterviewContent() {
 function LoadingFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-      <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+      <Loader2 className="w-12 h-12 animate-spin text-green-600" />
       <p className="text-gray-500">Loading...</p>
     </div>
   );
 }
 
-export default function NewVideoInterviewPage() {
+export default function NewTextInterviewPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <NewVideoInterviewContent />
+      <NewTextInterviewContent />
     </Suspense>
   );
 }

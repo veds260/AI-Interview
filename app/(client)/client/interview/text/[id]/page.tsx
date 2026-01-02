@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -32,6 +33,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Message {
   id: string;
@@ -256,9 +258,59 @@ export default function TextInterviewPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
+      <motion.div
+        className="max-w-3xl mx-auto space-y-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-40 mb-2" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-9 w-20" />
+        </div>
+
+        {/* Progress skeleton */}
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex justify-between text-sm mb-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+            <Skeleton className="h-2 w-full" />
+          </CardContent>
+        </Card>
+
+        {/* Chat area skeleton */}
+        <Card className="min-h-[400px]">
+          <CardHeader className="pb-2">
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 mb-4">
+              <div className="flex justify-start">
+                <motion.div
+                  className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-100"
+                  animate={{ opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <Skeleton className="h-3 w-16 mb-2" />
+                  <Skeleton className="h-5 w-64" />
+                  <Skeleton className="h-5 w-48 mt-1" />
+                </motion.div>
+              </div>
+            </div>
+            <div className="border-t pt-4">
+              <Skeleton className="h-24 w-full mb-3" />
+              <div className="flex justify-end">
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     );
   }
 
@@ -307,33 +359,69 @@ export default function TextInterviewPage() {
           {/* Messages */}
           <div className="flex-1 space-y-4 overflow-y-auto max-h-[350px] mb-4">
             {messages.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                <p>Loading your first question...</p>
-              </div>
-            ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${
-                    msg.role === "client" ? "justify-end" : "justify-start"
-                  }`}
+              <motion.div
+                className="text-center text-gray-500 py-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <motion.div
+                  className="flex justify-center gap-1.5 mb-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                 >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                      msg.role === "client"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-900"
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 rounded-full bg-gray-400"
+                      animate={{ y: [0, -8, 0] }}
+                      transition={{
+                        duration: 0.5,
+                        repeat: Infinity,
+                        delay: i * 0.15,
+                      }}
+                    />
+                  ))}
+                </motion.div>
+                <p>Loading your first question...</p>
+              </motion.div>
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {messages.map((msg, index) => (
+                  <motion.div
+                    key={msg.id}
+                    className={`flex ${
+                      msg.role === "client" ? "justify-end" : "justify-start"
                     }`}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                      delay: index === messages.length - 1 ? 0 : 0,
+                    }}
+                    layout
                   >
-                    {msg.role === "interviewer" && (
-                      <Badge variant="outline" className="mb-2 text-xs">
-                        Interviewer
-                      </Badge>
-                    )}
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                </div>
-              ))
+                    <motion.div
+                      className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                        msg.role === "client"
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-900"
+                      }`}
+                      whileHover={{ scale: 1.01 }}
+                      transition={{ type: "spring", stiffness: 400 }}
+                    >
+                      {msg.role === "interviewer" && (
+                        <Badge variant="outline" className="mb-2 text-xs">
+                          Interviewer
+                        </Badge>
+                      )}
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </motion.div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
             <div ref={messagesEndRef} />
           </div>
