@@ -319,8 +319,7 @@ export const apiUsage = pgTable("api_usage", {
   // Cost (in USD, stored as cents for precision)
   costCents: decimal("cost_cents", { precision: 10, scale: 4 }),
 
-  // Request details
-  requestPayload: jsonb("request_payload"), // For debugging
+  // Status
   success: boolean("success").notNull().default(true),
   errorMessage: text("error_message"),
 
