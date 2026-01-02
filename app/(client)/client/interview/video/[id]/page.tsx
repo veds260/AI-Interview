@@ -37,9 +37,26 @@ async function speakWithElevenLabs(
   text: string,
   interviewId: string,
   onStart?: () => void,
-  onEnd?: () => void
+  onEnd?: () => void,
+  useInstantTTS?: boolean
 ): Promise<void> {
   if (typeof window === "undefined") return;
+
+  // Use instant browser TTS for first question to eliminate startup delay
+  if (useInstantTTS) {
+    console.log("[TTS] First question - using instant browser TTS");
+    onStart?.();
+    fallbackBrowserTTS(text, onEnd);
+
+    // Preload ElevenLabs in background for next questions
+    fetch("/api/avatar/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "warm up", interviewId }),
+    }).catch(() => {}); // Ignore errors, just warming up
+
+    return;
+  }
 
   console.log("[TTS] Starting ElevenLabs TTS for:", text.substring(0, 50) + "...");
   onStart?.();
@@ -148,6 +165,7 @@ function VideoInterviewContent() {
   const pendingQuestionToSpeak = useRef<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const isFirstQuestionRef = useRef(true); // Use instant TTS for first question
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -275,11 +293,17 @@ function VideoInterviewContent() {
   // Speak function - uses HeyGen for video mode, ElevenLabs for audio-only
   const speak = useCallback((text: string) => {
     if (audioOnly) {
+      // Use instant browser TTS for first question, then ElevenLabs for rest
+      const useInstant = isFirstQuestionRef.current;
+      if (isFirstQuestionRef.current) {
+        isFirstQuestionRef.current = false;
+      }
       speakWithElevenLabs(
         text,
         interviewId,
         () => setIsAvatarSpeaking(true),
-        () => setIsAvatarSpeaking(false)
+        () => setIsAvatarSpeaking(false),
+        useInstant
       );
     } else {
       (window as any).heygenSpeak?.(text);
@@ -306,10 +330,8 @@ function VideoInterviewContent() {
     if (audioOnly && !isConnected && !isLoading && currentQuestion) {
       // In audio-only mode, connect immediately and speak the first question
       setIsConnected(true);
-      // Reduced delay from 500ms to 100ms for faster startup
-      setTimeout(() => {
-        speak(currentQuestion);
-      }, 100);
+      // Instant start - no delay
+      speak(currentQuestion);
     }
   }, [audioOnly, isConnected, isLoading, currentQuestion, speak]);
 
