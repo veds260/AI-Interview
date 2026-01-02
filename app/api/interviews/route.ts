@@ -27,6 +27,10 @@ interface GeneratedQuestion {
   reasoning: string;
 }
 
+// Simple in-memory cache for generated questions (30 min TTL)
+const questionCache = new Map<string, { questions: GeneratedQuestion[]; timestamp: number }>();
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
 // Check if we have enough context to generate custom questions
 function hasRichContext(
   kb: KnowledgeBase | undefined,
@@ -64,6 +68,15 @@ async function generateCustomQuestions(
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return [];
+
+  // Check cache first (use clientId as key)
+  if (clientId) {
+    const cached = questionCache.get(clientId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      console.log(`[Questions] Using cached questions for ${clientName} (${cached.questions.length} questions)`);
+      return cached.questions;
+    }
+  }
 
   // Build context sections
   let contextPrompt = `You are generating interview questions for ${clientName}.\n\n`;
@@ -189,6 +202,13 @@ Return JSON array with 12-15 questions:
 
     const questions = JSON.parse(jsonMatch[0]) as GeneratedQuestion[];
     console.log(`[Questions] Generated ${questions.length} custom questions for ${clientName}`);
+
+    // Cache the generated questions
+    if (clientId && questions.length > 0) {
+      questionCache.set(clientId, { questions, timestamp: Date.now() });
+      console.log(`[Questions] Cached questions for ${clientName}`);
+    }
+
     return questions;
   } catch (error) {
     console.error("Failed to generate custom questions:", error);
