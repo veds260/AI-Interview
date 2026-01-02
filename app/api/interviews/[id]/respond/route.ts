@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
 
 interface ClientKnowledgeSummary {
@@ -19,14 +19,22 @@ interface PreviousInterviewSummary {
   topicsDiscussed: string[];
 }
 
+interface SessionQuestion {
+  id?: string;
+  question: string;
+  category: string;
+}
+
 interface SessionState {
-  questionIds: string[];
+  questions?: SessionQuestion[]; // New: full question objects
+  questionIds?: string[]; // Legacy: just IDs for bank questions
   currentIndex: number;
   followUpCount?: number;
   pendingFollowUp?: string;
   clientContext?: ClientKnowledgeSummary;
   previousInterviews?: PreviousInterviewSummary[];
   competitorTopics?: string[];
+  useCustomQuestions?: boolean;
 }
 
 // Generate a dynamic follow-up question using AI with rich context
@@ -242,7 +250,11 @@ export async function POST(
     }
 
     const state = interview.sessionState as SessionState;
-    if (!state?.questionIds || state.questionIds.length === 0) {
+
+    // Calculate total questions - support both new and legacy format
+    const totalQuestions = state.questions?.length || state.questionIds?.length || 0;
+
+    if (totalQuestions === 0) {
       console.error("Interview has no questions:", { interviewId: id, sessionState: state });
       return NextResponse.json(
         { error: "This interview has no questions configured. Please create a new interview." },
@@ -251,22 +263,36 @@ export async function POST(
     }
 
     const currentIndex = state.currentIndex || 0;
-    if (currentIndex >= state.questionIds.length) {
-      // Already completed all questions
+    if (currentIndex >= totalQuestions) {
       return NextResponse.json({
         completed: true,
         message: "Interview completed",
       });
     }
 
-    // Get the current question (check for pending follow-up first)
-    const currentQuestionId = state.questionIds[currentIndex];
-    const currentQuestion = await db.query.questionBank.findFirst({
-      where: eq(questionBank.id, currentQuestionId),
-    });
+    // Get the current question - support both new questions array and legacy questionIds
+    let currentQuestionData: { id?: string; question: string; category?: string } | null = null;
+
+    if (state.questions && currentIndex < state.questions.length) {
+      // NEW: Use questions array directly
+      currentQuestionData = state.questions[currentIndex];
+    } else if (state.questionIds && currentIndex < state.questionIds.length) {
+      // LEGACY: Lookup from question bank
+      const questionId = state.questionIds[currentIndex];
+      const bankQuestion = await db.query.questionBank.findFirst({
+        where: eq(questionBank.id, questionId),
+      });
+      if (bankQuestion) {
+        currentQuestionData = {
+          id: bankQuestion.id,
+          question: bankQuestion.question,
+          category: bankQuestion.category || undefined,
+        };
+      }
+    }
 
     // If there's a pending follow-up, use that as the actual question
-    const actualQuestion = state.pendingFollowUp || currentQuestion?.question || "Question";
+    const actualQuestion = state.pendingFollowUp || currentQuestionData?.question || "Question";
     const isAnsweringFollowUp = !!state.pendingFollowUp;
 
     // Save the interviewer question message
@@ -274,8 +300,8 @@ export async function POST(
       interviewId: id,
       role: "interviewer",
       content: actualQuestion,
-      questionId: isAnsweringFollowUp ? undefined : currentQuestionId,
-      targetedContentType: currentQuestion?.category,
+      questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
+      targetedContentType: currentQuestionData?.category as any,
     });
 
     // Save the client response message
@@ -288,17 +314,17 @@ export async function POST(
     // Update questions asked
     const questionsAsked = (interview.questionsAsked as object[]) || [];
     questionsAsked.push({
-      questionId: isAnsweringFollowUp ? undefined : currentQuestionId,
+      questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
       question: actualQuestion,
       response: response.trim(),
-      category: currentQuestion?.category,
+      category: currentQuestionData?.category,
       timestamp: new Date().toISOString(),
       isFollowUp: isAnsweringFollowUp,
     });
 
     // FAST RESPONSE ARCHITECTURE:
     // 1. If there's a pending follow-up (generated in background last cycle), use it
-    // 2. Otherwise, immediately return the next bank question
+    // 2. Otherwise, immediately return the next question
     // 3. Start generating the follow-up in background for the NEXT cycle
 
     const followUpCount = state.followUpCount || 0;
@@ -314,23 +340,30 @@ export async function POST(
     // Calculate next index
     const shouldMoveToNext = !isFollowUp;
     const nextIndex = shouldMoveToNext ? currentIndex + 1 : currentIndex;
-    const completed = nextIndex >= state.questionIds.length;
+    const completed = nextIndex >= totalQuestions;
 
-    // If no follow-up, get the next bank question immediately
+    // If no follow-up, get the next question immediately
     if (!isFollowUp && !completed) {
-      const nextQuestionId = state.questionIds[nextIndex];
-      const nextQuestionFromBank = await db.query.questionBank.findFirst({
-        where: eq(questionBank.id, nextQuestionId),
-      });
-
-      if (nextQuestionFromBank?.question) {
-        // Quick personalize (instant, no API call)
-        nextQuestion = quickPersonalizeQuestion(
-          nextQuestionFromBank.question,
-          clientName,
-          state.clientContext,
-          state.competitorTopics
-        );
+      if (state.questions && nextIndex < state.questions.length) {
+        // NEW: Get from questions array directly
+        const nextQ = state.questions[nextIndex];
+        nextQuestion = state.useCustomQuestions
+          ? nextQ.question // Custom questions already personalized
+          : quickPersonalizeQuestion(nextQ.question, clientName, state.clientContext, state.competitorTopics);
+      } else if (state.questionIds && nextIndex < state.questionIds.length) {
+        // LEGACY: Lookup from question bank
+        const nextQuestionId = state.questionIds[nextIndex];
+        const nextQuestionFromBank = await db.query.questionBank.findFirst({
+          where: eq(questionBank.id, nextQuestionId),
+        });
+        if (nextQuestionFromBank?.question) {
+          nextQuestion = quickPersonalizeQuestion(
+            nextQuestionFromBank.question,
+            clientName,
+            state.clientContext,
+            state.competitorTopics
+          );
+        }
       }
     }
 
@@ -339,7 +372,7 @@ export async function POST(
     if (!isFollowUp && response.trim().length > 50 && !completed) {
       // Fire and forget - generate follow-up in background
       generateFollowUpQuestion(
-        currentQuestion?.question || "",
+        currentQuestionData?.question || "",
         response.trim(),
         {
           clientName,
@@ -393,12 +426,12 @@ export async function POST(
       })
       .where(eq(interviews.id, id));
 
-    // Update question usage count
-    if (shouldMoveToNext && currentQuestion) {
+    // Update question usage count (only for bank questions with IDs)
+    if (shouldMoveToNext && currentQuestionData?.id) {
       await db
         .update(questionBank)
-        .set({ timesUsed: (currentQuestion.timesUsed || 0) + 1 })
-        .where(eq(questionBank.id, currentQuestionId));
+        .set({ timesUsed: sql`COALESCE(times_used, 0) + 1` })
+        .where(eq(questionBank.id, currentQuestionData.id));
     }
 
     if (completed) {
@@ -412,7 +445,7 @@ export async function POST(
       completed: false,
       nextQuestion,
       isFollowUp,
-      progress: ((nextIndex + 1) / state.questionIds.length) * 100,
+      progress: ((nextIndex + 1) / totalQuestions) * 100,
     });
   } catch (error) {
     console.error("Error responding to interview:", error);

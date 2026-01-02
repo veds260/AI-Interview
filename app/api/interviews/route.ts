@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, interviews, clients, questionBank, users, competitors } from "@/lib/db";
 import { desc, eq, and, isNull, notInArray, sql } from "drizzle-orm";
+import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
 
 interface KnowledgeBase {
   bio?: string;
@@ -18,6 +19,181 @@ interface PreviousInterviewContent {
   topic?: string;
   keyInsights: string[];
   topicsDiscussed: string[];
+}
+
+interface GeneratedQuestion {
+  question: string;
+  category: string;
+  reasoning: string;
+}
+
+// Check if we have enough context to generate custom questions
+function hasRichContext(
+  kb: KnowledgeBase | undefined,
+  previousInterviews: PreviousInterviewContent[],
+  competitorTopics: string[]
+): boolean {
+  const hasBio = !!kb?.bio && kb.bio.length > 50;
+  const hasProducts = (kb?.products?.length || 0) > 0;
+  const hasTalkingPoints = (kb?.talkingPoints?.length || 0) > 0;
+  const hasPastInterviews = previousInterviews.length > 0;
+  const hasCompetitorTopics = competitorTopics.length > 0;
+  const hasTweets = (kb?.typefullyTweets?.length || 0) > 0;
+
+  // Need at least 2 sources of context for good questions
+  const contextSources = [
+    hasBio,
+    hasProducts,
+    hasTalkingPoints,
+    hasPastInterviews,
+    hasCompetitorTopics,
+    hasTweets,
+  ].filter(Boolean).length;
+
+  return contextSources >= 2;
+}
+
+// Generate custom questions using AI based on client context
+async function generateCustomQuestions(
+  clientName: string,
+  kb: KnowledgeBase | undefined,
+  previousInterviews: PreviousInterviewContent[],
+  competitorTopics: string[],
+  alreadyAskedQuestions: string[],
+  clientId?: string
+): Promise<GeneratedQuestion[]> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return [];
+
+  // Build context sections
+  let contextPrompt = `You are generating interview questions for ${clientName}.\n\n`;
+
+  if (kb?.bio) {
+    contextPrompt += `=== ABOUT THEM ===\n${kb.bio}\n\n`;
+  }
+
+  if (kb?.products?.length) {
+    contextPrompt += `=== THEIR PRODUCTS/SERVICES ===\n${kb.products.join(", ")}\n\n`;
+  }
+
+  if (kb?.talkingPoints?.length) {
+    contextPrompt += `=== TOPICS THEY WANT TO DISCUSS ===\n${kb.talkingPoints.join("\n")}\n\n`;
+  }
+
+  if (kb?.typefullyTweets?.length) {
+    const recentTweets = kb.typefullyTweets.slice(0, 8).map(t => t.content).join("\n---\n");
+    contextPrompt += `=== THEIR RECENT TWEETS/POSTS ===\n${recentTweets}\n\n`;
+  }
+
+  if (previousInterviews.length > 0) {
+    contextPrompt += `=== PAST INTERVIEW CONVERSATIONS ===\n`;
+    contextPrompt += `(Build on these - dig deeper, follow up on interesting points, explore new angles)\n`;
+    previousInterviews.slice(0, 3).forEach((interview, i) => {
+      contextPrompt += `\n--- Previous Session ${i + 1}${interview.topic ? ` (${interview.topic})` : ""} ---\n`;
+      interview.keyInsights.slice(0, 5).forEach(insight => {
+        contextPrompt += `${insight}\n`;
+      });
+    });
+    contextPrompt += `\n`;
+  }
+
+  if (competitorTopics.length > 0) {
+    contextPrompt += `=== TRENDING TOPICS IN THEIR SPACE ===\n${competitorTopics.slice(0, 10).join(", ")}\n\n`;
+  }
+
+  if (alreadyAskedQuestions.length > 0) {
+    contextPrompt += `=== QUESTIONS ALREADY ASKED (AVOID REPEATING) ===\n`;
+    alreadyAskedQuestions.slice(0, 20).forEach(q => {
+      contextPrompt += `- ${q}\n`;
+    });
+    contextPrompt += `\n`;
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "anthropic/claude-3-haiku",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "system",
+            content: `You generate personalized interview questions that extract unique stories, insights, and hot takes.
+
+QUESTION TYPES TO INCLUDE:
+1. Origin/Journey questions - their path, pivotal moments
+2. Failure/Learning stories - specific mistakes and lessons
+3. Hot takes - controversial opinions they hold
+4. Behind-the-scenes - how they actually work/think
+5. Future predictions - where they see things going
+6. Tactical advice - specific frameworks or tips they use
+
+RULES:
+- Questions must be SPECIFIC to their context, not generic
+- Build on past conversations - "Last time you mentioned X, tell me more about..."
+- Reference their actual products, tweets, or talking points
+- Ask for STORIES and EXAMPLES, not abstract opinions
+- Each question should have viral/clip potential
+- Mix easy warmup questions with deeper probing ones
+- 1-2 sentences max per question
+
+Return JSON array with 12-15 questions:
+[{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "why this question for them"}]`,
+          },
+          {
+            role: "user",
+            content: contextPrompt + "\n\nGenerate 12-15 personalized interview questions. Return ONLY the JSON array.",
+          },
+        ],
+      }),
+    });
+
+    const endTime = Date.now();
+
+    if (!res.ok) {
+      await trackApiCall({
+        clientId,
+        provider: "openrouter",
+        model: "anthropic/claude-3-haiku",
+        endpoint: "generate-questions",
+        durationMs: endTime - startTime,
+        success: false,
+        errorMessage: `HTTP ${res.status}`,
+      });
+      return [];
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    await trackApiCall({
+      clientId,
+      provider: "openrouter",
+      model: "anthropic/claude-3-haiku",
+      endpoint: "generate-questions",
+      inputTokens: data.usage?.prompt_tokens || estimateTokens(contextPrompt),
+      outputTokens: data.usage?.completion_tokens || estimateTokens(content),
+      durationMs: endTime - startTime,
+      success: true,
+    });
+
+    // Parse JSON from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+
+    const questions = JSON.parse(jsonMatch[0]) as GeneratedQuestion[];
+    console.log(`[Questions] Generated ${questions.length} custom questions for ${clientName}`);
+    return questions;
+  } catch (error) {
+    console.error("Failed to generate custom questions:", error);
+    return [];
+  }
 }
 
 export async function GET(request: Request) {
@@ -293,43 +469,6 @@ export async function POST(request: Request) {
         .filter((t) => t);
     }
 
-    // Prioritize categories not yet covered in previous interviews
-    const uniqueCoveredCategories = [...new Set(coveredCategories)];
-    let selectedQuestions = questions;
-
-    if (questions.length > 5) {
-      // Sort to prioritize:
-      // 1. Uncovered categories first
-      // 2. Questions related to competitor topics (trending content)
-      selectedQuestions = [...questions].sort((a, b) => {
-        const aUncovered = !uniqueCoveredCategories.includes(a.category || "");
-        const bUncovered = !uniqueCoveredCategories.includes(b.category || "");
-
-        // First priority: uncovered categories
-        if (aUncovered && !bUncovered) return -1;
-        if (!aUncovered && bUncovered) return 1;
-
-        // Second priority: questions matching competitor topics
-        const aMatchesCompetitor = (a.topics || []).some((t) =>
-          competitorTopics.some((ct) =>
-            ct.toLowerCase().includes(t.toLowerCase()) ||
-            t.toLowerCase().includes(ct.toLowerCase())
-          )
-        );
-        const bMatchesCompetitor = (b.topics || []).some((t) =>
-          competitorTopics.some((ct) =>
-            ct.toLowerCase().includes(t.toLowerCase()) ||
-            t.toLowerCase().includes(ct.toLowerCase())
-          )
-        );
-
-        if (aMatchesCompetitor && !bMatchesCompetitor) return -1;
-        if (!aMatchesCompetitor && bMatchesCompetitor) return 1;
-
-        return 0;
-      });
-    }
-
     // Prepare client context for the session
     const kb = client?.knowledgeBase as KnowledgeBase | undefined;
     const clientKnowledgeSummary = kb ? {
@@ -338,11 +477,105 @@ export async function POST(request: Request) {
       talkingPoints: kb.talkingPoints,
       voiceGuidelines: kb.voiceGuidelines,
       previousInsights: kb.insights,
-      // Include recent tweets as reference for their voice/style
       recentTweets: kb.typefullyTweets?.slice(0, 5).map(t => t.content),
     } : undefined;
 
-    // Create the interview
+    // Extract already asked question texts
+    const alreadyAskedQuestionTexts = previousInterviewContent
+      .flatMap(p => p.keyInsights)
+      .map(insight => insight.split("→")[0]?.replace('Q: "', '').replace('"', '').trim())
+      .filter(Boolean);
+
+    // ============================================
+    // SMART QUESTION SELECTION
+    // ============================================
+    // If we have rich context, generate custom questions
+    // Otherwise, fall back to question bank
+    // ============================================
+
+    let sessionQuestions: Array<{ id?: string; question: string; category: string }> = [];
+    let useCustomQuestions = false;
+
+    if (client && hasRichContext(kb, previousInterviewContent, competitorTopics)) {
+      console.log(`[Questions] Rich context found for ${client.name}, generating custom questions...`);
+
+      const customQuestions = await generateCustomQuestions(
+        client.name,
+        kb,
+        previousInterviewContent,
+        competitorTopics,
+        alreadyAskedQuestionTexts,
+        client.id
+      );
+
+      if (customQuestions.length >= 8) {
+        useCustomQuestions = true;
+        sessionQuestions = customQuestions.map(q => ({
+          question: q.question,
+          category: q.category,
+        }));
+
+        // Mix in 2-3 questions from bank for variety (if available)
+        if (questions.length > 0) {
+          const bankMix = questions
+            .slice(0, 3)
+            .map(q => ({ id: q.id, question: q.question, category: q.category || "general" }));
+
+          // Insert bank questions at positions 4, 8, 12 for variety
+          bankMix.forEach((bq, i) => {
+            const insertPos = Math.min((i + 1) * 4, sessionQuestions.length);
+            sessionQuestions.splice(insertPos, 0, bq);
+          });
+        }
+
+        console.log(`[Questions] Using ${customQuestions.length} custom + ${Math.min(3, questions.length)} bank questions`);
+      }
+    }
+
+    // Fall back to question bank if no custom questions
+    if (!useCustomQuestions) {
+      console.log(`[Questions] Using question bank (no rich context or generation failed)`);
+
+      // Prioritize categories not yet covered in previous interviews
+      const uniqueCoveredCategories = [...new Set(coveredCategories)];
+      let selectedQuestions = questions;
+
+      if (questions.length > 5) {
+        selectedQuestions = [...questions].sort((a, b) => {
+          const aUncovered = !uniqueCoveredCategories.includes(a.category || "");
+          const bUncovered = !uniqueCoveredCategories.includes(b.category || "");
+
+          if (aUncovered && !bUncovered) return -1;
+          if (!aUncovered && bUncovered) return 1;
+
+          const aMatchesCompetitor = (a.topics || []).some((t) =>
+            competitorTopics.some((ct) =>
+              ct.toLowerCase().includes(t.toLowerCase()) ||
+              t.toLowerCase().includes(ct.toLowerCase())
+            )
+          );
+          const bMatchesCompetitor = (b.topics || []).some((t) =>
+            competitorTopics.some((ct) =>
+              ct.toLowerCase().includes(t.toLowerCase()) ||
+              t.toLowerCase().includes(ct.toLowerCase())
+            )
+          );
+
+          if (aMatchesCompetitor && !bMatchesCompetitor) return -1;
+          if (!aMatchesCompetitor && bMatchesCompetitor) return 1;
+
+          return 0;
+        });
+      }
+
+      sessionQuestions = selectedQuestions.map(q => ({
+        id: q.id,
+        question: q.question,
+        category: q.category || "general",
+      }));
+    }
+
+    // Create the interview with new question structure
     const [newInterview] = await db
       .insert(interviews)
       .values({
@@ -353,18 +586,17 @@ export async function POST(request: Request) {
         startedAt: new Date(),
         questionsAsked: [],
         sessionState: {
-          questionIds: selectedQuestions.map((q) => q.id),
+          // Store full question objects (with or without IDs)
+          questions: sessionQuestions,
           currentIndex: 0,
-          // Include FULL context for AI to generate better follow-ups and remember past conversations
+          useCustomQuestions,
+          // Keep questionIds for backwards compatibility (only for bank questions)
+          questionIds: sessionQuestions.filter(q => q.id).map(q => q.id),
+          // Context for follow-ups
           clientContext: clientKnowledgeSummary,
-          previousInterviews: previousInterviewContent.slice(0, 5), // Last 5 interviews with full Q&A
-          competitorTopics: competitorTopics.slice(0, 10), // Top trending topics
-          // Track what was already discussed to avoid repeats
-          alreadyAskedQuestionTexts: previousInterviewContent
-            .flatMap(p => p.keyInsights)
-            .map(insight => insight.split("→")[0]?.replace('Q: "', '').replace('"', '').trim())
-            .filter(Boolean)
-            .slice(0, 50), // Last 50 questions text for semantic matching
+          previousInterviews: previousInterviewContent.slice(0, 5),
+          competitorTopics: competitorTopics.slice(0, 10),
+          alreadyAskedQuestionTexts: alreadyAskedQuestionTexts.slice(0, 50),
         },
       })
       .returning();

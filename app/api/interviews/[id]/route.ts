@@ -11,13 +11,21 @@ interface ClientKnowledgeSummary {
   recentTweets?: string[];
 }
 
+interface SessionQuestion {
+  id?: string;
+  question: string;
+  category: string;
+}
+
 interface SessionState {
-  questionIds: string[];
+  questions?: SessionQuestion[]; // New: full question objects
+  questionIds?: string[]; // Legacy: just IDs for bank questions
   currentIndex: number;
-  pendingFollowUp?: string; // Store follow-up question for resume
+  pendingFollowUp?: string;
   followUpCount?: number;
   clientContext?: ClientKnowledgeSummary;
   competitorTopics?: string[];
+  useCustomQuestions?: boolean;
 }
 
 // Quick personalization - just add a brief context prefix, no API call needed
@@ -95,36 +103,41 @@ export async function GET(
 
     const state = interview.sessionState as SessionState;
 
-    // Parallel fetch: client and current question (if needed)
-    const needsClient = !!interview.clientId;
-    const needsQuestion = state?.questionIds &&
-      state.currentIndex < state.questionIds.length &&
-      !state?.pendingFollowUp;
+    // Get client for personalization
+    let clientName: string | undefined;
+    if (interview.clientId) {
+      const client = await db.query.clients.findFirst({
+        where: eq(clients.id, interview.clientId),
+      });
+      clientName = client?.name;
+    }
 
-    const [client, question] = await Promise.all([
-      needsClient
-        ? db.query.clients.findFirst({ where: eq(clients.id, interview.clientId!) })
-        : Promise.resolve(null),
-      needsQuestion
-        ? db.query.questionBank.findFirst({
-            where: eq(questionBank.id, state.questionIds[state.currentIndex]),
-          })
-        : Promise.resolve(null),
-    ]);
-
-    const clientName = client?.name;
-
-    // Get current question
+    // Get current question - check new questions array first, then fall back to questionIds
     let currentQuestion = null;
+
     if (state?.pendingFollowUp) {
+      // Pending follow-up takes priority
       currentQuestion = state.pendingFollowUp;
-    } else if (question?.question) {
-      currentQuestion = quickPersonalizeQuestion(
-        question.question,
-        clientName,
-        state.clientContext,
-        state.competitorTopics
-      );
+    } else if (state?.questions && state.currentIndex < state.questions.length) {
+      // NEW: Use questions array directly (custom or bank questions stored inline)
+      const q = state.questions[state.currentIndex];
+      currentQuestion = state.useCustomQuestions
+        ? q.question // Custom questions already personalized
+        : quickPersonalizeQuestion(q.question, clientName, state.clientContext, state.competitorTopics);
+    } else if (state?.questionIds && state.currentIndex < state.questionIds.length) {
+      // LEGACY: Fall back to questionIds lookup from bank
+      const questionId = state.questionIds[state.currentIndex];
+      const question = await db.query.questionBank.findFirst({
+        where: eq(questionBank.id, questionId),
+      });
+      if (question?.question) {
+        currentQuestion = quickPersonalizeQuestion(
+          question.question,
+          clientName,
+          state.clientContext,
+          state.competitorTopics
+        );
+      }
     }
 
     return NextResponse.json({
