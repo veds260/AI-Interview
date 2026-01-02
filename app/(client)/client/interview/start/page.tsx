@@ -10,7 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Video, MessageSquare, Loader2, ArrowLeft } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Video, MessageSquare, Loader2, ArrowLeft, Mic, Zap } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -23,6 +25,7 @@ function InterviewStartContent() {
     "live_video" | "text_chat" | null
   >(preselectedMode as "live_video" | "text_chat" | null);
   const [isCreating, setIsCreating] = useState(false);
+  const [audioOnly, setAudioOnly] = useState(false);
 
   const handleStartInterview = async () => {
     if (!selectedMode) {
@@ -48,8 +51,9 @@ function InterviewStartContent() {
       if (selectedMode === "text_chat") {
         router.push(`/client/interview/text/${interview.id}`);
       } else {
-        // Use new video chat experience
-        router.push(`/client/interview/video/${interview.id}`);
+        // Video or audio-only interview
+        const audioParam = audioOnly ? "?audioOnly=true" : "";
+        router.push(`/client/interview/video/${interview.id}${audioParam}`);
       }
     } catch (error) {
       toast.error(
@@ -86,29 +90,63 @@ function InterviewStartContent() {
         >
           <CardHeader>
             <div className="flex items-center justify-between">
-              <Video
-                className={`h-8 w-8 ${
-                  selectedMode === "live_video"
-                    ? "text-blue-600"
-                    : "text-gray-400"
-                }`}
-              />
+              {audioOnly ? (
+                <Mic
+                  className={`h-8 w-8 ${
+                    selectedMode === "live_video"
+                      ? "text-blue-600"
+                      : "text-gray-400"
+                  }`}
+                />
+              ) : (
+                <Video
+                  className={`h-8 w-8 ${
+                    selectedMode === "live_video"
+                      ? "text-blue-600"
+                      : "text-gray-400"
+                  }`}
+                />
+              )}
               {selectedMode === "live_video" && (
                 <div className="w-4 h-4 rounded-full bg-blue-600" />
               )}
             </div>
-            <CardTitle className="mt-4">Video Interview</CardTitle>
+            <CardTitle className="mt-4">{audioOnly ? "Audio Interview" : "Video Interview"}</CardTitle>
             <CardDescription>
-              Have a live conversation with our AI avatar
+              {audioOnly ? "Voice-only conversation - faster & lighter" : "Have a live conversation with our AI avatar"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="text-sm text-gray-600 space-y-2">
-              <li>- Real-time video conversation</li>
-              <li>- Natural speaking experience</li>
-              <li>- AI adapts to your responses</li>
-              <li>- Recording saved for reference</li>
+              {audioOnly ? (
+                <>
+                  <li className="flex items-center gap-1"><Zap className="h-3 w-3 text-yellow-500" /> Faster response times</li>
+                  <li>- Voice conversation only</li>
+                  <li>- Works better on slow connections</li>
+                  <li>- Lower data usage</li>
+                </>
+              ) : (
+                <>
+                  <li>- Real-time video conversation</li>
+                  <li>- Natural speaking experience</li>
+                  <li>- AI adapts to your responses</li>
+                  <li>- Recording saved for reference</li>
+                </>
+              )}
             </ul>
+            {selectedMode === "live_video" && (
+              <div className="mt-4 pt-4 border-t flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                <Label htmlFor="audio-only" className="text-sm cursor-pointer">
+                  <span className="font-medium">Audio-only mode</span>
+                  <span className="block text-xs text-gray-500">Faster, no video avatar</span>
+                </Label>
+                <Switch
+                  id="audio-only"
+                  checked={audioOnly}
+                  onCheckedChange={setAudioOnly}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 

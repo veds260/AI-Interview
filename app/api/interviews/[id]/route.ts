@@ -20,76 +20,46 @@ interface SessionState {
   competitorTopics?: string[];
 }
 
-// Personalize a base question using knowledge base context
-async function personalizeQuestion(
+// Quick personalization - just add a brief context prefix, no API call needed
+// This eliminates latency while still making questions feel personal
+function quickPersonalizeQuestion(
   baseQuestion: string,
   clientName?: string,
   kb?: ClientKnowledgeSummary,
   competitorTopics?: string[]
-): Promise<string> {
+): string {
   // If no knowledge base, return the base question as-is
   if (!kb || (!kb.bio && !kb.products?.length && !kb.talkingPoints?.length)) {
     return baseQuestion;
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return baseQuestion;
+  // Build a quick personalization prefix based on available context
+  let prefix = "";
 
-  try {
-    let context = "";
-    if (clientName) context += `Name: ${clientName}\n`;
-    if (kb.bio) context += `Bio: ${kb.bio}\n`;
-    if (kb.products?.length) context += `Products/Services: ${kb.products.join(", ")}\n`;
-    if (kb.talkingPoints?.length) context += `Key talking points: ${kb.talkingPoints.join("; ")}\n`;
-    if (competitorTopics?.length) context += `Trending topics in their space: ${competitorTopics.slice(0, 5).join(", ")}\n`;
-
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "anthropic/claude-3-haiku",
-        max_tokens: 200,
-        messages: [
-          {
-            role: "system",
-            content: `You personalize interview questions based on client background.
-
-CLIENT BACKGROUND:
-${context}
-
-RULES:
-1. Take the base question and make it more relevant to THIS specific person
-2. Reference their industry, products, or expertise naturally
-3. Frame it as research you did: "Given your work in X..." or "Since you focus on Y..."
-4. NEVER say "you told me" or "you mentioned" - you haven't talked yet
-5. Keep the same intent/spirit of the original question
-6. Keep it conversational and natural, not stiff
-7. Return ONLY the personalized question, nothing else`,
-          },
-          {
-            role: "user",
-            content: `Personalize this question for the client above:
-
-"${baseQuestion}"
-
-Return ONLY the personalized question.`,
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) return baseQuestion;
-
-    const data = await res.json();
-    const personalized = data.choices?.[0]?.message?.content?.trim();
-    return personalized || baseQuestion;
-  } catch (error) {
-    console.error("Failed to personalize question:", error);
-    return baseQuestion;
+  // Check if we have relevant context to add
+  if (kb.products?.length && baseQuestion.toLowerCase().includes("work")) {
+    prefix = `Given your work on ${kb.products[0]}, `;
+  } else if (kb.talkingPoints?.length && competitorTopics?.length) {
+    // If question relates to industry trends
+    prefix = `With ${competitorTopics[0]} being a hot topic right now, `;
+  } else if (kb.bio && kb.bio.length > 20) {
+    // Extract a key phrase from bio for context
+    const bioWords = kb.bio.split(" ").slice(0, 5).join(" ");
+    if (bioWords.length > 10) {
+      prefix = `Based on your background, `;
+    }
   }
+
+  // Only add prefix if it makes sense with the question
+  if (prefix && !baseQuestion.toLowerCase().startsWith("given") &&
+      !baseQuestion.toLowerCase().startsWith("based") &&
+      !baseQuestion.toLowerCase().startsWith("since")) {
+    // Make first letter lowercase if adding prefix
+    const questionLower = baseQuestion.charAt(0).toLowerCase() + baseQuestion.slice(1);
+    return prefix + questionLower;
+  }
+
+  return baseQuestion;
 }
 
 export async function GET(
@@ -145,8 +115,8 @@ export async function GET(
       });
 
       if (question?.question) {
-        // Personalize the base question using knowledge base
-        currentQuestion = await personalizeQuestion(
+        // Quick personalize the base question (no API call - instant)
+        currentQuestion = quickPersonalizeQuestion(
           question.question,
           clientName,
           state.clientContext,

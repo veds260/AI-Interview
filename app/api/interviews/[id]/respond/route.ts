@@ -94,48 +94,28 @@ async function generateFollowUpQuestion(
       },
       body: JSON.stringify({
         model: "anthropic/claude-3-haiku",
-        max_tokens: 300,
+        max_tokens: 100, // Keep questions SHORT
         messages: [
           {
             role: "system",
-            content: `You are an expert interviewer conducting a content extraction interview with a founder.
-Your goal is to dig deeper into their responses to extract content for viral tweets, threads, and posts.
+            content: `You generate SHORT, CLEAR follow-up questions for content interviews.
 
-=== KNOWLEDGE BASE (Background info about the founder - DO NOT say "you told me" about this) ===
-${knowledgeBaseInfo || "No background info available"}
-=== END KNOWLEDGE BASE ===
+CONTEXT (for reference only):
+${knowledgeBaseInfo || "No background available"}
 ${previousInterviewsInfo}
 
-CRITICAL RULES FOR USING CONTEXT:
-
-1. KNOWLEDGE BASE = Background research you did BEFORE meeting them
-   - Use it to ask BETTER questions: "Given your work in [X], what do you think about..."
-   - Frame it as research: "I saw you're focused on [product], how does that relate to..."
-   - Reference their expertise: "Since you work in [industry], would you say..."
-   - NEVER say "you mentioned" or "last time we talked" about knowledge base info
-
-2. PREVIOUS INTERVIEWS = Things they ACTUALLY SAID in past interview sessions
-   - ONLY reference these as past conversations: "Last time we talked, you said..."
-   - If no previous interviews section exists, you have NEVER talked to them before
-
-3. GENERAL GUIDELINES:
-   - Ask for specific examples, numbers, or stories
-   - Look for contrarian views or unexpected lessons
-   - Keep questions natural and conversational
-   - Dig deeper into interesting parts of their response`,
+RULES:
+1. Questions must be 1 sentence, under 20 words
+2. Be direct and specific - no fluff
+3. Ask for: examples, numbers, stories, or hot takes
+4. NEVER reference knowledge base as "you told me" - use "given your work in X..."
+5. Match their energy - casual if they're casual`,
           },
           {
             role: "user",
-            content: `Question asked: "${question}"
+            content: `They answered: "${response.slice(0, 500)}"
 
-Founder's response: "${response}"
-
-Generate ONE follow-up question that:
-1. Digs deeper into something interesting from their response
-2. Optionally connects to their expertise/background from the knowledge base (but frame it as research, NOT as something they told you)
-3. Sounds natural and conversational
-
-Return ONLY the follow-up question, nothing else.`,
+Ask ONE short follow-up (under 20 words). Just the question, nothing else.`,
           },
         ],
       }),
@@ -151,76 +131,38 @@ Return ONLY the follow-up question, nothing else.`,
   }
 }
 
-// Personalize a base question using knowledge base context
-async function personalizeBaseQuestion(
+// Quick personalization - no API call, instant response
+function quickPersonalizeQuestion(
   baseQuestion: string,
   clientName?: string,
   kb?: ClientKnowledgeSummary,
   competitorTopics?: string[]
-): Promise<string> {
+): string {
   // If no knowledge base, return the base question as-is
   if (!kb || (!kb.bio && !kb.products?.length && !kb.talkingPoints?.length)) {
     return baseQuestion;
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return baseQuestion;
+  // Build a quick personalization prefix based on available context
+  let prefix = "";
 
-  try {
-    let context = "";
-    if (clientName) context += `Name: ${clientName}\n`;
-    if (kb.bio) context += `Bio: ${kb.bio}\n`;
-    if (kb.products?.length) context += `Products/Services: ${kb.products.join(", ")}\n`;
-    if (kb.talkingPoints?.length) context += `Key talking points: ${kb.talkingPoints.join("; ")}\n`;
-    if (competitorTopics?.length) context += `Trending topics in their space: ${competitorTopics.slice(0, 5).join(", ")}\n`;
-
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "anthropic/claude-3-haiku",
-        max_tokens: 200,
-        messages: [
-          {
-            role: "system",
-            content: `You personalize interview questions based on client background.
-
-CLIENT BACKGROUND:
-${context}
-
-RULES:
-1. Take the base question and make it more relevant to THIS specific person
-2. Reference their industry, products, or expertise naturally
-3. Frame it as research you did: "Given your work in X..." or "Since you focus on Y..."
-4. NEVER say "you told me" or "you mentioned" - you haven't talked yet
-5. Keep the same intent/spirit of the original question
-6. Keep it conversational and natural, not stiff
-7. Return ONLY the personalized question, nothing else`,
-          },
-          {
-            role: "user",
-            content: `Personalize this question for the client above:
-
-"${baseQuestion}"
-
-Return ONLY the personalized question.`,
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) return baseQuestion;
-
-    const data = await res.json();
-    const personalized = data.choices?.[0]?.message?.content?.trim();
-    return personalized || baseQuestion;
-  } catch (error) {
-    console.error("Failed to personalize question:", error);
-    return baseQuestion;
+  if (kb.products?.length && baseQuestion.toLowerCase().includes("work")) {
+    prefix = `Given your work on ${kb.products[0]}, `;
+  } else if (kb.talkingPoints?.length && competitorTopics?.length) {
+    prefix = `With ${competitorTopics[0]} being a hot topic right now, `;
+  } else if (kb.bio && kb.bio.length > 20) {
+    prefix = `Based on your background, `;
   }
+
+  // Only add prefix if it makes sense
+  if (prefix && !baseQuestion.toLowerCase().startsWith("given") &&
+      !baseQuestion.toLowerCase().startsWith("based") &&
+      !baseQuestion.toLowerCase().startsWith("since")) {
+    const questionLower = baseQuestion.charAt(0).toLowerCase() + baseQuestion.slice(1);
+    return prefix + questionLower;
+  }
+
+  return baseQuestion;
 }
 
 export async function POST(
@@ -360,8 +302,8 @@ export async function POST(
       });
 
       if (nextQuestionFromBank?.question) {
-        // Personalize the base question using knowledge base
-        nextQuestion = await personalizeBaseQuestion(
+        // Quick personalize (instant, no API call)
+        nextQuestion = quickPersonalizeQuestion(
           nextQuestionFromBank.question,
           clientName,
           state.clientContext,

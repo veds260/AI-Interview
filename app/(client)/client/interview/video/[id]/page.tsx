@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +26,34 @@ import {
   CheckCircle,
   MessageSquare,
   Volume2,
+  AudioLines,
 } from "lucide-react";
 import { toast } from "sonner";
 import HeyGenAvatar from "@/components/interview/heygen-avatar";
+
+// Simple TTS function using Web Speech API
+function speakText(text: string, onEnd?: () => void) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  // Try to use a good voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find(v =>
+    v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel")
+  );
+  if (preferredVoice) utterance.voice = preferredVoice;
+
+  if (onEnd) utterance.onend = onEnd;
+
+  window.speechSynthesis.speak(utterance);
+}
 
 interface Message {
   role: "interviewer" | "user";
@@ -36,10 +61,12 @@ interface Message {
   timestamp: Date;
 }
 
-export default function VideoInterviewPage() {
+function VideoInterviewContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const interviewId = params.id as string;
+  const audioOnly = searchParams.get("audioOnly") === "true";
 
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -55,11 +82,14 @@ export default function VideoInterviewPage() {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interviewComplete, setInterviewComplete] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processingResponseRef = useRef(false);
   const pendingQuestionToSpeak = useRef<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -138,17 +168,8 @@ export default function VideoInterviewPage() {
                 }]);
                 setProgress(continueData.progress || 0);
 
-                // Store the question to speak - will be spoken when avatar is ready
+                // Store the question to speak - will be spoken when ready
                 pendingQuestionToSpeak.current = continueData.nextQuestion;
-
-                // Also try speaking after a delay in case avatar is already ready
-                setTimeout(() => {
-                  if (pendingQuestionToSpeak.current) {
-                    console.log("Attempting to speak after delay:", pendingQuestionToSpeak.current);
-                    (window as any).heygenSpeak?.(pendingQuestionToSpeak.current);
-                    pendingQuestionToSpeak.current = null;
-                  }
-                }, 3000);
               } else if (continueData.completed) {
                 setInterviewComplete(true);
                 setShowCompleteDialog(true);
@@ -189,7 +210,17 @@ export default function VideoInterviewPage() {
     initInterview();
   }, [interviewId, router]);
 
-  // Handle avatar ready
+  // Speak function - uses HeyGen for video mode, Web Speech API for audio-only
+  const speak = useCallback((text: string) => {
+    if (audioOnly) {
+      setIsAvatarSpeaking(true);
+      speakText(text, () => setIsAvatarSpeaking(false));
+    } else {
+      (window as any).heygenSpeak?.(text);
+    }
+  }, [audioOnly]);
+
+  // Handle avatar ready (or auto-ready for audio-only)
   const handleAvatarReady = useCallback(() => {
     setIsConnected(true);
     // If there's a pending question to speak (from resume), speak it now
@@ -198,10 +229,21 @@ export default function VideoInterviewPage() {
       pendingQuestionToSpeak.current = null;
       setTimeout(() => {
         console.log("Avatar ready, speaking pending question:", questionToSpeak);
-        (window as any).heygenSpeak?.(questionToSpeak);
+        speak(questionToSpeak);
       }, 500);
     }
-  }, []);
+  }, [speak]);
+
+  // Auto-connect for audio-only mode
+  useEffect(() => {
+    if (audioOnly && !isConnected && !isLoading && currentQuestion) {
+      // In audio-only mode, connect immediately and speak the first question
+      setIsConnected(true);
+      setTimeout(() => {
+        speak(currentQuestion);
+      }, 500);
+    }
+  }, [audioOnly, isConnected, isLoading, currentQuestion, speak]);
 
   // Handle user transcript from HeyGen's voice chat STT
   const handleTranscript = useCallback(
@@ -248,12 +290,12 @@ export default function VideoInterviewPage() {
 
           // Thank the user
           const thankYou =
-            "Thank you so much for sharing your story with me today. Your insights are incredibly valuable, and I really appreciate your time. Take care!";
+            "Thank you so much for sharing! Your insights are valuable. Take care!";
           setMessages((prev) => [
             ...prev,
             { role: "interviewer", content: thankYou, timestamp: new Date() },
           ]);
-          (window as any).heygenSpeak?.(thankYou);
+          speak(thankYou);
         } else if (data.nextQuestion) {
           setCurrentQuestion(data.nextQuestion);
           setProgress(data.progress || progress);
@@ -270,7 +312,7 @@ export default function VideoInterviewPage() {
 
           // Speak the next question
           setTimeout(() => {
-            (window as any).heygenSpeak?.(data.nextQuestion);
+            speak(data.nextQuestion);
           }, 500);
         }
       } catch (error) {
@@ -280,21 +322,70 @@ export default function VideoInterviewPage() {
         processingResponseRef.current = false;
       }
     },
-    [interviewId, progress, currentQuestion]
+    [interviewId, progress, currentQuestion, speak]
   );
 
   // Repeat current question
   const repeatQuestion = useCallback(() => {
     if (currentQuestion && !isAvatarSpeaking) {
-      (window as any).heygenSpeak?.(currentQuestion);
+      speak(currentQuestion);
     }
-  }, [currentQuestion, isAvatarSpeaking]);
+  }, [currentQuestion, isAvatarSpeaking, speak]);
 
-  // Toggle mute
+  // Toggle mute (for video mode) or start/stop recording (for audio mode)
   const toggleMute = useCallback(() => {
-    (window as any).heygenToggleMute?.();
-    setIsMuted(!isMuted);
-  }, [isMuted]);
+    if (audioOnly) {
+      // For audio-only, handle mic recording
+      if (isRecordingAudio) {
+        // Stop recording
+        mediaRecorderRef.current?.stop();
+        setIsRecordingAudio(false);
+      } else {
+        // Start recording
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+          const mediaRecorder = new MediaRecorder(stream);
+          mediaRecorderRef.current = mediaRecorder;
+          audioChunksRef.current = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            audioChunksRef.current.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+            stream.getTracks().forEach(t => t.stop());
+
+            // Transcribe using API
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "recording.webm");
+
+            try {
+              const res = await fetch("/api/transcribe", {
+                method: "POST",
+                body: formData,
+              });
+              const data = await res.json();
+              if (data.text) {
+                handleTranscript(data.text, true);
+              }
+            } catch (e) {
+              console.error("Transcription error:", e);
+            }
+          };
+
+          mediaRecorder.start();
+          setIsRecordingAudio(true);
+        }).catch((e) => {
+          console.error("Mic access error:", e);
+          toast.error("Could not access microphone");
+        });
+      }
+    } else {
+      // For video mode, use HeyGen's mute toggle
+      (window as any).heygenToggleMute?.();
+      setIsMuted(!isMuted);
+    }
+  }, [audioOnly, isMuted, isRecordingAudio, handleTranscript]);
 
   // End interview
   const handleEndInterview = async () => {
@@ -381,27 +472,48 @@ export default function VideoInterviewPage() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
-        {/* Avatar section */}
+        {/* Avatar/Audio section */}
         <div className="lg:w-1/2 flex flex-col">
-          <HeyGenAvatar
-            onReady={handleAvatarReady}
-            onError={(err) => console.error("Avatar error:", err)}
-            onAvatarSpeaking={setIsAvatarSpeaking}
-            onUserSpeaking={setIsUserSpeaking}
-            onTranscript={handleTranscript}
-            initialQuestion={shouldAutoSpeak ? currentQuestion || undefined : undefined}
-            interviewId={interviewId}
-          />
+          {audioOnly ? (
+            /* Audio-only mode - simple UI */
+            <div className="aspect-video bg-gray-900 rounded-lg flex flex-col items-center justify-center relative">
+              <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-4 transition-all ${
+                isAvatarSpeaking ? "bg-blue-500/20 animate-pulse" : "bg-gray-800"
+              }`}>
+                <AudioLines className={`w-16 h-16 ${isAvatarSpeaking ? "text-blue-400" : "text-gray-500"}`} />
+              </div>
+              <p className="text-gray-400 text-sm">
+                {isAvatarSpeaking ? "Speaking..." : isRecordingAudio ? "Listening..." : "Tap mic to respond"}
+              </p>
+              {/* Current question display */}
+              {currentQuestion && (
+                <div className="absolute bottom-4 left-4 right-4 bg-gray-800/80 backdrop-blur rounded-lg p-3">
+                  <p className="text-white text-sm">{currentQuestion}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Video mode - HeyGen avatar */
+            <HeyGenAvatar
+              onReady={handleAvatarReady}
+              onError={(err) => console.error("Avatar error:", err)}
+              onAvatarSpeaking={setIsAvatarSpeaking}
+              onUserSpeaking={setIsUserSpeaking}
+              onTranscript={handleTranscript}
+              initialQuestion={shouldAutoSpeak ? currentQuestion || undefined : undefined}
+              interviewId={interviewId}
+            />
+          )}
 
           {/* Controls */}
           <div className="flex justify-center gap-3 mt-4">
             <Button
-              variant={isMuted ? "destructive" : "secondary"}
+              variant={(audioOnly ? isRecordingAudio : !isMuted) ? "secondary" : "destructive"}
               size="lg"
               onClick={toggleMute}
               className="rounded-full w-14 h-14"
             >
-              {isMuted ? (
+              {(audioOnly ? !isRecordingAudio : isMuted) ? (
                 <MicOff className="w-6 h-6" />
               ) : (
                 <Mic className="w-6 h-6" />
@@ -528,5 +640,21 @@ export default function VideoInterviewPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// Export with Suspense boundary for useSearchParams
+export default function VideoInterviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gray-950">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-400">Loading interview...</p>
+        </div>
+      </div>
+    }>
+      <VideoInterviewContent />
+    </Suspense>
   );
 }
