@@ -228,7 +228,7 @@ export async function POST(
       );
     }
 
-    // Get client name and topics for additional context
+    // Get client info (runs in parallel with nothing else critical)
     let clientName: string | undefined;
     let clientTopics: string[] | undefined;
     if (interview.clientId) {
@@ -296,39 +296,28 @@ export async function POST(
       isFollowUp: isAnsweringFollowUp,
     });
 
-    // Decide: generate AI follow-up or move to next bank question
-    // Generate follow-up for every question to dig deeper (max 1 follow-up per base question)
+    // FAST RESPONSE ARCHITECTURE:
+    // 1. If there's a pending follow-up (generated in background last cycle), use it
+    // 2. Otherwise, immediately return the next bank question
+    // 3. Start generating the follow-up in background for the NEXT cycle
+
     const followUpCount = state.followUpCount || 0;
     let nextQuestion: string | null = null;
     let isFollowUp = false;
 
-    // Only generate follow-up if we haven't already for this base question
-    if (followUpCount === 0 && response.trim().length > 50) {
-      nextQuestion = await generateFollowUpQuestion(
-        currentQuestion?.question || "",
-        response.trim(),
-        {
-          clientName,
-          topics: clientTopics,
-          // Use rich context from session state (populated at interview creation)
-          clientContext: state.clientContext,
-          previousInterviews: state.previousInterviews,
-          competitorTopics: state.competitorTopics,
-        },
-        { interviewId: id, clientId: interview.clientId || undefined }
-      );
-      if (nextQuestion) {
-        isFollowUp = true;
-      }
+    // Check if we have a pending follow-up from background generation
+    if (state.pendingFollowUp && followUpCount === 0) {
+      nextQuestion = state.pendingFollowUp;
+      isFollowUp = true;
     }
 
-    // If no follow-up or already did one, move to next bank question
+    // Calculate next index
     const shouldMoveToNext = !isFollowUp;
     const nextIndex = shouldMoveToNext ? currentIndex + 1 : currentIndex;
     const completed = nextIndex >= state.questionIds.length;
 
-    // If moving to next question and not completed, get it from bank and personalize
-    if (shouldMoveToNext && !completed) {
+    // If no follow-up, get the next bank question immediately
+    if (!isFollowUp && !completed) {
       const nextQuestionId = state.questionIds[nextIndex];
       const nextQuestionFromBank = await db.query.questionBank.findFirst({
         where: eq(questionBank.id, nextQuestionId),
@@ -345,6 +334,47 @@ export async function POST(
       }
     }
 
+    // BACKGROUND: Generate follow-up for the NEXT question cycle (don't await)
+    // This runs async so it doesn't block the response
+    if (!isFollowUp && response.trim().length > 50 && !completed) {
+      // Fire and forget - generate follow-up in background
+      generateFollowUpQuestion(
+        currentQuestion?.question || "",
+        response.trim(),
+        {
+          clientName,
+          topics: clientTopics,
+          clientContext: state.clientContext,
+          previousInterviews: state.previousInterviews,
+          competitorTopics: state.competitorTopics,
+        },
+        { interviewId: id, clientId: interview.clientId || undefined }
+      ).then(async (followUp) => {
+        if (followUp) {
+          // Store the generated follow-up in session state for next cycle
+          const currentInterview = await db.query.interviews.findFirst({
+            where: eq(interviews.id, id),
+          });
+          if (currentInterview) {
+            const currentState = currentInterview.sessionState as SessionState;
+            await db
+              .update(interviews)
+              .set({
+                sessionState: {
+                  ...currentState,
+                  pendingFollowUp: followUp,
+                },
+                updatedAt: new Date(),
+              })
+              .where(eq(interviews.id, id));
+            console.log("[Background] Follow-up generated and stored:", followUp.substring(0, 50));
+          }
+        }
+      }).catch((err) => {
+        console.error("[Background] Failed to generate follow-up:", err);
+      });
+    }
+
     await db
       .update(interviews)
       .set({
@@ -352,8 +382,8 @@ export async function POST(
           ...state,
           currentIndex: nextIndex,
           followUpCount: isFollowUp ? 1 : 0, // Reset for new base question
-          // Store follow-up for resume, clear when moving to next question
-          pendingFollowUp: isFollowUp ? nextQuestion : undefined,
+          // Clear pending follow-up since we used it (or didn't have one)
+          pendingFollowUp: undefined,
         },
         questionsAsked,
         questionsCount: (interview.questionsCount || 0) + 1,

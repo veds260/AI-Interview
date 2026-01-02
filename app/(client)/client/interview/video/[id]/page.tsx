@@ -293,10 +293,11 @@ function VideoInterviewContent() {
     if (pendingQuestionToSpeak.current) {
       const questionToSpeak = pendingQuestionToSpeak.current;
       pendingQuestionToSpeak.current = null;
+      // Reduced delay from 500ms to 100ms for faster startup
       setTimeout(() => {
         console.log("Avatar ready, speaking pending question:", questionToSpeak);
         speak(questionToSpeak);
-      }, 500);
+      }, 100);
     }
   }, [speak]);
 
@@ -305,9 +306,10 @@ function VideoInterviewContent() {
     if (audioOnly && !isConnected && !isLoading && currentQuestion) {
       // In audio-only mode, connect immediately and speak the first question
       setIsConnected(true);
+      // Reduced delay from 500ms to 100ms for faster startup
       setTimeout(() => {
         speak(currentQuestion);
-      }, 500);
+      }, 100);
     }
   }, [audioOnly, isConnected, isLoading, currentQuestion, speak]);
 
@@ -341,7 +343,7 @@ function VideoInterviewContent() {
       ]);
 
       try {
-        // Submit response to backend
+        // Submit response to backend (follow-ups generated in background)
         perfTracker.start("API: Submit Response");
         const res = await fetch(`/api/interviews/${interviewId}/respond`, {
           method: "POST",
@@ -381,13 +383,11 @@ function VideoInterviewContent() {
             },
           ]);
 
-          // Speak the next question
+          // Speak the next question immediately (reduced from 300ms)
           perfTracker.end("Process Response");
-          setTimeout(() => {
-            perfTracker.start("TTS: Next Question");
-            perfTracker.mark("Speaking question", `Length: ${data.nextQuestion.length} chars`);
-            speak(data.nextQuestion);
-          }, 300); // Reduced from 500ms
+          perfTracker.start("TTS: Next Question");
+          perfTracker.mark("Speaking question", `Length: ${data.nextQuestion.length} chars`);
+          speak(data.nextQuestion);
         }
       } catch (error) {
         console.error("Error submitting response:", error);

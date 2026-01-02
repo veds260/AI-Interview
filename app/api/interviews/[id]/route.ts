@@ -74,9 +74,17 @@ export async function GET(
 
     const { id } = await params;
 
-    const interview = await db.query.interviews.findFirst({
-      where: eq(interviews.id, id),
-    });
+    // Parallel fetch: interview and messages at the same time
+    const [interview, messages] = await Promise.all([
+      db.query.interviews.findFirst({
+        where: eq(interviews.id, id),
+      }),
+      db
+        .select()
+        .from(interviewMessages)
+        .where(eq(interviewMessages.interviewId, id))
+        .orderBy(asc(interviewMessages.createdAt)),
+    ]);
 
     if (!interview) {
       return NextResponse.json(
@@ -85,44 +93,38 @@ export async function GET(
       );
     }
 
-    // Get client name for personalization
-    let clientName: string | undefined;
-    if (interview.clientId) {
-      const client = await db.query.clients.findFirst({
-        where: eq(clients.id, interview.clientId),
-      });
-      clientName = client?.name;
-    }
+    const state = interview.sessionState as SessionState;
 
-    // Get messages
-    const messages = await db
-      .select()
-      .from(interviewMessages)
-      .where(eq(interviewMessages.interviewId, id))
-      .orderBy(asc(interviewMessages.createdAt));
+    // Parallel fetch: client and current question (if needed)
+    const needsClient = !!interview.clientId;
+    const needsQuestion = state?.questionIds &&
+      state.currentIndex < state.questionIds.length &&
+      !state?.pendingFollowUp;
+
+    const [client, question] = await Promise.all([
+      needsClient
+        ? db.query.clients.findFirst({ where: eq(clients.id, interview.clientId!) })
+        : Promise.resolve(null),
+      needsQuestion
+        ? db.query.questionBank.findFirst({
+            where: eq(questionBank.id, state.questionIds[state.currentIndex]),
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const clientName = client?.name;
 
     // Get current question
-    const state = interview.sessionState as SessionState;
     let currentQuestion = null;
-
-    // Check if there's a pending follow-up question (for resume)
     if (state?.pendingFollowUp) {
       currentQuestion = state.pendingFollowUp;
-    } else if (state?.questionIds && state.currentIndex < state.questionIds.length) {
-      const questionId = state.questionIds[state.currentIndex];
-      const question = await db.query.questionBank.findFirst({
-        where: eq(questionBank.id, questionId),
-      });
-
-      if (question?.question) {
-        // Quick personalize the base question (no API call - instant)
-        currentQuestion = quickPersonalizeQuestion(
-          question.question,
-          clientName,
-          state.clientContext,
-          state.competitorTopics
-        );
-      }
+    } else if (question?.question) {
+      currentQuestion = quickPersonalizeQuestion(
+        question.question,
+        clientName,
+        state.clientContext,
+        state.competitorTopics
+      );
     }
 
     return NextResponse.json({
