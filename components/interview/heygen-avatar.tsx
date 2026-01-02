@@ -14,6 +14,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
+// Preload the HeyGen SDK module (starts downloading immediately)
+let sdkPromise: Promise<any> | null = null;
+function preloadHeyGenSDK() {
+  if (!sdkPromise) {
+    sdkPromise = import("@heygen/streaming-avatar");
+  }
+  return sdkPromise;
+}
+
+// Start preloading immediately when this module loads
+if (typeof window !== "undefined") {
+  preloadHeyGenSDK();
+}
+
 interface HeyGenAvatarProps {
   onReady?: () => void;
   onError?: (error: string) => void;
@@ -69,12 +83,13 @@ export default function HeyGenAvatar({
 
     const initHeyGen = async () => {
       try {
-        setStatusMessage("Getting access token...");
+        setStatusMessage("Connecting to avatar...");
 
-        const tokenRes = await fetch(tokenEndpoint, {
-          method: "POST",
-        });
-        const tokenData = await tokenRes.json();
+        // Parallel fetch: token + SDK at the same time for faster startup
+        const [tokenData, sdk] = await Promise.all([
+          fetch(tokenEndpoint, { method: "POST" }).then(res => res.json()),
+          preloadHeyGenSDK(),
+        ]);
 
         if (!tokenData.configured || !tokenData.token) {
           console.log("HeyGen not configured, using fallback");
@@ -84,13 +99,9 @@ export default function HeyGenAvatar({
           return;
         }
 
-        setStatusMessage("Loading avatar SDK...");
-
-        const { default: StreamingAvatar, StreamingEvents, AvatarQuality, TaskType } =
-          await import("@heygen/streaming-avatar");
-
         if (!mounted) return;
 
+        const { default: StreamingAvatar, StreamingEvents, AvatarQuality, TaskType } = sdk;
         taskTypeRef.current = TaskType;
 
         const avatar = new StreamingAvatar({ token: tokenData.token });
@@ -139,9 +150,10 @@ export default function HeyGenAvatar({
 
         let sessionInfo;
         try {
+          // Use Low quality for faster startup (3-5s vs 8-10s for Medium/High)
           sessionInfo = await avatar.createStartAvatar({
             avatarName: avatarId,
-            quality: AvatarQuality.Medium,
+            quality: AvatarQuality.Low,
             language: "en",
             disableIdleTimeout: false,
           });
@@ -163,7 +175,7 @@ export default function HeyGenAvatar({
         sessionIdRef.current = sessionInfo.session_id;
         console.log("Avatar ready - using MediaRecorder for STT, HeyGen for TTS");
 
-        // Speak initial question
+        // Speak initial question immediately (reduced from 1000ms)
         if (initialQuestion && avatar) {
           setTimeout(async () => {
             try {
@@ -175,7 +187,7 @@ export default function HeyGenAvatar({
             } catch (err) {
               console.error("Error speaking initial question:", err);
             }
-          }, 1000);
+          }, 100);
         }
       } catch (error) {
         console.error("Failed to initialize HeyGen:", error);
