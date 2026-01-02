@@ -41,6 +41,7 @@ async function speakWithElevenLabs(
 ): Promise<void> {
   if (typeof window === "undefined") return;
 
+  console.log("[TTS] Starting ElevenLabs TTS for:", text.substring(0, 50) + "...");
   onStart?.();
 
   try {
@@ -53,32 +54,39 @@ async function speakWithElevenLabs(
 
     const data = await res.json();
     perfTracker.end("TTS: ElevenLabs API");
+    console.log("[TTS] API Response:", { hasAudioUrl: !!data.audioUrl, message: data.message });
 
     if (data.audioUrl) {
+      console.log("[TTS] Playing ElevenLabs audio...");
       perfTracker.start("TTS: Audio Playback");
       const audio = new Audio(data.audioUrl);
       audio.onended = () => {
+        console.log("[TTS] ElevenLabs audio finished");
         perfTracker.end("TTS: Audio Playback");
         onEnd?.();
       };
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error("[TTS] Audio playback error:", e);
         perfTracker.mark("TTS: Audio Error", "Falling back to browser TTS");
         fallbackBrowserTTS(text, onEnd);
       };
       await audio.play();
     } else {
       // ElevenLabs not configured, use browser TTS
+      console.log("[TTS] No audio URL, using browser TTS. Message:", data.message);
       fallbackBrowserTTS(text, onEnd);
     }
   } catch (error) {
-    console.error("ElevenLabs TTS error:", error);
+    console.error("[TTS] ElevenLabs API error:", error);
     fallbackBrowserTTS(text, onEnd);
   }
 }
 
 // Fallback to browser TTS if ElevenLabs fails
 function fallbackBrowserTTS(text: string, onEnd?: () => void) {
+  console.log("[TTS] Using browser TTS fallback");
   if (!window.speechSynthesis) {
+    console.error("[TTS] Browser speech synthesis not available");
     onEnd?.();
     return;
   }
@@ -93,9 +101,15 @@ function fallbackBrowserTTS(text: string, onEnd?: () => void) {
   const preferredVoice = voices.find(v =>
     v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel")
   );
-  if (preferredVoice) utterance.voice = preferredVoice;
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+    console.log("[TTS] Using voice:", preferredVoice.name);
+  }
 
-  if (onEnd) utterance.onend = onEnd;
+  utterance.onend = () => {
+    console.log("[TTS] Browser TTS finished");
+    onEnd?.();
+  };
   window.speechSynthesis.speak(utterance);
 }
 

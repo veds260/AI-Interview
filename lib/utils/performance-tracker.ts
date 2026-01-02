@@ -15,9 +15,8 @@ class PerformanceTracker {
   private enabled: boolean = true;
 
   constructor() {
-    // Enable in development or if explicitly enabled
-    this.enabled = process.env.NODE_ENV === "development" ||
-      (typeof window !== "undefined" && (window as any).__PERF_TRACKER_ENABLED__);
+    // Always enabled - we want to see performance in production too
+    this.enabled = true;
   }
 
   enable() {
