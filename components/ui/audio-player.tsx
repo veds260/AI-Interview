@@ -14,12 +14,10 @@ import {
 interface AudioPlayerProps {
   src: string;
   title?: string;
-  audioKey?: string; // R2 storage key for conversion
-  onDownload?: () => void;
   compact?: boolean;
 }
 
-export function AudioPlayer({ src, title, audioKey, onDownload, compact = false }: AudioPlayerProps) {
+export function AudioPlayer({ src, title, compact = false }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -64,44 +62,19 @@ export function AudioPlayer({ src, title, audioKey, onDownload, compact = false 
     setCurrentTime(value[0]);
   };
 
-  const handleDownload = async (format: "mp3" | "webm" = "mp3") => {
-    if (onDownload) {
-      onDownload();
-      return;
-    }
-
+  const handleDownload = async (format: "mp3" | "webm") => {
     setIsDownloading(true);
     try {
-      // If we have an audioKey and want mp3, use the conversion API
-      if (audioKey && format === "mp3") {
-        const response = await fetch(`/api/media/convert?key=${encodeURIComponent(audioKey)}&format=mp3&filename=${encodeURIComponent(title || "audio")}`);
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${title || "audio"}.mp3`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        } else {
-          // Fallback to direct download
-          window.open(src, "_blank");
-        }
-      } else {
-        // Direct download for webm or if no audioKey
-        const response = await fetch(src);
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${title || "audio"}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title || "audio"}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
       window.open(src, "_blank");
