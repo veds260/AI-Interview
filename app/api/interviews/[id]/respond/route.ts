@@ -173,36 +173,44 @@ Ask ONE short follow-up (under 20 words). Just the question, nothing else.`,
 }
 
 // Quick personalization - no API call, instant response
+// CONSERVATIVE: Only personalize when it genuinely improves the question
 function quickPersonalizeQuestion(
   baseQuestion: string,
   clientName?: string,
   kb?: ClientKnowledgeSummary,
   competitorTopics?: string[]
 ): string {
-  // If no knowledge base, return the base question as-is
-  if (!kb || (!kb.bio && !kb.products?.length && !kb.talkingPoints?.length)) {
-    return baseQuestion;
+  // Most questions work better without forced personalization
+  // Only add context when it's clearly relevant to the question topic
+
+  const questionLower = baseQuestion.toLowerCase();
+
+  // Questions about work/products - can mention their product
+  if (kb?.products?.length && (
+    questionLower.includes("your product") ||
+    questionLower.includes("your company") ||
+    questionLower.includes("your startup") ||
+    questionLower.includes("what you're building")
+  )) {
+    return baseQuestion.replace(
+      /your (product|company|startup)/gi,
+      kb.products[0]
+    );
   }
 
-  // Build a quick personalization prefix based on available context
-  let prefix = "";
-
-  if (kb.products?.length && baseQuestion.toLowerCase().includes("work")) {
-    prefix = `Given your work on ${kb.products[0]}, `;
-  } else if (kb.talkingPoints?.length && competitorTopics?.length) {
-    prefix = `With ${competitorTopics[0]} being a hot topic right now, `;
-  } else if (kb.bio && kb.bio.length > 20) {
-    prefix = `Based on your background, `;
+  // Questions about industry/trends - can mention competitor topics
+  if (competitorTopics?.length && (
+    questionLower.includes("industry") ||
+    questionLower.includes("trend") ||
+    questionLower.includes("market")
+  )) {
+    // Only 20% chance to add topic context - don't overdo it
+    if (Math.random() < 0.2) {
+      return `${baseQuestion} Especially regarding ${competitorTopics[0]}.`;
+    }
   }
 
-  // Only add prefix if it makes sense
-  if (prefix && !baseQuestion.toLowerCase().startsWith("given") &&
-      !baseQuestion.toLowerCase().startsWith("based") &&
-      !baseQuestion.toLowerCase().startsWith("since")) {
-    const questionLower = baseQuestion.charAt(0).toLowerCase() + baseQuestion.slice(1);
-    return prefix + questionLower;
-  }
-
+  // Default: return question as-is (most questions are better unmodified)
   return baseQuestion;
 }
 
