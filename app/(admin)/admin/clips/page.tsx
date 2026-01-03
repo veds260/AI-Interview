@@ -49,10 +49,12 @@ import {
   AlertTriangle,
   X,
   Mic,
+  Download,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { AudioPlayer } from "@/components/ui/audio-player";
+import { VideoPlayer } from "@/components/ui/video-player";
 
 interface Client {
   id: string;
@@ -62,6 +64,7 @@ interface Client {
 interface VideoClip {
   id: string;
   videoUrl: string;
+  videoKey?: string; // R2 storage key for conversion
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   fileSizeBytes: number | null;
@@ -114,8 +117,6 @@ export default function AdminClipsPage() {
   const [clipToDelete, setClipToDelete] = useState<VideoClip | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [clientFilter, setClientFilter] = useState<string>("all");
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   // Fetch clients for filter dropdown
   const { data: clientsList } = useQuery<Client[]>({
@@ -282,36 +283,6 @@ export default function AdminClipsPage() {
       toast.error("Failed to recover recordings");
     },
   });
-
-  // Audio playback
-  const playAudio = (recording: AudioRecording) => {
-    if (audioElement) {
-      audioElement.pause();
-    }
-
-    if (playingAudioId === recording.id) {
-      setPlayingAudioId(null);
-      setAudioElement(null);
-      return;
-    }
-
-    const audio = new Audio(recording.audioUrl);
-    audio.onended = () => {
-      setPlayingAudioId(null);
-      setAudioElement(null);
-    };
-    audio.play();
-    setAudioElement(audio);
-    setPlayingAudioId(recording.id);
-  };
-
-  const stopAudio = () => {
-    if (audioElement) {
-      audioElement.pause();
-      setAudioElement(null);
-      setPlayingAudioId(null);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -654,13 +625,12 @@ export default function AdminClipsPage() {
               {previewClip?.clientName && `Client: ${previewClip.clientName}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="aspect-video bg-black rounded-lg overflow-hidden">
+          <div className="aspect-video">
             {previewClip && (
-              <video
+              <VideoPlayer
                 src={previewClip.videoUrl}
-                controls
-                autoPlay
-                className="w-full h-full"
+                title={previewClip.title || previewClip.interviewTitle || "video"}
+                poster={previewClip.thumbnailUrl || undefined}
               />
             )}
           </div>

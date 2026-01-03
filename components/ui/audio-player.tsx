@@ -3,18 +3,26 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, Download, Volume2 } from "lucide-react";
+import { Play, Pause, Download, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AudioPlayerProps {
   src: string;
   title?: string;
+  audioKey?: string; // R2 storage key for conversion
   onDownload?: () => void;
   compact?: boolean;
 }
 
-export function AudioPlayer({ src, title, onDownload, compact = false }: AudioPlayerProps) {
+export function AudioPlayer({ src, title, audioKey, onDownload, compact = false }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -56,11 +64,49 @@ export function AudioPlayer({ src, title, onDownload, compact = false }: AudioPl
     setCurrentTime(value[0]);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async (format: "mp3" | "webm" = "mp3") => {
     if (onDownload) {
       onDownload();
-    } else {
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      // If we have an audioKey and want mp3, use the conversion API
+      if (audioKey && format === "mp3") {
+        const response = await fetch(`/api/media/convert?key=${encodeURIComponent(audioKey)}&format=mp3&filename=${encodeURIComponent(title || "audio")}`);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${title || "audio"}.mp3`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } else {
+          // Fallback to direct download
+          window.open(src, "_blank");
+        }
+      } else {
+        // Direct download for webm or if no audioKey
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${title || "audio"}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error("Download failed:", error);
       window.open(src, "_blank");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -97,14 +143,30 @@ export function AudioPlayer({ src, title, onDownload, compact = false }: AudioPl
           <span className="text-xs text-gray-500 w-10">{formatTime(duration)}</span>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-8 h-8 p-0 flex-shrink-0"
-          onClick={handleDownload}
-        >
-          <Download className="h-3 w-3" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0 flex-shrink-0"
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="h-3 w-3" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => handleDownload("mp3")}>
+              Download MP3
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDownload("webm")}>
+              Download WebM
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   }
@@ -138,14 +200,30 @@ export function AudioPlayer({ src, title, onDownload, compact = false }: AudioPl
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDownload}
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Download
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-1" />
+              )}
+              Download
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => handleDownload("mp3")}>
+              Download MP3
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDownload("webm")}>
+              Download WebM
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

@@ -17,9 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Video, Play, Download, Calendar, Clock, Loader2, Mic } from "lucide-react";
+import { Video, Play, Calendar, Clock, Loader2, Mic } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AudioPlayer } from "@/components/ui/audio-player";
+import { VideoPlayer } from "@/components/ui/video-player";
 
 interface VideoClip {
   id: string;
@@ -239,43 +240,28 @@ export default function ClipsPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="aspect-video bg-black rounded-lg overflow-hidden">
+            <div className="aspect-video">
               {selectedClip && (
-                <video
+                <VideoPlayer
                   src={selectedClip.videoUrl}
-                  controls
-                  autoPlay
-                  className="w-full h-full"
+                  title={selectedClip.title || selectedClip.interviewTitle || "video"}
+                  poster={selectedClip.thumbnailUrl || undefined}
                 />
               )}
             </div>
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-500 flex items-center gap-4">
+            <div className="text-sm text-gray-500 flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                {selectedClip &&
+                  new Date(selectedClip.createdAt).toLocaleString()}
+              </span>
+              {selectedClip?.durationSeconds && (
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {selectedClip &&
-                    new Date(selectedClip.createdAt).toLocaleString()}
+                  <Clock className="h-4 w-4" />
+                  {formatDuration(selectedClip.durationSeconds)}
                 </span>
-                {selectedClip?.durationSeconds && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {formatDuration(selectedClip.durationSeconds)}
-                  </span>
-                )}
-                <span>{formatFileSize(selectedClip?.fileSizeBytes || null)}</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (selectedClip) {
-                    window.open(selectedClip.videoUrl, "_blank");
-                  }
-                }}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
+              )}
+              <span>{formatFileSize(selectedClip?.fileSizeBytes || null)}</span>
             </div>
             {selectedClip?.transcript && (
               <div className="bg-gray-50 rounded-lg p-4">
