@@ -72,7 +72,7 @@ class ElevenLabsService {
           },
           body: JSON.stringify({
             text,
-            model_id: "eleven_turbo_v2_5", // Latest fast model
+            model_id: "eleven_turbo_v2", // Fast, low-latency model
             voice_settings: settings || {
               stability: 0.5,
               similarity_boost: 0.75,
