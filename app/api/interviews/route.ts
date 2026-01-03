@@ -6,7 +6,7 @@ import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
 import { elevenlabs } from "@/lib/services/elevenlabs";
 import { scrapeCompetitor } from "@/lib/services/twitter";
 
-const SCRAPE_STALE_DAYS = 7; // Re-scrape competitors older than 7 days
+const SCRAPE_STALE_DAYS = 2; // Re-scrape competitors older than 2 days
 
 interface KnowledgeBase {
   bio?: string;
