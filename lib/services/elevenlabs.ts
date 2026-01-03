@@ -36,8 +36,9 @@ class ElevenLabsService {
 
   constructor(config?: ElevenLabsConfig) {
     this.apiKey = config?.apiKey || process.env.ELEVENLABS_API_KEY || "";
-    // Default to Rachel voice (professional, clear)
-    this.voiceId = config?.voiceId || "21m00Tcm4TlvDq8ikWAM";
+    // Support env variable for voice, default to Sarah (warm, conversational)
+    // Other good options: Rachel (21m00Tcm4TlvDq8ikWAM), Adam (pNInz6obpgDQGcFmaJgB)
+    this.voiceId = config?.voiceId || process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
   }
 
   isConfigured(): boolean {
@@ -53,9 +54,11 @@ class ElevenLabsService {
     settings?: VoiceSettings
   ): Promise<ArrayBuffer | null> {
     if (!this.isConfigured()) {
-      console.warn("ElevenLabs not configured. Returning null.");
+      console.warn("[ElevenLabs] Not configured - no API key");
       return null;
     }
+
+    console.log(`[ElevenLabs] TTS request: voice=${this.voiceId}, text="${text.substring(0, 50)}..."`);
 
     try {
       // Use non-streaming endpoint for complete audio buffer
@@ -83,13 +86,15 @@ class ElevenLabsService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`ElevenLabs TTS error ${response.status}:`, errorText);
-        throw new Error(`ElevenLabs TTS API error: ${response.status} - ${errorText}`);
+        console.error(`[ElevenLabs] TTS error ${response.status}:`, errorText);
+        return null;
       }
 
-      return await response.arrayBuffer();
+      const buffer = await response.arrayBuffer();
+      console.log(`[ElevenLabs] TTS success: ${buffer.byteLength} bytes`);
+      return buffer;
     } catch (error) {
-      console.error("Failed to generate speech:", error);
+      console.error("[ElevenLabs] TTS failed:", error);
       return null;
     }
   }

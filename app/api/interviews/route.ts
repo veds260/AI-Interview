@@ -141,27 +141,26 @@ async function generateCustomQuestions(
         messages: [
           {
             role: "system",
-            content: `You generate personalized interview questions that extract unique stories, insights, and hot takes.
+            content: `You generate SHORT, PUNCHY interview questions.
 
-QUESTION TYPES TO INCLUDE:
-1. Origin/Journey questions - their path, pivotal moments
-2. Failure/Learning stories - specific mistakes and lessons
-3. Hot takes - controversial opinions they hold
-4. Behind-the-scenes - how they actually work/think
-5. Future predictions - where they see things going
-6. Tactical advice - specific frameworks or tips they use
+QUESTION STYLE:
+- ONE question only, under 15 words
+- Simple and direct - no multi-part questions
+- Ask ONE thing at a time
+- Natural conversational tone
 
-RULES:
-- Questions must be SPECIFIC to their context, not generic
-- Build on past conversations - "Last time you mentioned X, tell me more about..."
-- Reference their actual products, tweets, or talking points
-- Ask for STORIES and EXAMPLES, not abstract opinions
-- Each question should have viral/clip potential
-- Mix easy warmup questions with deeper probing ones
-- 1-2 sentences max per question
+GOOD EXAMPLES:
+- "What's your most controversial opinion about [topic]?"
+- "Tell me about a time you failed hard."
+- "What would you do differently if starting over?"
+- "What's the biggest misconception about [their work]?"
+
+BAD EXAMPLES (TOO LONG):
+- "You mentioned X in your previous interview. Can you walk me through the specific steps you took to achieve Y and what lessons you learned?"
+- "Given your experience with A and B, how do you think about C in the context of D?"
 
 Return JSON array with 12-15 questions:
-[{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "why this question for them"}]`,
+[{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "brief reason"}]`,
           },
           {
             role: "user",
