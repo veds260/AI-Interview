@@ -141,23 +141,24 @@ async function generateCustomQuestions(
         messages: [
           {
             role: "system",
-            content: `You generate SHORT, PUNCHY interview questions.
+            content: `You generate personalized interview questions that extract great stories and insights.
 
 QUESTION STYLE:
-- ONE question only, under 15 words
-- Simple and direct - no multi-part questions
+- Context buildup is GOOD ("Given your work on X..." or "You've talked about Y...")
+- But end with ONE clear question - never multiple questions
 - Ask ONE thing at a time
 - Natural conversational tone
 
 GOOD EXAMPLES:
-- "What's your most controversial opinion about [topic]?"
-- "Tell me about a time you failed hard."
-- "What would you do differently if starting over?"
-- "What's the biggest misconception about [their work]?"
+- "You've built multiple companies. What's the one mistake you see first-time founders make over and over?"
+- "Given your experience in [their field], what's a belief you hold that most people disagree with?"
+- "Tell me about a time you were completely wrong about something important."
+- "What's the biggest misconception people have about [their work]?"
 
-BAD EXAMPLES (TOO LONG):
-- "You mentioned X in your previous interview. Can you walk me through the specific steps you took to achieve Y and what lessons you learned?"
-- "Given your experience with A and B, how do you think about C in the context of D?"
+BAD EXAMPLES (multiple questions = bad UX):
+- "Can you walk me through X? What were the steps? And what lessons did you learn?"
+- "How did you approach Y? What challenges came up? How did you overcome them?"
+- "Tell me about X and also Y and what you think about Z?"
 
 Return JSON array with 12-15 questions:
 [{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "brief reason"}]`,
