@@ -66,8 +66,8 @@ export async function POST(
         topTweets: data.topTweets.map((t) => ({
           text: t.text,
           engagement: t.engagement,
-          likes: t.public_metrics.like_count,
-          retweets: t.public_metrics.retweet_count,
+          likes: t.likeCount,
+          retweets: t.retweetCount,
         })),
       },
     });
