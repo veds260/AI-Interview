@@ -64,7 +64,7 @@ interface Client {
 interface VideoClip {
   id: string;
   videoUrl: string;
-  videoKey?: string; // R2 storage key for conversion
+  videoKey?: string; // R2 storage key for download
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   fileSizeBytes: number | null;
@@ -630,6 +630,7 @@ export default function AdminClipsPage() {
               src={previewClip.videoUrl}
               title={previewClip.title || previewClip.interviewTitle || "video"}
               poster={previewClip.thumbnailUrl || undefined}
+              videoKey={previewClip.videoKey}
             />
           )}
           <DialogFooter>

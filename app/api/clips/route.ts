@@ -99,11 +99,12 @@ export async function GET(req: NextRequest) {
     const clipsWithUrls = await Promise.all(
       clips.map(async (clip) => {
         try {
+          const originalKey = clip.videoUrl; // Keep original R2 key for downloads
           const signedUrl = await getPresignedVideoUrl(clip.videoUrl);
-          return { ...clip, videoUrl: signedUrl };
+          return { ...clip, videoUrl: signedUrl, videoKey: originalKey };
         } catch (e) {
           console.error(`Failed to sign URL for clip ${clip.id}:`, e);
-          return clip; // Return original if signing fails
+          return { ...clip, videoKey: clip.videoUrl }; // Return original if signing fails
         }
       })
     );

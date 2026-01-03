@@ -25,6 +25,7 @@ import { VideoPlayer } from "@/components/ui/video-player";
 interface VideoClip {
   id: string;
   videoUrl: string;
+  videoKey?: string; // R2 storage key for download
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   fileSizeBytes: number | null;
@@ -245,6 +246,7 @@ export default function ClipsPage() {
                 src={selectedClip.videoUrl}
                 title={selectedClip.title || selectedClip.interviewTitle || "video"}
                 poster={selectedClip.thumbnailUrl || undefined}
+                videoKey={selectedClip.videoKey}
               />
             )}
             <div className="text-sm text-gray-500 flex items-center gap-4">
