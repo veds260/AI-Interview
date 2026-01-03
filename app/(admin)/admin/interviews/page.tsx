@@ -103,6 +103,8 @@ export default function AdminInterviewsPage() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [extractConfirmOpen, setExtractConfirmOpen] = useState(false);
+  const [interviewToExtract, setInterviewToExtract] = useState<Interview | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -185,12 +187,23 @@ export default function AdminInterviewsPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
-      toast.success(`Extracted ${data.count} content pieces`);
+      toast.success(`Extracted ${data.count} content pieces. Interview marked as completed.`);
+      setExtractConfirmOpen(false);
+      setInterviewToExtract(null);
     },
     onError: () => {
       toast.error("Failed to extract content");
     },
   });
+
+  const handleExtractClick = (interview: Interview) => {
+    if (interview.status !== "completed") {
+      setInterviewToExtract(interview);
+      setExtractConfirmOpen(true);
+    } else {
+      extractMutation.mutate(interview.id);
+    }
+  };
 
   const assignMutation = useMutation({
     mutationFn: async ({ interviewId, writerId }: { interviewId: string; writerId: string }) => {
@@ -524,13 +537,13 @@ export default function AdminInterviewsPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
 
-                        {interview.status === "completed" && (
+                        {["completed", "in_progress", "paused"].includes(interview.status) && (
                           <>
                             {(interview.extractionsCount || 0) === 0 ? (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => extractMutation.mutate(interview.id)}
+                                onClick={() => handleExtractClick(interview)}
                                 disabled={extractMutation.isPending}
                               >
                                 {extractMutation.isPending ? (
@@ -748,13 +761,13 @@ export default function AdminInterviewsPage() {
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
               Close
             </Button>
-            {selectedInterview && selectedInterview.status === "completed" && (
+            {selectedInterview && ["completed", "in_progress", "paused"].includes(selectedInterview.status) && (
               <>
                 {(selectedInterview.extractionsCount || 0) === 0 ? (
                   <Button
                     onClick={() => {
-                      extractMutation.mutate(selectedInterview.id);
                       setViewDialogOpen(false);
+                      handleExtractClick(selectedInterview);
                     }}
                     disabled={extractMutation.isPending}
                   >
@@ -908,6 +921,58 @@ export default function AdminInterviewsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShareDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extract Confirmation Dialog */}
+      <Dialog open={extractConfirmOpen} onOpenChange={setExtractConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extract from Incomplete Interview?</DialogTitle>
+            <DialogDescription>
+              This interview is currently {interviewToExtract?.status === "in_progress" ? "in progress" : "paused"}.
+              Extracting content will mark this interview as <strong>completed</strong> and it cannot be continued.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-3">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                The client will no longer be able to continue this interview after extraction.
+              </p>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p><strong>Interview:</strong> {interviewToExtract?.title || `Interview ${interviewToExtract?.id?.slice(0, 8)}`}</p>
+              <p><strong>Questions answered:</strong> {interviewToExtract?.questionsCount || 0}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setExtractConfirmOpen(false);
+                setInterviewToExtract(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (interviewToExtract) {
+                  extractMutation.mutate(interviewToExtract.id);
+                }
+              }}
+              disabled={extractMutation.isPending}
+            >
+              {extractMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              Extract & Complete
             </Button>
           </DialogFooter>
         </DialogContent>

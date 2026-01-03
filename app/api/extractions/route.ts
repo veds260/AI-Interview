@@ -171,11 +171,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // Update interview extraction count
+    // Update interview extraction count and mark as completed
     await db
       .update(interviews)
       .set({
         extractionsCount: extractedContent.length,
+        status: "completed",
+        completedAt: interview.completedAt || new Date(),
         updatedAt: new Date(),
       })
       .where(eq(interviews.id, interviewId));
