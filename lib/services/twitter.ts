@@ -6,26 +6,23 @@ const TWITTER_API_BASE = "https://api.twitterapi.io";
 interface Tweet {
   id: string;
   text: string;
-  created_at: string;
-  public_metrics: {
-    like_count: number;
-    retweet_count: number;
-    reply_count: number;
-    quote_count: number;
-  };
+  createdAt: string;
+  likeCount: number;
+  retweetCount: number;
+  replyCount: number;
+  quoteCount: number;
+  viewCount: number;
   author: {
     username: string;
     name: string;
-    followers_count: number;
+    followersCount: number;
   };
 }
 
 interface TwitterApiResponse {
-  data: Tweet[];
-  meta?: {
-    result_count: number;
-    next_token?: string;
-  };
+  tweets: Tweet[];
+  has_next_page?: boolean;
+  next_cursor?: string;
 }
 
 export async function fetchUserTweets(
@@ -50,12 +47,21 @@ export async function fetchUserTweets(
     );
 
     if (!response.ok) {
-      console.error(`Twitter API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Twitter API error: ${response.status}`, errorText);
       return [];
     }
 
-    const data: TwitterApiResponse = await response.json();
-    return data.data || [];
+    const data = await response.json();
+    console.log(`[Twitter] Fetched ${data.tweets?.length || 0} tweets for @${username}`);
+
+    // Handle the actual twitterapi.io response format
+    if (!data.tweets || !Array.isArray(data.tweets)) {
+      console.error("[Twitter] Unexpected response format:", JSON.stringify(data).slice(0, 500));
+      return [];
+    }
+
+    return data.tweets;
   } catch (error) {
     console.error("Failed to fetch tweets:", error);
     return [];
@@ -63,12 +69,12 @@ export async function fetchUserTweets(
 }
 
 export function calculateEngagement(tweet: Tweet): number {
-  const metrics = tweet.public_metrics;
+  // Use flat metric fields from twitterapi.io response
   return (
-    metrics.like_count +
-    metrics.retweet_count * 2 +
-    metrics.reply_count * 1.5 +
-    metrics.quote_count * 2.5
+    (tweet.likeCount || 0) +
+    (tweet.retweetCount || 0) * 2 +
+    (tweet.replyCount || 0) * 1.5 +
+    (tweet.quoteCount || 0) * 2.5
   );
 }
 
@@ -87,6 +93,8 @@ export function extractTopics(tweets: Tweet[]): string[] {
   const commonTopics: Record<string, number> = {};
 
   tweets.forEach((tweet) => {
+    if (!tweet.text) return;
+
     // Extract hashtags
     const hashtags = tweet.text.match(/#\w+/g) || [];
     hashtags.forEach((tag) => {
@@ -118,6 +126,7 @@ export async function scrapeCompetitor(username: string) {
   const tweets = await fetchUserTweets(username, 50);
 
   if (tweets.length === 0) {
+    console.log(`[Twitter] No tweets found for @${username}`);
     return null;
   }
 
@@ -126,11 +135,13 @@ export async function scrapeCompetitor(username: string) {
     tweets.reduce((sum, t) => sum + calculateEngagement(t), 0) / tweets.length;
   const topics = extractTopics(tweets);
 
+  console.log(`[Twitter] Scraped @${username}: ${tweets.length} tweets, ${topics.length} topics, avg engagement: ${Math.round(avgEngagement)}`);
+
   return {
     tweets,
     topTweets,
     avgEngagement: Math.round(avgEngagement),
     topics,
-    followerCount: tweets[0]?.author?.followers_count || 0,
+    followerCount: tweets[0]?.author?.followersCount || 0,
   };
 }
