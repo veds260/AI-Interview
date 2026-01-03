@@ -279,10 +279,32 @@ export default function LiveInterviewPage() {
   const processAudio = async (audioBlob: Blob) => {
     setIsProcessing(true);
 
+    // FAST PATH: Use Web Speech transcript immediately if available
+    const webSpeechText = transcript.trim();
+
+    if (webSpeechText) {
+      // Fire background transcription for audio storage (don't wait for it)
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("language_code", "en");
+      formData.append("interviewId", interviewId);
+
+      // Background: transcribe and store audio (fire-and-forget)
+      fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      }).catch(err => console.error("Background transcription error:", err));
+
+      // Submit immediately with Web Speech text
+      await submitResponse(webSpeechText);
+      setIsProcessing(false);
+      return;
+    }
+
+    // FALLBACK: Web Speech failed, wait for Deepgram transcription
     let transcribedText = "";
     let audioKey: string | null = null;
 
-    // Try ElevenLabs STT (also uploads audio to R2 in background)
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
@@ -302,13 +324,11 @@ export default function LiveInterviewPage() {
         }
       }
     } catch (error) {
-      console.error("ElevenLabs STT error:", error);
+      console.error("Transcription error:", error);
     }
 
-    const finalText = transcribedText || transcript.trim();
-
-    if (finalText) {
-      await submitResponse(finalText, audioKey);
+    if (transcribedText) {
+      await submitResponse(transcribedText, audioKey);
     } else {
       toast.error("Could not capture your response. Please try again and speak clearly.");
     }
