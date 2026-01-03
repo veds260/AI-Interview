@@ -19,13 +19,15 @@ export async function POST(req: NextRequest) {
     const audioBuffer = await audioFile.arrayBuffer();
     const mimeType = audioFile.type || "audio/webm";
 
-    // Upload audio to R2 in background (non-blocking)
-    if (interviewId) {
-      uploadAudioInBackground(audioBuffer, {
-        interviewId,
-        contentType: mimeType,
-      });
-    }
+    // Helper to start background upload (called after transcription succeeds)
+    const startBackgroundUpload = () => {
+      if (interviewId) {
+        uploadAudioInBackground(audioBuffer, {
+          interviewId,
+          contentType: mimeType,
+        });
+      }
+    };
 
     // Try Deepgram first (Nova-3 has best accuracy, same as HeyGen uses internally)
     const deepgramKey = process.env.DEEPGRAM_API_KEY;
@@ -47,6 +49,8 @@ export async function POST(req: NextRequest) {
           const result = await response.json();
           const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
           console.log("Deepgram transcription:", transcript);
+          // Start upload AFTER transcription succeeds (no resource contention)
+          startBackgroundUpload();
           return NextResponse.json({ text: transcript });
         } else {
           const errorText = await response.text();
@@ -80,6 +84,7 @@ export async function POST(req: NextRequest) {
         if (response.ok) {
           const result = await response.json();
           console.log("Groq transcription:", result.text);
+          startBackgroundUpload();
           return NextResponse.json({ text: result.text });
         } else {
           console.error("Groq error:", await response.text());
@@ -112,6 +117,7 @@ export async function POST(req: NextRequest) {
         if (response.ok) {
           const result = await response.json();
           console.log("OpenAI transcription:", result.text);
+          startBackgroundUpload();
           return NextResponse.json({ text: result.text });
         } else {
           console.error("OpenAI error:", await response.text());
