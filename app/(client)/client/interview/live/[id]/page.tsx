@@ -280,6 +280,7 @@ export default function LiveInterviewPage() {
     setIsProcessing(true);
 
     let transcribedText = "";
+    let audioKey: string | null = null;
 
     // Try ElevenLabs STT (also uploads audio to R2 in background)
     try {
@@ -297,6 +298,7 @@ export default function LiveInterviewPage() {
         const data = await res.json();
         if (data.text && data.text.trim()) {
           transcribedText = data.text.trim();
+          audioKey = data.audioKey || null;
         }
       }
     } catch (error) {
@@ -306,7 +308,7 @@ export default function LiveInterviewPage() {
     const finalText = transcribedText || transcript.trim();
 
     if (finalText) {
-      await submitResponse(finalText);
+      await submitResponse(finalText, audioKey);
     } else {
       toast.error("Could not capture your response. Please try again and speak clearly.");
     }
@@ -314,12 +316,12 @@ export default function LiveInterviewPage() {
     setIsProcessing(false);
   };
 
-  const submitResponse = async (response: string) => {
+  const submitResponse = async (response: string, audioKey?: string | null) => {
     try {
       const res = await fetch(`/api/interviews/${interviewId}/respond`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ response }),
+        body: JSON.stringify({ response, audioKey }),
       });
 
       if (!res.ok) throw new Error("Failed to submit response");

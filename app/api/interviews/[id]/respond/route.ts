@@ -217,7 +217,7 @@ export async function POST(
     }
 
     const { id } = await params;
-    const { response } = await request.json();
+    const { response, audioKey } = await request.json();
 
     if (!response?.trim()) {
       return NextResponse.json(
@@ -305,11 +305,12 @@ export async function POST(
       targetedContentType: currentQuestionData?.category as any,
     });
 
-    // Save the client response message
+    // Save the client response message (with audioUrl if available)
     await db.insert(interviewMessages).values({
       interviewId: id,
       role: "client",
       content: response.trim(),
+      audioUrl: audioKey || null,
     });
 
     // Update questions asked

@@ -54,6 +54,37 @@ export function uploadAudioInBackground(
 }
 
 /**
+ * Upload audio with a pre-defined key (for when we need to return the key before upload completes)
+ */
+export function uploadAudioInBackgroundWithKey(
+  audioBuffer: ArrayBuffer,
+  key: string,
+  contentType: string = "audio/webm"
+): void {
+  const client = getR2Client();
+  if (!client) {
+    console.log("[Storage] R2 not configured, skipping audio upload");
+    return;
+  }
+
+  const bucketName = process.env.R2_BUCKET_NAME || "compound-interviewer";
+
+  // Fire and forget
+  client.send(
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: Buffer.from(audioBuffer),
+      ContentType: contentType,
+    })
+  ).then(() => {
+    console.log("[Storage] Audio uploaded:", key, `(${Math.round(Buffer.from(audioBuffer).length / 1024)}KB)`);
+  }).catch((err) => {
+    console.error("[Storage] Background audio upload failed:", err);
+  });
+}
+
+/**
  * Internal function to handle the actual upload
  */
 async function uploadAudioToR2(

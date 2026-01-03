@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadAudioInBackground } from "@/lib/services/storage";
+import { uploadAudioInBackgroundWithKey } from "@/lib/services/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,13 +19,19 @@ export async function POST(req: NextRequest) {
     const audioBuffer = await audioFile.arrayBuffer();
     const mimeType = audioFile.type || "audio/webm";
 
+    // Generate audio key for R2 storage
+    let audioKey: string | null = null;
+    if (interviewId) {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const extension = mimeType.includes("mp3") ? "mp3" : mimeType.includes("wav") ? "wav" : "webm";
+      audioKey = `audio/${interviewId}/${timestamp}-${randomId}.${extension}`;
+    }
+
     // Helper to start background upload (called after transcription succeeds)
     const startBackgroundUpload = () => {
-      if (interviewId) {
-        uploadAudioInBackground(audioBuffer, {
-          interviewId,
-          contentType: mimeType,
-        });
+      if (interviewId && audioKey) {
+        uploadAudioInBackgroundWithKey(audioBuffer, audioKey, mimeType);
       }
     };
 
@@ -51,7 +57,7 @@ export async function POST(req: NextRequest) {
           console.log("Deepgram transcription:", transcript);
           // Start upload AFTER transcription succeeds (no resource contention)
           startBackgroundUpload();
-          return NextResponse.json({ text: transcript });
+          return NextResponse.json({ text: transcript, audioKey });
         } else {
           const errorText = await response.text();
           console.error("Deepgram error:", errorText);
@@ -85,7 +91,7 @@ export async function POST(req: NextRequest) {
           const result = await response.json();
           console.log("Groq transcription:", result.text);
           startBackgroundUpload();
-          return NextResponse.json({ text: result.text });
+          return NextResponse.json({ text: result.text, audioKey });
         } else {
           console.error("Groq error:", await response.text());
         }
@@ -118,7 +124,7 @@ export async function POST(req: NextRequest) {
           const result = await response.json();
           console.log("OpenAI transcription:", result.text);
           startBackgroundUpload();
-          return NextResponse.json({ text: result.text });
+          return NextResponse.json({ text: result.text, audioKey });
         } else {
           console.error("OpenAI error:", await response.text());
         }

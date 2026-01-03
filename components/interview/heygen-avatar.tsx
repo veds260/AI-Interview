@@ -34,7 +34,7 @@ interface HeyGenAvatarProps {
   onFallback?: () => void; // Called when HeyGen fails and we fall back to static UI
   onUserSpeaking?: (isSpeaking: boolean) => void;
   onAvatarSpeaking?: (isSpeaking: boolean) => void;
-  onTranscript?: (text: string, isFinal: boolean) => void;
+  onTranscript?: (text: string, isFinal: boolean, audioKey?: string) => void;
   initialQuestion?: string;
   knowledgeBase?: string;
   tokenEndpoint?: string;
@@ -495,7 +495,8 @@ export default function HeyGenAvatar({
 
           if (result.text && result.text.trim()) {
             console.log("Server transcription result:", result.text);
-            onTranscriptRef.current?.(result.text, true);
+            // Pass audioKey as third argument for audio storage
+            onTranscriptRef.current?.(result.text, true, result.audioKey);
           } else if (result.error) {
             console.error("Transcription error:", result.error, result.hint);
             // Show text input as fallback

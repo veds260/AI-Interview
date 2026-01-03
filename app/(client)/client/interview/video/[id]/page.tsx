@@ -407,7 +407,7 @@ function VideoInterviewContent() {
 
   // Handle user transcript from HeyGen's voice chat STT
   const handleTranscript = useCallback(
-    async (text: string, isFinal: boolean) => {
+    async (text: string, isFinal: boolean, audioKey?: string) => {
       if (!isFinal || processingResponseRef.current || !text.trim()) return;
 
       const cleanText = text.trim();
@@ -469,7 +469,7 @@ function VideoInterviewContent() {
         const res = await fetch(`/api/interviews/${interviewId}/respond`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ response: cleanText }),
+          body: JSON.stringify({ response: cleanText, audioKey }),
         });
         perfTracker.end("API: Submit Response");
 
@@ -569,7 +569,8 @@ function VideoInterviewContent() {
               });
               const data = await res.json();
               if (data.text) {
-                handleTranscript(data.text, true);
+                // Pass audioKey to handleTranscript so it gets saved with the message
+                handleTranscript(data.text, true, data.audioKey);
               }
             } catch (e) {
               console.error("Transcription error:", e);
