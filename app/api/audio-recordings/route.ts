@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { interviewMessages, interviews, clients } from "@/lib/db/schema";
-import { eq, desc, and, isNotNull, sql } from "drizzle-orm";
+import { interviewMessages, interviews, clients, interviewAssignments } from "@/lib/db/schema";
+import { eq, desc, and, isNotNull, inArray } from "drizzle-orm";
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -88,6 +88,28 @@ export async function GET(req: NextRequest) {
         conditions.push(eq(interviewMessages.interviewId, interviewId));
       }
       // We'll filter by client via the join
+    } else if (session.user.role === "writer") {
+      // Writers can only access audio from their assigned interviews
+      const assignments = await db
+        .select({ interviewId: interviewAssignments.interviewId })
+        .from(interviewAssignments)
+        .where(eq(interviewAssignments.writerId, session.user.id));
+
+      const assignedInterviewIds = assignments.map((a) => a.interviewId);
+
+      if (assignedInterviewIds.length === 0) {
+        return NextResponse.json({ recordings: [] });
+      }
+
+      if (interviewId) {
+        // Verify writer has access to this interview
+        if (!assignedInterviewIds.includes(interviewId)) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        conditions.push(eq(interviewMessages.interviewId, interviewId));
+      } else {
+        conditions.push(inArray(interviewMessages.interviewId, assignedInterviewIds));
+      }
     } else {
       return NextResponse.json({ recordings: [] });
     }

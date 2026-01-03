@@ -17,8 +17,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Video, Play, Download, Calendar, Clock, Loader2, Mic, Pause } from "lucide-react";
+import { Video, Play, Download, Calendar, Clock, Loader2, Mic } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { AudioPlayer } from "@/components/ui/audio-player";
 
 interface VideoClip {
   id: string;
@@ -48,8 +49,6 @@ interface AudioRecording {
 export default function ClipsPage() {
   const [selectedClip, setSelectedClip] = useState<VideoClip | null>(null);
   const [activeTab, setActiveTab] = useState<"video" | "audio">("video");
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   const { data, isLoading } = useQuery<{ clips: VideoClip[] }>({
     queryKey: ["clips"],
@@ -68,28 +67,6 @@ export default function ClipsPage() {
       return res.json();
     },
   });
-
-  // Audio playback
-  const playAudio = (recording: AudioRecording) => {
-    if (audioElement) {
-      audioElement.pause();
-    }
-
-    if (playingAudioId === recording.id) {
-      setPlayingAudioId(null);
-      setAudioElement(null);
-      return;
-    }
-
-    const audio = new Audio(recording.audioUrl);
-    audio.onended = () => {
-      setPlayingAudioId(null);
-      setAudioElement(null);
-    };
-    audio.play();
-    setAudioElement(audio);
-    setPlayingAudioId(recording.id);
-  };
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return "Unknown size";
@@ -218,21 +195,8 @@ export default function ClipsPage() {
                   {audioData.recordings.map((recording) => (
                     <div
                       key={recording.id}
-                      className="flex items-center gap-4 p-4 hover:bg-gray-50"
+                      className="p-4 hover:bg-gray-50 space-y-2"
                     >
-                      <Button
-                        variant={playingAudioId === recording.id ? "secondary" : "outline"}
-                        size="sm"
-                        className="w-10 h-10 rounded-full p-0 flex-shrink-0"
-                        onClick={() => playAudio(recording)}
-                      >
-                        {playingAudioId === recording.id ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Play className="h-4 w-4" />
-                        )}
-                      </Button>
-
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900 line-clamp-2">
                           {recording.content}
@@ -254,6 +218,7 @@ export default function ClipsPage() {
                           )}
                         </div>
                       </div>
+                      <AudioPlayer src={recording.audioUrl} compact />
                     </div>
                   ))}
                 </div>

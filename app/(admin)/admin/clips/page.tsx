@@ -49,10 +49,10 @@ import {
   AlertTriangle,
   X,
   Mic,
-  Pause,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { AudioPlayer } from "@/components/ui/audio-player";
 
 interface Client {
   id: string;
@@ -602,48 +602,38 @@ export default function AdminClipsPage() {
                   {filteredAudio.map((recording) => (
                     <div
                       key={recording.id}
-                      className="flex items-center gap-4 p-4 hover:bg-gray-50"
+                      className="p-4 hover:bg-gray-50 space-y-2"
                     >
-                      <Button
-                        variant={playingAudioId === recording.id ? "secondary" : "outline"}
-                        size="sm"
-                        className="w-10 h-10 rounded-full p-0"
-                        onClick={() => playAudio(recording)}
-                      >
-                        {playingAudioId === recording.id ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Play className="h-4 w-4" />
-                        )}
-                      </Button>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 line-clamp-2">
-                          {recording.content}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                          <span className={`px-1.5 py-0.5 rounded ${
-                            recording.role === "client"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}>
-                            {recording.role === "client" ? "Response" : "Question"}
-                          </span>
-                          {recording.clientName && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {recording.clientName}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 line-clamp-2">
+                            {recording.content}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                            <span className={`px-1.5 py-0.5 rounded ${
+                              recording.role === "client"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}>
+                              {recording.role === "client" ? "Response" : "Question"}
                             </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(recording.createdAt), { addSuffix: true })}
-                          </span>
-                          {recording.fileSizeBytes && (
-                            <span>{formatFileSize(recording.fileSizeBytes)}</span>
-                          )}
+                            {recording.clientName && (
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {recording.clientName}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDistanceToNow(new Date(recording.createdAt), { addSuffix: true })}
+                            </span>
+                            {recording.fileSizeBytes && (
+                              <span>{formatFileSize(recording.fileSizeBytes)}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <AudioPlayer src={recording.audioUrl} compact />
                     </div>
                   ))}
                 </div>

@@ -52,7 +52,22 @@ import {
   Copy,
   ExternalLink,
   ChevronRight,
+  Mic,
+  Calendar,
 } from "lucide-react";
+import { AudioPlayer } from "@/components/ui/audio-player";
+import { formatDistanceToNow } from "date-fns";
+
+interface AudioRecording {
+  id: string;
+  audioUrl: string;
+  content: string;
+  role: "interviewer" | "client";
+  createdAt: string;
+  interviewId: string | null;
+  interviewTitle: string | null;
+  fileSizeBytes: number | null;
+}
 
 interface Assignment {
   id: string;
@@ -103,6 +118,24 @@ export default function AssignmentsPage() {
   const queryClient = useQueryClient();
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // Fetch audio recordings for selected interview
+  const { data: audioData, isLoading: audioLoading } = useQuery<{ recordings: AudioRecording[] }>({
+    queryKey: ["audio-recordings", selectedAssignment?.interviewId],
+    queryFn: async () => {
+      const res = await fetch(`/api/audio-recordings?interviewId=${selectedAssignment?.interviewId}`);
+      if (!res.ok) throw new Error("Failed to fetch audio recordings");
+      return res.json();
+    },
+    enabled: !!selectedAssignment?.interviewId && detailDialogOpen,
+  });
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return "Unknown size";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   // Fetch assignments
   const { data: assignments, isLoading } = useQuery<Assignment[]>({
@@ -335,11 +368,15 @@ export default function AssignmentsPage() {
 
           {selectedAssignment && (
             <Tabs defaultValue="overview" className="mt-4">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                <TabsTrigger value="audio" className="flex items-center gap-1">
+                  <Mic className="h-3 w-3" />
+                  Audio ({audioData?.recordings?.length || 0})
+                </TabsTrigger>
                 <TabsTrigger value="extractions">Content ({selectedAssignment.extractionsCount})</TabsTrigger>
-                <TabsTrigger value="client">Client Info</TabsTrigger>
+                <TabsTrigger value="client">Client</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
@@ -438,6 +475,56 @@ export default function AssignmentsPage() {
                     )}
                   </ScrollArea>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="audio">
+                <ScrollArea className="h-96">
+                  {audioLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    </div>
+                  ) : !audioData?.recordings?.length ? (
+                    <div className="text-center py-12">
+                      <Mic className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <h3 className="text-lg font-medium text-gray-900">No audio recordings</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        This interview doesn't have any audio recordings
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 pr-4">
+                      {audioData.recordings.map((recording) => (
+                        <div
+                          key={recording.id}
+                          className="p-4 border rounded-lg space-y-2"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 line-clamp-2">
+                              {recording.content}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                              <span className={`px-1.5 py-0.5 rounded ${
+                                recording.role === "client"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}>
+                                {recording.role === "client" ? "Client Response" : "Question"}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDistanceToNow(new Date(recording.createdAt), { addSuffix: true })}
+                              </span>
+                              {recording.fileSizeBytes && (
+                                <span>{formatFileSize(recording.fileSizeBytes)}</span>
+                              )}
+                            </div>
+                          </div>
+                          <AudioPlayer src={recording.audioUrl} compact />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
               <TabsContent value="extractions">
