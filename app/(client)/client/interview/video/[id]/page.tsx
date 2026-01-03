@@ -53,7 +53,7 @@ async function preloadAudio(text: string, interviewId: string): Promise<string |
   }
 }
 
-// ElevenLabs TTS function with fallback to browser TTS
+// ElevenLabs TTS function - retries before any fallback
 async function speakWithElevenLabs(
   text: string,
   interviewId: string,
@@ -77,89 +77,73 @@ async function speakWithElevenLabs(
     preloadingMap.delete(text);
   }
 
-  // If we have audio (preloaded or waited for), play it instantly
-  if (audioUrl) {
-    console.log("[TTS] Using preloaded audio - instant playback!");
-    perfTracker.start("TTS: Audio Playback");
-    const audio = new Audio(audioUrl);
-    audio.onended = () => {
-      console.log("[TTS] Audio finished");
-      perfTracker.end("TTS: Audio Playback");
-      onEnd?.();
-    };
-    audio.onerror = (e) => {
-      console.error("[TTS] Audio playback error:", e);
-      fallbackBrowserTTS(text, onEnd);
-    };
-    await audio.play();
-    return;
-  }
-
-  // No preloaded audio, fetch now
-  try {
-    perfTracker.start("TTS: ElevenLabs API");
-    const res = await fetch("/api/avatar/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, interviewId }),
-    });
-
-    const data = await res.json();
-    perfTracker.end("TTS: ElevenLabs API");
-
-    if (data.audioUrl) {
-      console.log("[TTS] Playing audio...");
-      perfTracker.start("TTS: Audio Playback");
-      const audio = new Audio(data.audioUrl);
+  // Helper to play audio
+  const playAudio = (url: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio(url);
       audio.onended = () => {
         console.log("[TTS] Audio finished");
-        perfTracker.end("TTS: Audio Playback");
-        onEnd?.();
+        resolve();
       };
       audio.onerror = (e) => {
         console.error("[TTS] Audio playback error:", e);
-        fallbackBrowserTTS(text, onEnd);
+        reject(e);
       };
-      await audio.play();
-    } else {
-      console.log("[TTS] No audio URL, using browser TTS");
-      fallbackBrowserTTS(text, onEnd);
-    }
-  } catch (error) {
-    console.error("[TTS] API error:", error);
-    fallbackBrowserTTS(text, onEnd);
-  }
-}
-
-// Fallback to browser TTS if ElevenLabs fails
-function fallbackBrowserTTS(text: string, onEnd?: () => void) {
-  console.log("[TTS] Using browser TTS fallback");
-  if (!window.speechSynthesis) {
-    console.error("[TTS] Browser speech synthesis not available");
-    onEnd?.();
-    return;
-  }
-
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.0;
-  utterance.pitch = 1.0;
-  utterance.volume = 1.0;
-
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find(v =>
-    v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel")
-  );
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
-    console.log("[TTS] Using voice:", preferredVoice.name);
-  }
-
-  utterance.onend = () => {
-    console.log("[TTS] Browser TTS finished");
-    onEnd?.();
+      audio.play().catch(reject);
+    });
   };
-  window.speechSynthesis.speak(utterance);
+
+  // If we have preloaded audio, play it
+  if (audioUrl) {
+    console.log("[TTS] Using preloaded audio - instant playback!");
+    perfTracker.start("TTS: Audio Playback");
+    try {
+      await playAudio(audioUrl);
+      perfTracker.end("TTS: Audio Playback");
+      onEnd?.();
+      return;
+    } catch (e) {
+      console.error("[TTS] Preloaded audio failed, fetching fresh...");
+      // Fall through to fetch fresh audio
+    }
+  }
+
+  // Fetch from ElevenLabs API with retry
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) console.log(`[TTS] Retry attempt ${attempt}...`);
+
+      perfTracker.start("TTS: ElevenLabs API");
+      const res = await fetch("/api/avatar/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, interviewId }),
+      });
+
+      const data = await res.json();
+      perfTracker.end("TTS: ElevenLabs API");
+
+      if (data.audioUrl) {
+        console.log("[TTS] Got audio URL, playing...");
+        perfTracker.start("TTS: Audio Playback");
+        await playAudio(data.audioUrl);
+        perfTracker.end("TTS: Audio Playback");
+        onEnd?.();
+        return;
+      } else {
+        console.warn("[TTS] No audio URL returned:", data.message || "unknown reason");
+        // Continue to retry
+      }
+    } catch (error) {
+      console.error("[TTS] API error:", error);
+      // Continue to retry
+    }
+  }
+
+  // All retries failed - NO browser TTS fallback (consistent voice is critical)
+  console.error("[TTS] All ElevenLabs attempts failed - check ELEVENLABS_API_KEY in Railway");
+  onEnd?.();
 }
 
 interface Message {

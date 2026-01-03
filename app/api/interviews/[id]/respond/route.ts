@@ -434,14 +434,8 @@ export async function POST(
       });
     }
 
-    // Helper: Promise with timeout
-    const withTimeout = <T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
-      Promise.race([
-        promise,
-        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-      ]);
-
     // Run DB update and audio generation in PARALLEL for speed
+    // No timeout - let ElevenLabs complete fully to avoid browser TTS fallback
     const [, , nextQuestionAudioUrl] = await Promise.all([
       // 1. Update interview state
       db
@@ -469,24 +463,20 @@ export async function POST(
             .where(eq(questionBank.id, currentQuestionData.id))
         : Promise.resolve(),
 
-      // 3. Generate audio for next question with 1.5s timeout
-      // If audio takes too long, client will fetch separately
+      // 3. Generate audio for next question (no timeout - must complete)
       nextQuestion && elevenlabs.isConfigured() && !completed
-        ? withTimeout(
-            elevenlabs.textToSpeech(nextQuestion).then(buffer => {
-              if (buffer) {
-                const base64 = Buffer.from(buffer).toString("base64");
-                console.log("[Respond] Audio generated for next question");
-                return `data:audio/mpeg;base64,${base64}`;
-              }
-              return null;
-            }).catch(err => {
-              console.error("[Respond] Audio generation failed:", err);
-              return null;
-            }),
-            1500, // 1.5 second timeout
-            null  // Return null if timeout, client fetches separately
-          )
+        ? elevenlabs.textToSpeech(nextQuestion).then(buffer => {
+            if (buffer) {
+              const base64 = Buffer.from(buffer).toString("base64");
+              console.log("[Respond] Audio generated:", buffer.byteLength, "bytes");
+              return `data:audio/mpeg;base64,${base64}`;
+            }
+            console.warn("[Respond] ElevenLabs returned no audio buffer");
+            return null;
+          }).catch(err => {
+            console.error("[Respond] Audio generation failed:", err);
+            return null;
+          })
         : Promise.resolve(null),
     ]);
 
