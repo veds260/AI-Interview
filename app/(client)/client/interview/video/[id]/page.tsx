@@ -522,12 +522,8 @@ function VideoInterviewContent() {
         const errorMessage = "I couldn't process your response. Please tap the microphone and try again.";
         setCaptureError(errorMessage);
 
-        // Speak the error so user hears it
-        if ("speechSynthesis" in window) {
-          const utterance = new SpeechSynthesisUtterance(errorMessage);
-          utterance.rate = 0.9;
-          speechSynthesis.speak(utterance);
-        }
+        // Speak the error using ElevenLabs (same voice as interview)
+        speak(errorMessage);
 
         toast.error("Failed to process your response");
         perfTracker.mark("Error", String(error));
@@ -589,21 +585,13 @@ function VideoInterviewContent() {
                 // No text transcribed - show error
                 const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.";
                 setCaptureError(errorMessage);
-                if ("speechSynthesis" in window) {
-                  const utterance = new SpeechSynthesisUtterance(errorMessage);
-                  utterance.rate = 0.9;
-                  speechSynthesis.speak(utterance);
-                }
+                speak(errorMessage);
               }
             } catch (e) {
               console.error("Transcription error:", e);
               const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again.";
               setCaptureError(errorMessage);
-              if ("speechSynthesis" in window) {
-                const utterance = new SpeechSynthesisUtterance(errorMessage);
-                utterance.rate = 0.9;
-                speechSynthesis.speak(utterance);
-              }
+              speak(errorMessage);
             }
           };
 
