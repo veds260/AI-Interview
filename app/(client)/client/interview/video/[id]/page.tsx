@@ -557,9 +557,10 @@ function VideoInterviewContent() {
             const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
             stream.getTracks().forEach(t => t.stop());
 
-            // Transcribe using API
+            // Transcribe using API (also uploads audio to R2 in background)
             const formData = new FormData();
             formData.append("audio", audioBlob, "recording.webm");
+            formData.append("interviewId", interviewId);
 
             try {
               const res = await fetch("/api/transcribe", {

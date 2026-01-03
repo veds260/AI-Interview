@@ -478,10 +478,13 @@ export default function HeyGenAvatar({
           return;
         }
 
-        // Send to server for transcription
+        // Send to server for transcription (also uploads audio to R2 in background)
         try {
           const formData = new FormData();
           formData.append("audio", audioBlob, "recording.webm");
+          if (interviewId) {
+            formData.append("interviewId", interviewId);
+          }
 
           const response = await fetch("/api/transcribe", {
             method: "POST",

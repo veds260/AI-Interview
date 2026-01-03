@@ -281,11 +281,12 @@ export default function LiveInterviewPage() {
 
     let transcribedText = "";
 
-    // Try ElevenLabs STT
+    // Try ElevenLabs STT (also uploads audio to R2 in background)
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
       formData.append("language_code", "en");
+      formData.append("interviewId", interviewId);
 
       const res = await fetch("/api/transcribe", {
         method: "POST",

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { uploadAudioInBackground } from "@/lib/services/storage";
 
 export async function POST(req: NextRequest) {
   try {
     // Get the audio data from the request
     const formData = await req.formData();
     const audioFile = formData.get("audio") as File | null;
+    const interviewId = formData.get("interviewId") as string | null;
 
     if (!audioFile) {
       return NextResponse.json(
@@ -13,15 +15,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get audio buffer once (used for both transcription and upload)
+    const audioBuffer = await audioFile.arrayBuffer();
+    const mimeType = audioFile.type || "audio/webm";
+
+    // Upload audio to R2 in background (non-blocking)
+    if (interviewId) {
+      uploadAudioInBackground(audioBuffer, {
+        interviewId,
+        contentType: mimeType,
+      });
+    }
+
     // Try Deepgram first (Nova-3 has best accuracy, same as HeyGen uses internally)
     const deepgramKey = process.env.DEEPGRAM_API_KEY;
     if (deepgramKey) {
       try {
-        const audioBuffer = await audioFile.arrayBuffer();
-
-        // Determine content type
-        const mimeType = audioFile.type || "audio/webm";
-
         const response = await fetch(
           "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&language=en",
           {
