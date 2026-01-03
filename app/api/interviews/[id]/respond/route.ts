@@ -304,13 +304,26 @@ export async function POST(
     const actualQuestion = state.pendingFollowUp || currentQuestionData?.question || "Question";
     const isAnsweringFollowUp = !!state.pendingFollowUp;
 
+    // Valid question categories from the database enum
+    const validCategories = [
+      "origin_story", "failure_story", "success_story", "turning_point",
+      "hot_take", "contrarian_view", "industry_critique", "prediction",
+      "technical", "framework", "how_to", "lessons", "values", "habits",
+      "influences", "advice"
+    ];
+
+    // Only use category if it's valid, otherwise null
+    const validCategory = currentQuestionData?.category && validCategories.includes(currentQuestionData.category)
+      ? currentQuestionData.category
+      : null;
+
     // Save the interviewer question message
     await db.insert(interviewMessages).values({
       interviewId: id,
       role: "interviewer",
       content: actualQuestion,
       questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
-      targetedContentType: currentQuestionData?.category as any,
+      targetedContentType: validCategory as any,
     });
 
     // Save the client response message (with audioUrl if available)
