@@ -198,19 +198,27 @@ export default function LiveInterviewPage() {
     }
   }, [stopSpeaking]);
 
-  // Avatar ready handler - only speak once when first ready
+  // Speak first question immediately when interview data loads (don't wait for avatar)
+  const hasSpokenFirstQuestion = useRef(false);
+  useEffect(() => {
+    if (currentQuestion && !isLoading && !hasSpokenFirstQuestion.current) {
+      hasSpokenFirstQuestion.current = true;
+      console.log("Speaking first question immediately (not waiting for avatar)");
+      speakQuestion(currentQuestion);
+    }
+  }, [currentQuestion, isLoading, speakQuestion]);
+
+  // Avatar ready handler - avatar is now just for visual, not blocking
   const handleAvatarReady = useCallback(() => {
     if (avatarReadyRef.current) {
       console.log("Avatar already ready, skipping duplicate call");
       return;
     }
-    console.log("Avatar ready, will speak initial question");
+    console.log("Avatar ready (visual only, speech already started)");
     avatarReadyRef.current = true;
     setAvatarReady(true);
-    if (currentQuestion) {
-      setTimeout(() => speakQuestion(currentQuestion), 500);
-    }
-  }, [currentQuestion, speakQuestion]);
+    // Don't speak here - we already started speaking when interview loaded
+  }, []);
 
   const startRecording = async () => {
     try {
