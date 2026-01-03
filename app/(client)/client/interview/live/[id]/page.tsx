@@ -57,6 +57,7 @@ export default function LiveInterviewPage() {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [avatarReady, setAvatarReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -278,6 +279,7 @@ export default function LiveInterviewPage() {
 
   const processAudio = async (audioBlob: Blob) => {
     setIsProcessing(true);
+    setCaptureError(null);
 
     // FAST PATH: Use Web Speech transcript immediately if available
     const webSpeechText = transcript.trim();
@@ -330,7 +332,8 @@ export default function LiveInterviewPage() {
     if (transcribedText) {
       await submitResponse(transcribedText, audioKey);
     } else {
-      toast.error("Could not capture your response. Please try again and speak clearly.");
+      setCaptureError("We couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.");
+      toast.error("Could not capture your response");
     }
 
     setIsProcessing(false);
@@ -392,6 +395,7 @@ export default function LiveInterviewPage() {
     if (isRecording) {
       stopRecording();
     } else {
+      setCaptureError(null); // Clear any previous error
       startRecording();
     }
   };
@@ -484,8 +488,15 @@ export default function LiveInterviewPage() {
               )}
             </div>
 
+            {/* Capture Error */}
+            {captureError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-700 font-medium text-center">{captureError}</p>
+              </div>
+            )}
+
             {/* Live Transcript */}
-            {transcript && (
+            {transcript && !captureError && (
               <div className="bg-blue-50 rounded-lg p-4">
                 <p className="text-sm text-gray-500 mb-1">Your response:</p>
                 <p className="text-gray-900">{transcript}</p>
