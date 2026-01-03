@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Target, Twitter, Trash2 } from "lucide-react";
+import { Plus, Loader2, Target, Twitter, Trash2, RefreshCw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -141,6 +141,75 @@ export default function CompetitorsPage() {
     },
   });
 
+  const [scrapingId, setScrapingId] = useState<string | null>(null);
+  const [scrapingAll, setScrapingAll] = useState(false);
+
+  const scrapeAllMutation = useMutation({
+    mutationFn: async () => {
+      setScrapingAll(true);
+      const unscrapedCompetitors = competitors.filter(c => !c.lastScrapedAt || c.topics?.length === 0);
+      if (unscrapedCompetitors.length === 0) {
+        throw new Error("All competitors have already been scraped");
+      }
+
+      let success = 0;
+      let failed = 0;
+
+      for (const comp of unscrapedCompetitors) {
+        try {
+          const res = await fetch("/api/competitors/scrape", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ competitorId: comp.id }),
+          });
+          if (res.ok) {
+            success++;
+          } else {
+            failed++;
+          }
+        } catch {
+          failed++;
+        }
+      }
+
+      return { success, failed, total: unscrapedCompetitors.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["competitors"] });
+      toast.success(`Scraped ${data.success}/${data.total} competitors${data.failed > 0 ? ` (${data.failed} failed)` : ""}`);
+      setScrapingAll(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+      setScrapingAll(false);
+    },
+  });
+
+  const scrapeMutation = useMutation({
+    mutationFn: async (competitorId: string) => {
+      setScrapingId(competitorId);
+      const res = await fetch("/api/competitors/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ competitorId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to scrape competitor");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["competitors"] });
+      toast.success(`Scraped ${data.tweetCount} tweets, found ${data.topics.length} topics`);
+      setScrapingId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+      setScrapingId(null);
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.clientId || !formData.twitterHandle) {
@@ -159,13 +228,31 @@ export default function CompetitorsPage() {
             Track competitor Twitter accounts for voice and style analysis
           </p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Competitor
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => scrapeAllMutation.mutate()}
+            disabled={scrapingAll || competitors.length === 0}
+          >
+            {scrapingAll ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Scraping...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Scrape All
+              </>
+            )}
+          </Button>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Competitor
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Competitor</DialogTitle>
@@ -253,6 +340,7 @@ export default function CompetitorsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Stats */}
@@ -363,14 +451,29 @@ export default function CompetitorsPage() {
                         : "Never"}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(competitor.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => scrapeMutation.mutate(competitor.id)}
+                          disabled={scrapingId === competitor.id}
+                          title="Scrape Twitter data"
+                        >
+                          {scrapingId === competitor.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteMutation.mutate(competitor.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

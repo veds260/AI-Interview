@@ -340,7 +340,16 @@ export default function LiveInterviewPage() {
     if (transcribedText) {
       await submitResponse(transcribedText, audioKey);
     } else {
-      setCaptureError("We couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.");
+      const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.";
+      setCaptureError(errorMessage);
+
+      // Speak the error message so user hears it
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(errorMessage);
+        utterance.rate = 0.9;
+        speechSynthesis.speak(utterance);
+      }
+
       toast.error("Could not capture your response");
     }
 
@@ -496,10 +505,16 @@ export default function LiveInterviewPage() {
               )}
             </div>
 
-            {/* Capture Error */}
+            {/* Capture Error - prominent with animation */}
             {captureError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700 font-medium text-center">{captureError}</p>
+              <div
+                className="bg-red-50 border-2 border-red-400 rounded-lg p-4 animate-pulse shadow-lg"
+                style={{
+                  animation: "shake 0.5s ease-in-out, pulse 2s infinite"
+                }}
+              >
+                <p className="text-red-700 font-semibold text-center text-lg">{captureError}</p>
+                <p className="text-red-500 text-center text-sm mt-2">Tap the microphone below to try again</p>
               </div>
             )}
 
