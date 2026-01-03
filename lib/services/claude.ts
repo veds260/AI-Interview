@@ -68,15 +68,38 @@ class ClaudeService {
 
               Response: ${response}
 
+              CONTENT GENERATION RULES (CRITICAL - MUST FOLLOW):
+
+              1. NO HASHTAGS - Never include hashtags in any content
+              2. NO EM DASHES - Never use em dashes (—) in any content
+              3. NO RHETORICAL QUESTIONS - Avoid "The truth?", "Want to know why?", "Here's the thing..."
+              4. LENGTH FOR TWEETS: 280-450 characters with natural variation (not forced to exact limits)
+              5. SIMPLE LANGUAGE - Write at 5th grade reading level, conversational tone
+              6. VARY SENTENCE STRUCTURE - Mix short and longer sentences for natural rhythm
+              7. FIRST PERSON - Write from the founder's perspective ("I" not "they")
+              8. ONE CLEAR INSIGHT - Each tweet should focus on a single idea
+              9. AVOID PATTERNS:
+                 - No "Same X. Same Y. Same Z." staccato patterns
+                 - No "Thing isn't X. It's Y." patterns
+                 - No generic motivational phrases like "Your network is your net worth"
+              10. BE SPECIFIC - Include concrete details from the response
+
+              PROVEN TWEET FORMATS THAT WORK (use these as inspiration):
+              - "I've [number/action]..." credential posts with specific insights
+              - "Quick [topic] tip:" with contrasting observations
+              - "Hot take:" for contrarian views
+              - Story format: Set scene, share tension, reveal insight
+              - "The biggest [domain] mistake is..." with explanation
+
               Extract and return valid JSON with exactly these fields:
               {
                 "contentType": "origin_story|failure_story|success_story|turning_point|hot_take|contrarian_view|industry_critique|prediction|technical|framework|how_to|lessons|values|habits|influences|advice",
                 "topics": ["topic1", "topic2"],
                 "keyQuote": "The single best soundbite (under 280 chars)",
                 "summary": "1-2 sentence summary of the content",
-                "tweetDraft": "A tweet written in their voice using this content",
+                "tweetDraft": "A tweet in founder's voice, 280-450 chars, no hashtags, follows rules above",
                 "threadOutline": ["Point 1", "Point 2", "Point 3"],
-                "linkedinDraft": "A LinkedIn post version if suitable",
+                "linkedinDraft": "A LinkedIn post version if suitable (no hashtags)",
                 "suggestedFormats": ["tweet", "thread", "linkedin", "blog"],
                 "web2Friendly": true or false,
                 "technicalDepth": 1-5,

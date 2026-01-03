@@ -69,6 +69,7 @@ export async function GET(request: Request) {
         storytellingPotential: contentExtractions.storytellingPotential,
         createdAt: contentExtractions.createdAt,
         clientName: clients.name,
+        clientTwitterHandle: clients.twitterHandle,
         interviewTitle: interviews.title,
       })
       .from(contentExtractions)

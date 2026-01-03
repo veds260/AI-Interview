@@ -298,6 +298,31 @@ export const interviewAssignments = pgTable("interview_assignments", {
   completedAt: timestamp("completed_at"),
 });
 
+// Post Comments (for tweet mockup review)
+export const postComments = pgTable("post_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  extractionId: uuid("extraction_id")
+    .references(() => contentExtractions.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+
+  // Comment metadata
+  userName: varchar("user_name", { length: 255 }).notNull(),
+  userRole: varchar("user_role", { length: 50 }).notNull(), // admin, client, writer
+
+  // Comment content
+  commentText: text("comment_text").notNull(),
+  selectedText: text("selected_text"), // Text being commented on
+  startOffset: integer("start_offset"),
+  endOffset: integer("end_offset"),
+
+  // Status
+  resolved: boolean("resolved").notNull().default(false),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // API Usage Tracking
 export const apiUsage = pgTable("api_usage", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -386,7 +411,7 @@ export const interviewMessagesRelations = relations(
 
 export const contentExtractionsRelations = relations(
   contentExtractions,
-  ({ one }) => ({
+  ({ one, many }) => ({
     interview: one(interviews, {
       fields: [contentExtractions.interviewId],
       references: [interviews.id],
@@ -399,8 +424,20 @@ export const contentExtractionsRelations = relations(
       fields: [contentExtractions.clientId],
       references: [clients.id],
     }),
+    comments: many(postComments),
   })
 );
+
+export const postCommentsRelations = relations(postComments, ({ one }) => ({
+  extraction: one(contentExtractions, {
+    fields: [postComments.extractionId],
+    references: [contentExtractions.id],
+  }),
+  user: one(users, {
+    fields: [postComments.userId],
+    references: [users.id],
+  }),
+}));
 
 export const interviewAssignmentsRelations = relations(
   interviewAssignments,
@@ -437,3 +474,5 @@ export type VideoClip = typeof videoClips.$inferSelect;
 export type NewVideoClip = typeof videoClips.$inferInsert;
 export type ApiUsage = typeof apiUsage.$inferSelect;
 export type NewApiUsage = typeof apiUsage.$inferInsert;
+export type PostComment = typeof postComments.$inferSelect;
+export type NewPostComment = typeof postComments.$inferInsert;
