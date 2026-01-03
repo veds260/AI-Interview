@@ -616,7 +616,7 @@ export default function AdminClipsPage() {
 
       {/* Preview Dialog */}
       <Dialog open={!!previewClip} onOpenChange={() => setPreviewClip(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {previewClip?.title || previewClip?.interviewTitle || "Video Clip"}
@@ -625,15 +625,13 @@ export default function AdminClipsPage() {
               {previewClip?.clientName && `Client: ${previewClip.clientName}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="aspect-video">
-            {previewClip && (
-              <VideoPlayer
-                src={previewClip.videoUrl}
-                title={previewClip.title || previewClip.interviewTitle || "video"}
-                poster={previewClip.thumbnailUrl || undefined}
-              />
-            )}
-          </div>
+          {previewClip && (
+            <VideoPlayer
+              src={previewClip.videoUrl}
+              title={previewClip.title || previewClip.interviewTitle || "video"}
+              poster={previewClip.thumbnailUrl || undefined}
+            />
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreviewClip(null)}>
               Close

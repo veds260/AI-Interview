@@ -3,12 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface VideoPlayerProps {
   src: string;
@@ -18,8 +12,10 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ src, title, poster }: VideoPlayerProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const handleDownload = async (format: "mp4" | "webm") => {
+    setShowDropdown(false);
     setIsDownloading(true);
     try {
       const response = await fetch(src);
@@ -34,7 +30,6 @@ export function VideoPlayer({ src, title, poster }: VideoPlayerProps) {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      // Fallback: open in new tab
       window.open(src, "_blank");
     } finally {
       setIsDownloading(false);
@@ -42,43 +37,51 @@ export function VideoPlayer({ src, title, poster }: VideoPlayerProps) {
   };
 
   return (
-    <div className="relative bg-black rounded-lg overflow-hidden">
-      <video
-        src={src}
-        poster={poster}
-        controls
-        autoPlay
-        className="w-full h-full"
-        playsInline
-      />
+    <div className="relative w-full" style={{ maxHeight: "70vh" }}>
+      <div className="relative bg-black rounded-lg overflow-hidden">
+        <video
+          src={src}
+          poster={poster}
+          controls
+          className="w-full max-h-[60vh] object-contain"
+          playsInline
+        />
+      </div>
 
-      {/* Download button overlay */}
-      <div className="absolute top-2 right-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={isDownloading}
-              className="bg-black/70 hover:bg-black/90 text-white"
-            >
-              {isDownloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              <span className="ml-1">Download</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => handleDownload("mp4")}>
-              Download as MP4
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDownload("webm")}>
-              Download as WebM
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* Download button below video */}
+      <div className="flex justify-end mt-3">
+        <div className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isDownloading}
+            onClick={() => setShowDropdown(!showDropdown)}
+          >
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Download
+          </Button>
+
+          {showDropdown && (
+            <div className="absolute right-0 mt-1 w-40 bg-white border rounded-md shadow-lg z-50">
+              <button
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                onClick={() => handleDownload("mp4")}
+              >
+                Download as MP4
+              </button>
+              <button
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                onClick={() => handleDownload("webm")}
+              >
+                Download as WebM
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -231,7 +231,7 @@ export default function ClipsPage() {
 
       {/* Video Player Dialog */}
       <Dialog open={!!selectedClip} onOpenChange={() => setSelectedClip(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedClip?.title ||
@@ -240,15 +240,13 @@ export default function ClipsPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="aspect-video">
-              {selectedClip && (
-                <VideoPlayer
-                  src={selectedClip.videoUrl}
-                  title={selectedClip.title || selectedClip.interviewTitle || "video"}
-                  poster={selectedClip.thumbnailUrl || undefined}
-                />
-              )}
-            </div>
+            {selectedClip && (
+              <VideoPlayer
+                src={selectedClip.videoUrl}
+                title={selectedClip.title || selectedClip.interviewTitle || "video"}
+                poster={selectedClip.thumbnailUrl || undefined}
+              />
+            )}
             <div className="text-sm text-gray-500 flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
