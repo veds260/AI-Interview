@@ -53,15 +53,17 @@ export async function fetchUserTweets(
     }
 
     const data = await response.json();
-    console.log(`[Twitter] Fetched ${data.tweets?.length || 0} tweets for @${username}`);
 
-    // Handle the actual twitterapi.io response format
-    if (!data.tweets || !Array.isArray(data.tweets)) {
-      console.error("[Twitter] Unexpected response format:", JSON.stringify(data).slice(0, 500));
+    // twitterapi.io nests tweets under data.tweets
+    const tweets = data.data?.tweets || data.tweets || [];
+    console.log(`[Twitter] Fetched ${tweets.length} tweets for @${username}`);
+
+    if (!Array.isArray(tweets) || tweets.length === 0) {
+      console.error("[Twitter] No tweets found. Response:", JSON.stringify(data).slice(0, 300));
       return [];
     }
 
-    return data.tweets;
+    return tweets;
   } catch (error) {
     console.error("Failed to fetch tweets:", error);
     return [];
