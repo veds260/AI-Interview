@@ -91,6 +91,21 @@ export function analyzeTopTweets(tweets: Tweet[], topN: number = 5) {
     .slice(0, topN);
 }
 
+// Format top tweets for storage (lightweight version)
+export function formatTopTweetsForStorage(tweets: Tweet[], topN: number = 5) {
+  const topTweets = analyzeTopTweets(tweets, topN);
+  return topTweets.map((t) => ({
+    id: t.id,
+    text: t.text,
+    likes: t.likeCount || 0,
+    retweets: t.retweetCount || 0,
+    replies: t.replyCount || 0,
+    views: t.viewCount || 0,
+    engagement: t.engagement,
+    createdAt: t.createdAt,
+  }));
+}
+
 export function extractTopics(tweets: Tweet[]): string[] {
   const commonTopics: Record<string, number> = {};
 
@@ -133,6 +148,7 @@ export async function scrapeCompetitor(username: string) {
   }
 
   const topTweets = analyzeTopTweets(tweets, 5);
+  const topTweetsForStorage = formatTopTweetsForStorage(tweets, 5);
   const avgEngagement =
     tweets.reduce((sum, t) => sum + calculateEngagement(t), 0) / tweets.length;
   const topics = extractTopics(tweets);
@@ -142,6 +158,7 @@ export async function scrapeCompetitor(username: string) {
   return {
     tweets,
     topTweets,
+    topTweetsForStorage, // Lightweight version for DB
     avgEngagement: Math.round(avgEngagement),
     topics,
     followerCount: tweets[0]?.author?.followersCount || 0,

@@ -53,6 +53,7 @@ export async function POST(
       .set({
         avgEngagement: String(data.avgEngagement),
         topics: data.topics,
+        recentTweets: data.topTweetsForStorage,
         lastScrapedAt: new Date(),
       })
       .where(eq(competitors.id, id));

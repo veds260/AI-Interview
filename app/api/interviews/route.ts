@@ -517,10 +517,11 @@ export async function POST(request: Request) {
                   .set({
                     topics: data.topics,
                     avgEngagement: String(data.avgEngagement),
+                    recentTweets: data.topTweetsForStorage,
                     lastScrapedAt: new Date(),
                   })
                   .where(eq(competitors.id, comp.id));
-                console.log(`[Competitors] Scraped ${comp.twitterHandle}: ${data.topics.length} topics`);
+                console.log(`[Competitors] Scraped ${comp.twitterHandle}: ${data.topics.length} topics, ${data.topTweetsForStorage?.length || 0} top tweets`);
               }
             } catch (err) {
               console.error(`[Competitors] Failed to scrape ${comp.twitterHandle}:`, err);
