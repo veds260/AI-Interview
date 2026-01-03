@@ -135,9 +135,23 @@ export async function POST(request: Request) {
     const questionsAsked = (interview.questionsAsked as object[]) || [];
     const extractedContent = [];
 
+    // Valid content types from the enum
+    const VALID_CONTENT_TYPES = [
+      "origin_story", "failure_story", "success_story", "turning_point",
+      "hot_take", "contrarian_view", "industry_critique", "prediction",
+      "technical", "framework", "how_to", "lessons", "values", "habits",
+      "influences", "advice"
+    ];
+
     // Process each Q&A pair
     for (const qa of questionsAsked as { question: string; response: string; category?: string }[]) {
       if (!qa.question || !qa.response) continue;
+
+      // Skip very short responses (likely not useful content)
+      if (qa.response.length < 50) {
+        console.log(`Skipping short response (${qa.response.length} chars)`);
+        continue;
+      }
 
       const extraction = await claude.extractContent(
         qa.question,
@@ -146,29 +160,49 @@ export async function POST(request: Request) {
       );
 
       if (extraction) {
-        const [saved] = await db
-          .insert(contentExtractions)
-          .values({
-            interviewId: interview.id,
-            clientId: interview.clientId,
-            contentType: extraction.contentType as typeof contentExtractions.$inferInsert.contentType,
-            topics: extraction.topics,
-            questionAsked: qa.question,
-            rawResponse: qa.response,
-            keyQuote: extraction.keyQuote,
-            summary: extraction.summary,
-            tweetDraft: extraction.tweetDraft,
-            threadOutline: extraction.threadOutline,
-            linkedinDraft: extraction.linkedinDraft,
-            suggestedFormats: extraction.suggestedFormats,
-            web2Friendly: extraction.web2Friendly,
-            technicalDepth: extraction.technicalDepth,
-            controversyLevel: extraction.controversyLevel,
-            storytellingPotential: extraction.storytellingPotential,
-          })
-          .returning();
+        // Validate contentType - skip if invalid (AI returned something like "insufficient_data")
+        if (!VALID_CONTENT_TYPES.includes(extraction.contentType)) {
+          console.log(`Skipping invalid contentType: ${extraction.contentType}`);
+          continue;
+        }
 
-        extractedContent.push(saved);
+        // Skip if tweet draft is empty or indicates insufficient content
+        if (!extraction.tweetDraft ||
+            extraction.tweetDraft.toLowerCase().includes("not enough content") ||
+            extraction.tweetDraft.toLowerCase().includes("insufficient") ||
+            extraction.tweetDraft.toLowerCase().includes("unable to generate")) {
+          console.log(`Skipping extraction with invalid tweet draft`);
+          continue;
+        }
+
+        try {
+          const [saved] = await db
+            .insert(contentExtractions)
+            .values({
+              interviewId: interview.id,
+              clientId: interview.clientId,
+              contentType: extraction.contentType as typeof contentExtractions.$inferInsert.contentType,
+              topics: extraction.topics,
+              questionAsked: qa.question,
+              rawResponse: qa.response,
+              keyQuote: extraction.keyQuote,
+              summary: extraction.summary,
+              tweetDraft: extraction.tweetDraft,
+              threadOutline: extraction.threadOutline,
+              linkedinDraft: extraction.linkedinDraft,
+              suggestedFormats: extraction.suggestedFormats,
+              web2Friendly: extraction.web2Friendly,
+              technicalDepth: extraction.technicalDepth,
+              controversyLevel: extraction.controversyLevel,
+              storytellingPotential: extraction.storytellingPotential,
+            })
+            .returning();
+
+          extractedContent.push(saved);
+        } catch (insertError) {
+          console.error("Failed to insert extraction:", insertError);
+          // Continue with other extractions
+        }
       }
     }
 
