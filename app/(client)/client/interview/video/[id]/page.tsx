@@ -191,6 +191,7 @@ function VideoInterviewContent() {
   const [interviewComplete, setInterviewComplete] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [heygenFallback, setHeygenFallback] = useState(false); // Track if HeyGen fell back to static UI
+  const [captureError, setCaptureError] = useState<string | null>(null); // Error when speech capture fails
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -518,6 +519,16 @@ function VideoInterviewContent() {
         }
       } catch (error) {
         console.error("Error submitting response:", error);
+        const errorMessage = "I couldn't process your response. Please tap the microphone and try again.";
+        setCaptureError(errorMessage);
+
+        // Speak the error so user hears it
+        if ("speechSynthesis" in window) {
+          const utterance = new SpeechSynthesisUtterance(errorMessage);
+          utterance.rate = 0.9;
+          speechSynthesis.speak(utterance);
+        }
+
         toast.error("Failed to process your response");
         perfTracker.mark("Error", String(error));
       } finally {
@@ -536,6 +547,9 @@ function VideoInterviewContent() {
 
   // Toggle mute (for video mode) or start/stop recording (for audio mode)
   const toggleMute = useCallback(() => {
+    // Clear any error when user taps mic
+    setCaptureError(null);
+
     if (audioOnly) {
       // For audio-only, handle mic recording
       if (isRecordingAudio) {
@@ -571,9 +585,25 @@ function VideoInterviewContent() {
               if (data.text) {
                 // Pass audioKey to handleTranscript so it gets saved with the message
                 handleTranscript(data.text, true, data.audioKey);
+              } else {
+                // No text transcribed - show error
+                const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.";
+                setCaptureError(errorMessage);
+                if ("speechSynthesis" in window) {
+                  const utterance = new SpeechSynthesisUtterance(errorMessage);
+                  utterance.rate = 0.9;
+                  speechSynthesis.speak(utterance);
+                }
               }
             } catch (e) {
               console.error("Transcription error:", e);
+              const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again.";
+              setCaptureError(errorMessage);
+              if ("speechSynthesis" in window) {
+                const utterance = new SpeechSynthesisUtterance(errorMessage);
+                utterance.rate = 0.9;
+                speechSynthesis.speak(utterance);
+              }
             }
           };
 
@@ -711,6 +741,17 @@ function VideoInterviewContent() {
               initialQuestion={shouldAutoSpeak ? currentQuestion || undefined : undefined}
               interviewId={interviewId}
             />
+          )}
+
+          {/* Capture Error - prominent with animation */}
+          {captureError && (
+            <div
+              className="mx-4 mt-4 bg-red-900/50 border-2 border-red-500 rounded-lg p-4 animate-pulse"
+              style={{ animation: "shake 0.5s ease-in-out, pulse 2s infinite" }}
+            >
+              <p className="text-red-200 font-semibold text-center">{captureError}</p>
+              <p className="text-red-300 text-center text-sm mt-2">Tap the microphone below to try again</p>
+            </div>
           )}
 
           {/* Controls */}
