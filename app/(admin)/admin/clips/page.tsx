@@ -266,6 +266,23 @@ export default function AdminClipsPage() {
 
   const isLoading = clipsLoading || statsLoading;
 
+  // Backfill old audio recordings
+  const backfillMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/backfill-audio", { method: "POST" });
+      if (!res.ok) throw new Error("Backfill failed");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["audio-recordings"] });
+      queryClient.invalidateQueries({ queryKey: ["audio-stats"] });
+      toast.success(`Recovered ${data.matched} audio recordings`);
+    },
+    onError: () => {
+      toast.error("Failed to recover recordings");
+    },
+  });
+
   // Audio playback
   const playAudio = (recording: AudioRecording) => {
     if (audioElement) {
@@ -529,15 +546,28 @@ export default function AdminClipsPage() {
             </CardHeader>
             <CardContent>
               {audioStats ? (
-                <div className="flex items-center gap-6 text-sm">
-                  <div>
-                    <span className="text-2xl font-bold">{audioStats.totalRecordings}</span>
-                    <span className="text-gray-500 ml-1">recordings</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6 text-sm">
+                    <div>
+                      <span className="text-2xl font-bold">{audioStats.totalRecordings}</span>
+                      <span className="text-gray-500 ml-1">recordings</span>
+                    </div>
+                    <div>
+                      <span className="text-2xl font-bold">{audioStats.totalMB.toFixed(1)}</span>
+                      <span className="text-gray-500 ml-1">MB used</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-2xl font-bold">{audioStats.totalMB.toFixed(1)}</span>
-                    <span className="text-gray-500 ml-1">MB used</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => backfillMutation.mutate()}
+                    disabled={backfillMutation.isPending}
+                  >
+                    {backfillMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Recover Old Recordings
+                  </Button>
                 </div>
               ) : (
                 <Loader2 className="h-4 w-4 animate-spin" />
