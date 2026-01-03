@@ -147,6 +147,26 @@ export default function AssignmentsPage() {
     },
   });
 
+  // Extract content from interview
+  const extractMutation = useMutation({
+    mutationFn: async (interviewId: string) => {
+      const res = await fetch("/api/extractions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interviewId }),
+      });
+      if (!res.ok) throw new Error("Failed to extract content");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      toast.success(`Extracted ${data.count} content pieces`);
+    },
+    onError: () => {
+      toast.error("Failed to extract content");
+    },
+  });
+
   // Update assignment status
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -453,11 +473,19 @@ export default function AssignmentsPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">Full Transcript</h4>
-                    {selectedAssignment.interview?.transcript && (
+                    {(selectedAssignment.interview?.transcript || selectedAssignment.interview?.questionsAsked?.length) && (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => copyToClipboard(selectedAssignment.interview!.transcript!)}
+                        onClick={() => {
+                          let text = selectedAssignment.interview?.transcript;
+                          if (!text && selectedAssignment.interview?.questionsAsked?.length) {
+                            text = (selectedAssignment.interview.questionsAsked as any[])
+                              .map((qa, idx) => `Q${idx + 1}: ${qa.question}\n\nA: ${qa.response}`)
+                              .join("\n\n---\n\n");
+                          }
+                          if (text) copyToClipboard(text);
+                        }}
                       >
                         <Copy className="h-4 w-4 mr-1" /> Copy
                       </Button>
@@ -468,6 +496,15 @@ export default function AssignmentsPage() {
                       <pre className="whitespace-pre-wrap text-sm font-mono">
                         {selectedAssignment.interview.transcript}
                       </pre>
+                    ) : selectedAssignment.interview?.questionsAsked?.length ? (
+                      <div className="space-y-6">
+                        {(selectedAssignment.interview.questionsAsked as any[]).map((qa, idx) => (
+                          <div key={idx} className="pb-4 border-b last:border-0">
+                            <p className="font-medium text-blue-700 mb-2">Q{idx + 1}: {qa.question}</p>
+                            <p className="text-gray-700 whitespace-pre-wrap">{qa.response}</p>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <p className="text-gray-400 text-center py-8">
                         No transcript available
@@ -596,7 +633,18 @@ export default function AssignmentsPage() {
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No content extractions yet</p>
-                      <p className="text-sm">Extractions will appear once generated from the interview</p>
+                      <p className="text-sm mb-4">Extract content from this interview to generate tweets, quotes, and more</p>
+                      <Button
+                        onClick={() => extractMutation.mutate(selectedAssignment.interviewId)}
+                        disabled={extractMutation.isPending}
+                      >
+                        {extractMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4 mr-2" />
+                        )}
+                        Extract Content
+                      </Button>
                     </div>
                   )}
                 </ScrollArea>
