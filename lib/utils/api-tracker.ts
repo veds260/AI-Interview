@@ -24,10 +24,10 @@ const PRICING = {
   // OpenAI TTS (per 1K characters)
   "openai/tts-1": { per1kChars: 0.015 },
   "openai/tts-1-hd": { per1kChars: 0.03 },
-  // ElevenLabs Turbo v2 (~$50/1M chars = $0.05/1K chars)
-  // Source: https://elevenlabs.io/pricing/api
-  elevenlabs: { per1kChars: 0.05 },
-  "elevenlabs/turbo-v2": { per1kChars: 0.05 },
+  // ElevenLabs (Creator plan: $0.30/1K chars, Starter: ~$0.30/1K)
+  // Source: https://elevenlabs.io/pricing
+  elevenlabs: { per1kChars: 0.30 },
+  "eleven_turbo_v2": { per1kChars: 0.30 },
 };
 
 interface TrackApiCallParams {
@@ -73,6 +73,12 @@ export async function trackApiCall(params: TrackApiCallParams) {
     if (params.provider === "openai" && params.characters) {
       const ttsPrice = params.model === "tts-1-hd" ? 0.03 : 0.015;
       costCents += (params.characters / 1000) * ttsPrice * 100;
+    }
+
+    // ElevenLabs pricing (per 1k chars) - $0.30/1k for Creator plan
+    if (params.provider === "elevenlabs" && params.characters) {
+      const elevenLabsPrice = 0.30; // $0.30 per 1000 characters (Creator plan)
+      costCents += (params.characters / 1000) * elevenLabsPrice * 100;
     }
 
     await db.insert(apiUsage).values({
