@@ -117,9 +117,10 @@ export default function TextInterviewPage() {
               },
             ]);
           }
-        } else {
-          // No question available - show error
-          setLoadError("No questions available for this interview. The interview may not be properly configured.");
+        } else if (data.interview.status !== "completed") {
+          // No question available but interview not completed - something's wrong
+          console.error("Interview loaded but no current question:", data);
+          setLoadError("Something went wrong loading this interview. Please try starting a new interview or contact support.");
         }
 
         // Calculate progress
@@ -370,15 +371,22 @@ export default function TextInterviewPage() {
                 animate={{ opacity: 1 }}
               >
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
-                  <p className="text-red-700">{loadError}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => router.push("/client")}
-                  >
-                    Return to Dashboard
-                  </Button>
+                  <p className="text-red-700 mb-3">{loadError}</p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push("/client")}
+                    >
+                      Return to Dashboard
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => router.push("/client/interview/text/new")}
+                    >
+                      Start New Interview
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             ) : messages.length === 0 ? (

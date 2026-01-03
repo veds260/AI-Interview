@@ -140,6 +140,18 @@ export async function GET(
       }
     }
 
+    // Log if no question found - helps debug
+    if (!currentQuestion && interview.status !== "completed") {
+      console.error("No current question found for interview:", {
+        interviewId: id,
+        status: interview.status,
+        hasState: !!state,
+        questionsLength: state?.questions?.length || 0,
+        questionIdsLength: state?.questionIds?.length || 0,
+        currentIndex: state?.currentIndex,
+      });
+    }
+
     return NextResponse.json({
       interview,
       messages: messages.map((m) => ({
