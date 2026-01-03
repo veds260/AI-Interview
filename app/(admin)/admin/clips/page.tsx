@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Video,
   Play,
@@ -47,6 +48,8 @@ import {
   Loader2,
   AlertTriangle,
   X,
+  Mic,
+  Pause,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -82,14 +85,37 @@ interface StorageStats {
   remainingGB: number;
 }
 
+interface AudioRecording {
+  id: string;
+  audioUrl: string;
+  content: string;
+  role: "interviewer" | "client";
+  createdAt: string;
+  interviewId: string | null;
+  interviewTitle: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  fileSizeBytes: number | null;
+}
+
+interface AudioStats {
+  totalRecordings: number;
+  totalBytes: number;
+  totalMB: number;
+  totalGB: number;
+}
+
 export default function AdminClipsPage() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"video" | "audio">("video");
   const [selectedClips, setSelectedClips] = useState<Set<string>>(new Set());
   const [previewClip, setPreviewClip] = useState<VideoClip | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clipToDelete, setClipToDelete] = useState<VideoClip | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [clientFilter, setClientFilter] = useState<string>("all");
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   // Fetch clients for filter dropdown
   const { data: clientsList } = useQuery<Client[]>({
@@ -125,6 +151,32 @@ export default function AdminClipsPage() {
       return res.json();
     },
   });
+
+  // Audio recordings queries
+  const { data: audioData, isLoading: audioLoading } = useQuery<{ recordings: AudioRecording[] }>({
+    queryKey: ["audio-recordings"],
+    queryFn: async () => {
+      const res = await fetch("/api/audio-recordings?limit=200");
+      if (!res.ok) throw new Error("Failed to fetch audio recordings");
+      return res.json();
+    },
+  });
+
+  const { data: audioStats } = useQuery<AudioStats>({
+    queryKey: ["audio-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/audio-recordings/stats");
+      if (!res.ok) throw new Error("Failed to fetch audio stats");
+      return res.json();
+    },
+  });
+
+  // Filter audio by client
+  const filteredAudio = audioData?.recordings?.filter((rec) => {
+    if (clientFilter === "all") return true;
+    if (clientFilter === "unassigned") return !rec.clientId;
+    return rec.clientId === clientFilter;
+  }) || [];
 
   const deleteMutation = useMutation({
     mutationFn: async (clipId: string) => {
@@ -214,18 +266,71 @@ export default function AdminClipsPage() {
 
   const isLoading = clipsLoading || statsLoading;
 
+  // Audio playback
+  const playAudio = (recording: AudioRecording) => {
+    if (audioElement) {
+      audioElement.pause();
+    }
+
+    if (playingAudioId === recording.id) {
+      setPlayingAudioId(null);
+      setAudioElement(null);
+      return;
+    }
+
+    const audio = new Audio(recording.audioUrl);
+    audio.onended = () => {
+      setPlayingAudioId(null);
+      setAudioElement(null);
+    };
+    audio.play();
+    setAudioElement(audio);
+    setPlayingAudioId(recording.id);
+  };
+
+  const stopAudio = () => {
+    if (audioElement) {
+      audioElement.pause();
+      setAudioElement(null);
+      setPlayingAudioId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">Video Clips</h1>
+          <h1 className="text-3xl font-bold">Media Library</h1>
           <p className="text-gray-500 mt-1">
-            Manage recorded interview clips and storage
+            Manage video clips and audio recordings from interviews
           </p>
         </div>
       </div>
 
-      {/* Filter */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "video" | "audio")}>
+        <TabsList>
+          <TabsTrigger value="video" className="flex items-center gap-2">
+            <Video className="h-4 w-4" />
+            Video Clips
+            {clipsData?.clips?.length ? (
+              <span className="ml-1 text-xs bg-gray-200 px-1.5 rounded">
+                {clipsData.clips.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="audio" className="flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            Audio Recordings
+            {audioData?.recordings?.length ? (
+              <span className="ml-1 text-xs bg-gray-200 px-1.5 rounded">
+                {audioData.recordings.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="video" className="space-y-6">
+          {/* Filter */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Filter by client:</span>
@@ -410,6 +515,113 @@ export default function AdminClipsPage() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        <TabsContent value="audio" className="space-y-6">
+          {/* Audio Stats Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Mic className="h-4 w-4" />
+                Audio Storage
+              </CardTitle>
+              <CardDescription>Interview response recordings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {audioStats ? (
+                <div className="flex items-center gap-6 text-sm">
+                  <div>
+                    <span className="text-2xl font-bold">{audioStats.totalRecordings}</span>
+                    <span className="text-gray-500 ml-1">recordings</span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-bold">{audioStats.totalMB.toFixed(1)}</span>
+                    <span className="text-gray-500 ml-1">MB used</span>
+                  </div>
+                </div>
+              ) : (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Audio Recordings List */}
+          {audioLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          ) : !filteredAudio.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Mic className="h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium">No audio recordings yet</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Audio from interview responses will appear here
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">
+                  Audio Recordings ({filteredAudio.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {filteredAudio.map((recording) => (
+                    <div
+                      key={recording.id}
+                      className="flex items-center gap-4 p-4 hover:bg-gray-50"
+                    >
+                      <Button
+                        variant={playingAudioId === recording.id ? "secondary" : "outline"}
+                        size="sm"
+                        className="w-10 h-10 rounded-full p-0"
+                        onClick={() => playAudio(recording)}
+                      >
+                        {playingAudioId === recording.id ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 line-clamp-2">
+                          {recording.content}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          <span className={`px-1.5 py-0.5 rounded ${
+                            recording.role === "client"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}>
+                            {recording.role === "client" ? "Response" : "Question"}
+                          </span>
+                          {recording.clientName && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {recording.clientName}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(recording.createdAt), { addSuffix: true })}
+                          </span>
+                          {recording.fileSizeBytes && (
+                            <span>{formatFileSize(recording.fileSizeBytes)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Preview Dialog */}
       <Dialog open={!!previewClip} onOpenChange={() => setPreviewClip(null)}>
