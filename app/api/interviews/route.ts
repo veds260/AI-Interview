@@ -31,9 +31,10 @@ interface GeneratedQuestion {
   reasoning: string;
 }
 
-// Simple in-memory cache for generated questions (30 min TTL)
+// Disable question cache - always generate fresh to avoid repetition
+// Each interview should get unique questions based on what's already been asked
 const questionCache = new Map<string, { questions: GeneratedQuestion[]; timestamp: number }>();
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const CACHE_TTL_MS = 0; // Disabled - always generate fresh questions
 
 // Check if we have enough context to generate custom questions
 function hasRichContext(
@@ -347,7 +348,7 @@ export async function POST(request: Request) {
         .from(interviews)
         .where(eq(interviews.clientId, client.id))
         .orderBy(desc(interviews.createdAt))
-        .limit(10); // Get last 10 interviews for context
+        .limit(50); // Get more interviews to avoid ANY repetition
 
       // Extract all previously asked question IDs, categories, and FULL content
       previousInterviews.forEach((interview) => {
