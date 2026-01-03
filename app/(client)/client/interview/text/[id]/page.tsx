@@ -68,6 +68,7 @@ export default function TextInterviewPage() {
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -116,6 +117,9 @@ export default function TextInterviewPage() {
               },
             ]);
           }
+        } else {
+          // No question available - show error
+          setLoadError("No questions available for this interview. The interview may not be properly configured.");
         }
 
         // Calculate progress
@@ -126,8 +130,9 @@ export default function TextInterviewPage() {
           );
         }
       } catch (error) {
+        console.error("Failed to load interview:", error);
+        setLoadError("Failed to load interview. Please try again.");
         toast.error("Failed to load interview");
-        router.push("/client");
       } finally {
         setIsLoading(false);
       }
@@ -358,7 +363,25 @@ export default function TextInterviewPage() {
         <CardContent className="flex-1 flex flex-col">
           {/* Messages */}
           <div className="flex-1 space-y-4 overflow-y-auto max-h-[350px] mb-4">
-            {messages.length === 0 ? (
+            {loadError ? (
+              <motion.div
+                className="text-center py-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-red-700">{loadError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => router.push("/client")}
+                  >
+                    Return to Dashboard
+                  </Button>
+                </div>
+              </motion.div>
+            ) : messages.length === 0 ? (
               <motion.div
                 className="text-center text-gray-500 py-8"
                 initial={{ opacity: 0 }}
