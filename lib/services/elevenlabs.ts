@@ -36,9 +36,9 @@ class ElevenLabsService {
 
   constructor(config?: ElevenLabsConfig) {
     this.apiKey = config?.apiKey || process.env.ELEVENLABS_API_KEY || "";
-    // Default to Matilda - most natural, warm conversational voice
-    // Other options: Josh (TxGEqnHWrfWFTfGW9XjX - natural male), Charlotte (XB0fDUnXU5powFXDhCwa - British female)
-    this.voiceId = config?.voiceId || process.env.ELEVENLABS_VOICE_ID || "XrExE9yKIg1WjnnlVkGX";
+    // Default to Rachel - reliable default voice that works on all plans
+    // Can override with ELEVENLABS_VOICE_ID env var
+    this.voiceId = config?.voiceId || process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
   }
 
   isConfigured(): boolean {
@@ -47,22 +47,20 @@ class ElevenLabsService {
 
   /**
    * Convert text to speech audio (MP3 format for regular playback)
-   * Uses non-streaming endpoint for complete audio buffer (more reliable for base64 encoding)
    */
   async textToSpeech(
     text: string,
     settings?: VoiceSettings
   ): Promise<ArrayBuffer | null> {
     if (!this.isConfigured()) {
-      console.warn("[ElevenLabs] Not configured - no API key");
+      console.error("[ElevenLabs] NOT CONFIGURED - ELEVENLABS_API_KEY missing!");
       return null;
     }
 
-    console.log(`[ElevenLabs] TTS request: voice=${this.voiceId}, text="${text.substring(0, 50)}..."`);
+    const startTime = Date.now();
+    console.log(`[ElevenLabs] TTS: voice=${this.voiceId}, chars=${text.length}`);
 
     try {
-      // Use non-streaming endpoint for complete audio buffer
-      // Streaming endpoint can cause truncation in serverless environments
       const response = await fetch(
         `${this.baseUrl}/text-to-speech/${this.voiceId}`,
         {
@@ -70,31 +68,37 @@ class ElevenLabsService {
           headers: {
             "Content-Type": "application/json",
             "xi-api-key": this.apiKey,
+            "Accept": "audio/mpeg",
           },
           body: JSON.stringify({
             text,
-            model_id: "eleven_turbo_v2", // Faster model for real-time
+            model_id: "eleven_turbo_v2_5", // Latest fast model
             voice_settings: settings || {
               stability: 0.5,
               similarity_boost: 0.75,
-              style: 0,
-              use_speaker_boost: true,
             },
           }),
         }
       );
 
+      const duration = Date.now() - startTime;
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[ElevenLabs] TTS error ${response.status}:`, errorText);
+        console.error(`[ElevenLabs] ERROR ${response.status} (${duration}ms):`, errorText);
         return null;
       }
 
       const buffer = await response.arrayBuffer();
-      console.log(`[ElevenLabs] TTS success: ${buffer.byteLength} bytes`);
+      console.log(`[ElevenLabs] SUCCESS: ${buffer.byteLength} bytes in ${duration}ms`);
+
+      if (buffer.byteLength < 1000) {
+        console.error(`[ElevenLabs] WARNING: Audio too small (${buffer.byteLength} bytes), might be error`);
+      }
+
       return buffer;
     } catch (error) {
-      console.error("[ElevenLabs] TTS failed:", error);
+      console.error("[ElevenLabs] EXCEPTION:", error);
       return null;
     }
   }
