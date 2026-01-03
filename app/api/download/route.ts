@@ -57,10 +57,10 @@ export async function GET(req: NextRequest) {
 
     if (type === "video") {
       contentType = "video/webm";
-      extension = "mp4"; // User wants mp4, we'll name it mp4 even though it's webm
+      extension = "webm";
     } else if (type === "audio") {
       contentType = "audio/webm";
-      extension = "mp3"; // User wants mp3, we'll name it mp3 even though it's webm
+      extension = "webm";
     }
 
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9-_\s]/g, "_");
