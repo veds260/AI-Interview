@@ -102,26 +102,31 @@ async function generateCustomQuestions(
     contextPrompt += `=== THEIR RECENT TWEETS/POSTS ===\n${recentTweets}\n\n`;
   }
 
-  if (previousInterviews.length > 0) {
-    contextPrompt += `=== PAST INTERVIEW CONVERSATIONS ===\n`;
-    contextPrompt += `(Build on these - dig deeper, follow up on interesting points, explore new angles)\n`;
-    previousInterviews.slice(0, 3).forEach((interview, i) => {
-      contextPrompt += `\n--- Previous Session ${i + 1}${interview.topic ? ` (${interview.topic})` : ""} ---\n`;
-      interview.keyInsights.slice(0, 5).forEach(insight => {
-        contextPrompt += `${insight}\n`;
-      });
-    });
-    contextPrompt += `\n`;
-  }
-
   if (competitorTopics.length > 0) {
     contextPrompt += `=== TRENDING TOPICS IN THEIR SPACE ===\n${competitorTopics.slice(0, 10).join(", ")}\n\n`;
   }
 
-  if (alreadyAskedQuestions.length > 0) {
-    contextPrompt += `=== QUESTIONS ALREADY ASKED (AVOID REPEATING) ===\n`;
-    alreadyAskedQuestions.slice(0, 20).forEach(q => {
-      contextPrompt += `- ${q}\n`;
+  // Extract themes already covered to avoid repetition
+  const coveredThemes: string[] = [];
+  if (previousInterviews.length > 0 || alreadyAskedQuestions.length > 0) {
+    contextPrompt += `=== TOPICS/THEMES ALREADY COVERED (DO NOT ASK ABOUT THESE AGAIN) ===\n`;
+    contextPrompt += `These topics have been discussed. Ask about COMPLETELY DIFFERENT things:\n`;
+
+    previousInterviews.slice(0, 3).forEach((interview) => {
+      interview.keyInsights.slice(0, 5).forEach(insight => {
+        // Extract the question part
+        const qMatch = insight.match(/Q: "([^"]+)"/);
+        if (qMatch) {
+          contextPrompt += `- ${qMatch[1]}\n`;
+          coveredThemes.push(qMatch[1]);
+        }
+      });
+    });
+
+    alreadyAskedQuestions.slice(0, 15).forEach(q => {
+      if (!coveredThemes.includes(q)) {
+        contextPrompt += `- ${q}\n`;
+      }
     });
     contextPrompt += `\n`;
   }
@@ -143,29 +148,31 @@ async function generateCustomQuestions(
             role: "system",
             content: `You generate personalized interview questions that extract great stories and insights.
 
+CRITICAL RULE - NO REPETITION:
+- If a topic/theme was already discussed, DO NOT ask about it again in different words
+- "What's your biggest failure?" and "Tell me about a time you failed" are THE SAME question
+- "How did you start?" and "What's your origin story?" are THE SAME question
+- Each question must explore a COMPLETELY NEW angle or topic
+
 QUESTION STYLE:
-- Context buildup is GOOD ("Given your work on X..." or "You've talked about Y...")
-- But end with ONE clear question - never multiple questions
-- Ask ONE thing at a time
+- Context buildup is fine ("Given your work on X...")
+- End with ONE clear question - never multiple questions
 - Natural conversational tone
 
-GOOD EXAMPLES:
-- "You've built multiple companies. What's the one mistake you see first-time founders make over and over?"
-- "Given your experience in [their field], what's a belief you hold that most people disagree with?"
-- "Tell me about a time you were completely wrong about something important."
-- "What's the biggest misconception people have about [their work]?"
+GOOD VARIETY EXAMPLES:
+- Origin/journey: "What made you take the leap into [field]?"
+- Failure: "What's a decision you'd take back if you could?"
+- Hot take: "What do most people in your industry get completely wrong?"
+- Tactical: "What's your actual daily routine look like?"
+- Prediction: "Where do you see [industry] in 5 years?"
+- Behind scenes: "What does your team not know about how you operate?"
 
-BAD EXAMPLES (multiple questions = bad UX):
-- "Can you walk me through X? What were the steps? And what lessons did you learn?"
-- "How did you approach Y? What challenges came up? How did you overcome them?"
-- "Tell me about X and also Y and what you think about Z?"
-
-Return JSON array with 12-15 questions:
-[{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "brief reason"}]`,
+Return JSON array with 12-15 DIVERSE questions (each covering a different theme):
+[{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "why this is NEW/different"}]`,
           },
           {
             role: "user",
-            content: contextPrompt + "\n\nGenerate 12-15 personalized interview questions. Return ONLY the JSON array.",
+            content: contextPrompt + "\n\nGenerate 12-15 interview questions. Each must cover a DIFFERENT topic/theme than the ones already covered above. Return ONLY the JSON array.",
           },
         ],
       }),
