@@ -3,11 +3,23 @@ import { auth } from "@/lib/auth";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import { PassThrough } from "stream";
+import { execSync } from "child_process";
 
-// Set ffmpeg path
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+// Try to find ffmpeg in system PATH
+function findFfmpegPath(): string | null {
+  try {
+    const path = execSync("which ffmpeg", { encoding: "utf-8" }).trim();
+    return path || null;
+  } catch {
+    return null;
+  }
+}
+
+const ffmpegPath = findFfmpegPath();
+if (ffmpegPath) {
+  ffmpeg.setFfmpegPath(ffmpegPath);
+}
 
 const r2Client = new S3Client({
   region: "auto",
@@ -46,6 +58,13 @@ export async function GET(req: NextRequest) {
 
     if (!format || !["mp4", "mp3"].includes(format)) {
       return NextResponse.json({ error: "Invalid format. Use mp4 or mp3" }, { status: 400 });
+    }
+
+    if (!ffmpegPath) {
+      return NextResponse.json(
+        { error: "FFmpeg not available on this server" },
+        { status: 503 }
+      );
     }
 
     // Fetch the original file from R2
