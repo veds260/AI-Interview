@@ -36,9 +36,9 @@ class ElevenLabsService {
 
   constructor(config?: ElevenLabsConfig) {
     this.apiKey = config?.apiKey || process.env.ELEVENLABS_API_KEY || "";
-    // Support env variable for voice, default to Sarah (warm, conversational)
-    // Other good options: Rachel (21m00Tcm4TlvDq8ikWAM), Adam (pNInz6obpgDQGcFmaJgB)
-    this.voiceId = config?.voiceId || process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
+    // Default to Matilda - most natural, warm conversational voice
+    // Other options: Josh (TxGEqnHWrfWFTfGW9XjX - natural male), Charlotte (XB0fDUnXU5powFXDhCwa - British female)
+    this.voiceId = config?.voiceId || process.env.ELEVENLABS_VOICE_ID || "XrExE9yKIg1WjnnlVkGX";
   }
 
   isConfigured(): boolean {
