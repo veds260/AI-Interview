@@ -219,13 +219,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    // Run auth and params parsing in parallel with request body parsing
+    const [session, { id }, body] = await Promise.all([
+      auth(),
+      params,
+      request.json(),
+    ]);
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
-    const { response, audioKey } = await request.json();
+    const { response, audioKey } = body;
 
     if (!response?.trim()) {
       return NextResponse.json(
@@ -234,6 +239,7 @@ export async function POST(
       );
     }
 
+    // Fetch interview first (needed for clientId)
     const interview = await db.query.interviews.findFirst({
       where: eq(interviews.id, id),
     });
@@ -245,18 +251,10 @@ export async function POST(
       );
     }
 
-    // Get client info (runs in parallel with nothing else critical)
-    let clientName: string | undefined;
-    let clientTopics: string[] | undefined;
-    if (interview.clientId) {
-      const client = await db.query.clients.findFirst({
-        where: eq(clients.id, interview.clientId),
-      });
-      if (client) {
-        clientName = client.name;
-        clientTopics = client.topicsOfExpertise as string[] | undefined;
-      }
-    }
+    // Get client info in background (don't await yet - will be used later)
+    const clientPromise = interview.clientId
+      ? db.query.clients.findFirst({ where: eq(clients.id, interview.clientId) })
+      : Promise.resolve(null);
 
     const state = interview.sessionState as SessionState;
 
@@ -317,22 +315,22 @@ export async function POST(
       ? currentQuestionData.category
       : null;
 
-    // Save the interviewer question message
-    await db.insert(interviewMessages).values({
-      interviewId: id,
-      role: "interviewer",
-      content: actualQuestion,
-      questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
-      targetedContentType: validCategory as any,
-    });
-
-    // Save the client response message (with audioUrl if available)
-    await db.insert(interviewMessages).values({
-      interviewId: id,
-      role: "client",
-      content: response.trim(),
-      audioUrl: audioKey || null,
-    });
+    // Save both messages in PARALLEL (they're independent)
+    await Promise.all([
+      db.insert(interviewMessages).values({
+        interviewId: id,
+        role: "interviewer",
+        content: actualQuestion,
+        questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
+        targetedContentType: validCategory as any,
+      }),
+      db.insert(interviewMessages).values({
+        interviewId: id,
+        role: "client",
+        content: response.trim(),
+        audioUrl: audioKey || null,
+      }),
+    ]);
 
     // Update questions asked
     const questionsAsked = (interview.questionsAsked as object[]) || [];
@@ -364,6 +362,11 @@ export async function POST(
     const shouldMoveToNext = !isFollowUp;
     const nextIndex = shouldMoveToNext ? currentIndex + 1 : currentIndex;
     const completed = nextIndex >= totalQuestions;
+
+    // Now await client info (was fetching in background while we did other work)
+    const client = await clientPromise;
+    const clientName = client?.name;
+    const clientTopics = client?.topicsOfExpertise as string[] | undefined;
 
     // If no follow-up, get the next question immediately
     if (!isFollowUp && !completed) {
@@ -431,6 +434,13 @@ export async function POST(
       });
     }
 
+    // Helper: Promise with timeout
+    const withTimeout = <T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+      ]);
+
     // Run DB update and audio generation in PARALLEL for speed
     const [, , nextQuestionAudioUrl] = await Promise.all([
       // 1. Update interview state
@@ -459,19 +469,24 @@ export async function POST(
             .where(eq(questionBank.id, currentQuestionData.id))
         : Promise.resolve(),
 
-      // 3. Generate audio for next question (runs in parallel!)
+      // 3. Generate audio for next question with 1.5s timeout
+      // If audio takes too long, client will fetch separately
       nextQuestion && elevenlabs.isConfigured() && !completed
-        ? elevenlabs.textToSpeech(nextQuestion).then(buffer => {
-            if (buffer) {
-              const base64 = Buffer.from(buffer).toString("base64");
-              console.log("[Respond] Audio generated for next question");
-              return `data:audio/mpeg;base64,${base64}`;
-            }
-            return null;
-          }).catch(err => {
-            console.error("[Respond] Audio generation failed:", err);
-            return null;
-          })
+        ? withTimeout(
+            elevenlabs.textToSpeech(nextQuestion).then(buffer => {
+              if (buffer) {
+                const base64 = Buffer.from(buffer).toString("base64");
+                console.log("[Respond] Audio generated for next question");
+                return `data:audio/mpeg;base64,${base64}`;
+              }
+              return null;
+            }).catch(err => {
+              console.error("[Respond] Audio generation failed:", err);
+              return null;
+            }),
+            1500, // 1.5 second timeout
+            null  // Return null if timeout, client fetches separately
+          )
         : Promise.resolve(null),
     ]);
 

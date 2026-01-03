@@ -46,6 +46,7 @@ class ElevenLabsService {
 
   /**
    * Convert text to speech audio (MP3 format for regular playback)
+   * Uses non-streaming endpoint for complete audio buffer (more reliable for base64 encoding)
    */
   async textToSpeech(
     text: string,
@@ -57,8 +58,10 @@ class ElevenLabsService {
     }
 
     try {
+      // Use non-streaming endpoint for complete audio buffer
+      // Streaming endpoint can cause truncation in serverless environments
       const response = await fetch(
-        `${this.baseUrl}/text-to-speech/${this.voiceId}/stream`,
+        `${this.baseUrl}/text-to-speech/${this.voiceId}`,
         {
           method: "POST",
           headers: {
@@ -93,6 +96,7 @@ class ElevenLabsService {
 
   /**
    * Convert text to speech in PCM16 format at 16kHz (for Simli lip-sync)
+   * Uses non-streaming endpoint for complete audio buffer
    */
   async textToSpeechPCM(
     text: string,
@@ -104,8 +108,9 @@ class ElevenLabsService {
     }
 
     try {
+      // Use non-streaming endpoint with PCM output format
       const response = await fetch(
-        `${this.baseUrl}/text-to-speech/${this.voiceId}/stream?output_format=pcm_16000`,
+        `${this.baseUrl}/text-to-speech/${this.voiceId}?output_format=pcm_16000`,
         {
           method: "POST",
           headers: {
