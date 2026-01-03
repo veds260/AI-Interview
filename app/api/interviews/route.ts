@@ -4,6 +4,9 @@ import { db, interviews, clients, questionBank, users, competitors } from "@/lib
 import { desc, eq, and, isNull, notInArray, sql } from "drizzle-orm";
 import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
 import { elevenlabs } from "@/lib/services/elevenlabs";
+import { scrapeCompetitor } from "@/lib/services/twitter";
+
+const SCRAPE_STALE_DAYS = 7; // Re-scrape competitors older than 7 days
 
 interface KnowledgeBase {
   bio?: string;
@@ -481,13 +484,50 @@ export async function POST(request: Request) {
     let competitorTopics: string[] = [];
     if (client) {
       const clientCompetitors = await db
-        .select({ topics: competitors.topics })
+        .select({
+          id: competitors.id,
+          twitterHandle: competitors.twitterHandle,
+          topics: competitors.topics,
+          lastScrapedAt: competitors.lastScrapedAt,
+        })
         .from(competitors)
         .where(eq(competitors.clientId, client.id));
 
       competitorTopics = clientCompetitors
         .flatMap((c) => c.topics || [])
         .filter((t) => t);
+
+      // Auto-scrape stale competitors in background (don't block interview start)
+      const staleThreshold = new Date(Date.now() - SCRAPE_STALE_DAYS * 24 * 60 * 60 * 1000);
+      const staleCompetitors = clientCompetitors.filter(
+        (c) => c.twitterHandle && (!c.lastScrapedAt || c.lastScrapedAt < staleThreshold)
+      );
+
+      if (staleCompetitors.length > 0) {
+        console.log(`[Competitors] Auto-scraping ${staleCompetitors.length} stale competitors in background`);
+
+        // Fire-and-forget: scrape in background, don't await
+        Promise.all(
+          staleCompetitors.map(async (comp) => {
+            try {
+              const data = await scrapeCompetitor(comp.twitterHandle!);
+              if (data?.topics) {
+                await db
+                  .update(competitors)
+                  .set({
+                    topics: data.topics,
+                    avgEngagement: String(data.avgEngagement),
+                    lastScrapedAt: new Date(),
+                  })
+                  .where(eq(competitors.id, comp.id));
+                console.log(`[Competitors] Scraped ${comp.twitterHandle}: ${data.topics.length} topics`);
+              }
+            } catch (err) {
+              console.error(`[Competitors] Failed to scrape ${comp.twitterHandle}:`, err);
+            }
+          })
+        ).catch((err) => console.error("[Competitors] Background scrape error:", err));
+      }
     }
 
     // Prepare client context for the session
