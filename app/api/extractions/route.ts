@@ -131,22 +131,55 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get client info for context
-    let clientContext;
+    // Get client info for context - including full knowledge base
+    let clientContext: {
+      name?: string;
+      topics?: string[];
+      voiceStyle?: string;
+      bio?: string;
+      products?: string[];
+      talkingPoints?: string[];
+      competitorTopics?: string[];
+      otherQAs?: { question: string; response: string }[];
+    } | undefined;
+
     if (interview.clientId) {
       const client = await db.query.clients.findFirst({
         where: eq(clients.id, interview.clientId),
       });
+
       if (client) {
+        const kb = client.knowledgeBase as {
+          bio?: string;
+          products?: string[];
+          talkingPoints?: string[];
+          voiceGuidelines?: string;
+        } | null;
+
+        // Get competitor topics
+        const { competitors } = await import("@/lib/db/schema");
+        const clientCompetitors = await db
+          .select({ topics: competitors.topics })
+          .from(competitors)
+          .where(eq(competitors.clientId, client.id));
+
+        const competitorTopics = clientCompetitors
+          .flatMap((c) => c.topics || [])
+          .filter((t) => t);
+
         clientContext = {
           name: client.name,
           topics: client.topicsOfExpertise || [],
-          voiceStyle: client.voiceStyle || undefined,
+          voiceStyle: client.voiceStyle || kb?.voiceGuidelines || undefined,
+          bio: kb?.bio || undefined,
+          products: kb?.products || undefined,
+          talkingPoints: kb?.talkingPoints || undefined,
+          competitorTopics: competitorTopics.length > 0 ? competitorTopics : undefined,
         };
       }
     }
 
-    const questionsAsked = (interview.questionsAsked as object[]) || [];
+    const questionsAsked = (interview.questionsAsked as { question: string; response: string; category?: string }[]) || [];
     const extractedContent = [];
 
     // Valid content types from the enum
@@ -157,8 +190,9 @@ export async function POST(request: Request) {
       "influences", "advice"
     ];
 
-    // Process each Q&A pair
-    for (const qa of questionsAsked as { question: string; response: string; category?: string }[]) {
+    // Process each Q&A pair with full context
+    for (let i = 0; i < questionsAsked.length; i++) {
+      const qa = questionsAsked[i];
       if (!qa.question || !qa.response) continue;
 
       // Skip very short responses (likely not useful content)
@@ -167,10 +201,15 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // Include other Q&As from the same interview as context (excluding current one)
+      const otherQAs = questionsAsked
+        .filter((_, idx) => idx !== i && questionsAsked[idx].response?.length > 50)
+        .map(q => ({ question: q.question, response: q.response }));
+
       const extraction = await claude.extractContent(
         qa.question,
         qa.response,
-        clientContext
+        clientContext ? { ...clientContext, otherQAs } : undefined
       );
 
       if (extraction) {

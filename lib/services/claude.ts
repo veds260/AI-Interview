@@ -43,6 +43,11 @@ class ClaudeService {
       name?: string;
       topics?: string[];
       voiceStyle?: string;
+      bio?: string;
+      products?: string[];
+      talkingPoints?: string[];
+      competitorTopics?: string[];
+      otherQAs?: { question: string; response: string }[];
     },
     trackingContext?: { interviewId?: string; clientId?: string }
   ): Promise<ContentExtraction | null> {
@@ -53,26 +58,84 @@ class ClaudeService {
 
     const startTime = Date.now();
     try {
-      const contextInfo = clientContext
-        ? `
-        Founder: ${clientContext.name || "Unknown"}
-        Industry/Topics: ${clientContext.topics?.join(", ") || "General"}
-        Voice Guidelines: ${clientContext.voiceStyle || "Professional, authentic"}
-      `
-        : "";
+      // Build rich context from all available information
+      let contextInfo = "";
 
-      const promptContent = `Extract structured content from this founder interview response.
-              ${contextInfo}
+      if (clientContext) {
+        contextInfo = `
+═══════════════════════════════════════════════════════════════
+FOUNDER CONTEXT (Use this to make content authentic & specific):
+═══════════════════════════════════════════════════════════════
 
-              Question Asked: ${question}
+Name: ${clientContext.name || "Unknown"}
+`;
 
-              Response: ${response}
+        if (clientContext.bio) {
+          contextInfo += `\nBio/Background:\n${clientContext.bio}\n`;
+        }
 
-              ═══════════════════════════════════════════════════════════════
-              CONTENT GENERATION RULES (CRITICAL - MUST FOLLOW):
-              ═══════════════════════════════════════════════════════════════
+        if (clientContext.products?.length) {
+          contextInfo += `\nProducts/Services: ${clientContext.products.join(", ")}\n`;
+        }
 
-              FORBIDDEN (NEVER USE):
+        if (clientContext.topics?.length) {
+          contextInfo += `\nExpertise Areas: ${clientContext.topics.join(", ")}\n`;
+        }
+
+        if (clientContext.talkingPoints?.length) {
+          contextInfo += `\nKey Talking Points:\n${clientContext.talkingPoints.map(tp => `- ${tp}`).join("\n")}\n`;
+        }
+
+        if (clientContext.voiceStyle) {
+          contextInfo += `\nVoice/Tone Guidelines: ${clientContext.voiceStyle}\n`;
+        }
+
+        if (clientContext.competitorTopics?.length) {
+          contextInfo += `\nTrending Topics in Their Space: ${clientContext.competitorTopics.slice(0, 10).join(", ")}\n`;
+        }
+
+        // Include other Q&As from the same interview for context
+        if (clientContext.otherQAs?.length) {
+          contextInfo += `\n═══════════════════════════════════════════════════════════════
+OTHER INSIGHTS FROM THIS INTERVIEW (for context/consistency):
+═══════════════════════════════════════════════════════════════\n`;
+          clientContext.otherQAs.slice(0, 5).forEach((qa, i) => {
+            contextInfo += `\n${i + 1}. Q: ${qa.question}\n   A: ${qa.response.substring(0, 300)}${qa.response.length > 300 ? "..." : ""}\n`;
+          });
+        }
+      }
+
+      const promptContent = `You are creating social media content for a founder based on their interview.
+
+${contextInfo}
+
+═══════════════════════════════════════════════════════════════
+CURRENT Q&A TO TRANSFORM INTO CONTENT:
+═══════════════════════════════════════════════════════════════
+
+Question Asked: ${question}
+
+Response: ${response}
+
+═══════════════════════════════════════════════════════════════
+CRITICAL: USE THE FULL CONTEXT
+═══════════════════════════════════════════════════════════════
+
+- Reference specific details from the founder's bio/background if provided
+- Connect to their products/services when relevant
+- Use their talking points and expertise areas to add depth
+- Make content specific to THEIR industry and experience
+- Use competitor/trending topics to make content timely
+- Reference other interview answers for consistency and completeness
+- The content should sound like it could ONLY come from this specific person
+- Include specific numbers, names, timeframes from their response
+- DO NOT create generic content that could apply to anyone
+
+═══════════════════════════════════════════════════════════════
+CONTENT GENERATION RULES (CRITICAL - MUST FOLLOW):
+═══════════════════════════════════════════════════════════════
+
+FORBIDDEN (NEVER USE):
               - Hashtags (never include any)
               - Em dashes (—)
               - Rhetorical questions ("The truth?", "Want to know why?", "Here's the thing...")
