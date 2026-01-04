@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
-import { ImagePlus, X, Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React, { useRef, useState, useEffect } from 'react'
+import { ImagePlus, X, Clipboard } from 'lucide-react'
 
 interface ImageUploadProps {
   onImageChange: (imageUrl: string | null) => void
@@ -16,7 +15,9 @@ export default function ImageUpload({
   className = '',
 }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -30,6 +31,33 @@ export default function ImageUpload({
     }
     reader.readAsDataURL(file)
   }
+
+  // Handle clipboard paste
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Only handle paste when this component area is focused or active
+      if (!isFocused && !containerRef.current?.contains(document.activeElement)) {
+        return
+      }
+
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          e.preventDefault()
+          const file = items[i].getAsFile()
+          if (file) {
+            handleFileSelect(file)
+          }
+          break
+        }
+      }
+    }
+
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [isFocused])
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -87,10 +115,14 @@ export default function ImageUpload({
 
   return (
     <div
+      ref={containerRef}
       className={`relative ${className}`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      tabIndex={0}
     >
       <input
         ref={fileInputRef}
@@ -101,15 +133,22 @@ export default function ImageUpload({
       />
       <button
         onClick={() => fileInputRef.current?.click()}
-        className={`w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors ${
-          isDragging
+        onFocus={() => setIsFocused(true)}
+        className={`w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 transition-colors ${
+          isDragging || isFocused
             ? 'border-blue-500 bg-blue-50'
             : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
         }`}
       >
-        <ImagePlus className={`w-6 h-6 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
-        <span className={`text-sm ${isDragging ? 'text-blue-600' : 'text-gray-500'}`}>
-          {isDragging ? 'Drop image here' : 'Add image'}
+        <div className="flex items-center gap-2">
+          <ImagePlus className={`w-5 h-5 ${isDragging || isFocused ? 'text-blue-500' : 'text-gray-400'}`} />
+          <Clipboard className={`w-4 h-4 ${isDragging || isFocused ? 'text-blue-500' : 'text-gray-400'}`} />
+        </div>
+        <span className={`text-sm ${isDragging || isFocused ? 'text-blue-600' : 'text-gray-500'}`}>
+          {isDragging ? 'Drop image here' : 'Click, drop, or paste image'}
+        </span>
+        <span className="text-xs text-gray-400">
+          Ctrl+V / Cmd+V to paste
         </span>
       </button>
     </div>

@@ -11,11 +11,13 @@ import { apiUsage } from "@/lib/db/schema";
 // HeyGen: https://docs.heygen.com/reference/limits (0.2 credits/min, ~$0.10/min at Scale)
 // Deepgram: https://deepgram.com/pricing ($0.0043/min batch, $0.0077/min streaming)
 // OpenAI TTS: https://platform.openai.com/docs/pricing ($15/1M chars = $0.015/1K chars)
-const PRICING = {
+const PRICING: Record<string, { input?: number; output?: number; perMinute?: number; per1kChars?: number }> = {
   // Claude models via OpenRouter (per 1M tokens)
   "anthropic/claude-3-haiku": { input: 0.25, output: 1.25 },
   "anthropic/claude-3.5-sonnet": { input: 3, output: 15 },
   "anthropic/claude-3-sonnet": { input: 3, output: 15 },
+  // Content extraction via OpenRouter
+  "openrouter": { input: 3, output: 15 }, // Default to Sonnet pricing
   // HeyGen streaming avatar (per minute) - 0.2 credits/min at $0.50/credit (Scale plan)
   heygen: { perMinute: 0.10 },
   // Deepgram Nova-2 (per minute) - using streaming rate for real-time interviews
