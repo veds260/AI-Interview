@@ -82,7 +82,7 @@ class ClaudeService {
               - Clichés and buzzwords
 
               ═══════════════════════════════════════════════════════════════
-              TWEET FORMATTING (280-450 characters):
+              TWEET FORMATTING:
               ═══════════════════════════════════════════════════════════════
 
               HOOK (First Line) - This is the most important part:
@@ -110,7 +110,7 @@ class ClaudeService {
               That week taught me more about sales than any book ever could. Desperation creates clarity."
 
               ═══════════════════════════════════════════════════════════════
-              LINKEDIN FORMATTING (400-800 characters):
+              LINKEDIN FORMATTING:
               ═══════════════════════════════════════════════════════════════
 
               STRUCTURE:
@@ -152,9 +152,9 @@ class ClaudeService {
                 "topics": ["topic1", "topic2"],
                 "keyQuote": "The single best soundbite (under 280 chars)",
                 "summary": "1-2 sentence summary of the content",
-                "tweetDraft": "A tweet with strong hook, line breaks for spacing, 280-450 chars, follows formatting rules above",
+                "tweetDraft": "A tweet with strong hook, line breaks for spacing, follows formatting rules above",
                 "threadOutline": ["Point 1", "Point 2", "Point 3"],
-                "linkedinDraft": "A LinkedIn post with hook, line breaks between paragraphs, 400-800 chars, professional but personal",
+                "linkedinDraft": "A LinkedIn post with hook, line breaks between paragraphs, professional but personal",
                 "suggestedFormats": ["tweet", "thread", "linkedin", "blog"],
                 "web2Friendly": true or false,
                 "technicalDepth": 1-5,

@@ -93,14 +93,15 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/extractions/[id] - Delete extraction (admin only)
+// DELETE /api/extractions/[id] - Delete extraction (admin or writer)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
-    if (!session?.user || session.user.role !== "admin") {
+    const role = (session?.user as { role?: string })?.role;
+    if (!session?.user || !["admin", "writer"].includes(role || "")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

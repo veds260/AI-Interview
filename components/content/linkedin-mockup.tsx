@@ -17,6 +17,7 @@ interface LinkedInMockupProps {
   profilePicture?: string
   postText: string
   timestamp?: Date
+  imageUrl?: string
 }
 
 export default function LinkedInMockup({
@@ -25,6 +26,7 @@ export default function LinkedInMockup({
   profilePicture,
   postText,
   timestamp,
+  imageUrl,
 }: LinkedInMockupProps) {
   // Get initials for default avatar
   const getInitials = (name: string) => {
@@ -117,6 +119,17 @@ export default function LinkedInMockup({
           {formattedText}
         </div>
       </div>
+
+      {/* Post Image */}
+      {imageUrl && (
+        <div className="w-full">
+          <img
+            src={imageUrl}
+            alt="Post image"
+            className="w-full object-cover max-h-[400px]"
+          />
+        </div>
+      )}
 
       {/* Engagement Stats */}
       <div className="px-4 py-2 flex items-center justify-between text-xs text-gray-500 border-b border-gray-100">

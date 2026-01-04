@@ -28,12 +28,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Copy, Check, FileText, MessageSquare, Linkedin, BookOpen, Twitter, Sparkles } from "lucide-react";
+import { Loader2, Copy, Check, FileText, MessageSquare, Linkedin, BookOpen, Twitter, Sparkles, Pencil, Trash2, Save, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import CommentableTweetMockup from "@/components/content/commentable-tweet-mockup";
 import CommentList from "@/components/content/comment-list";
 import LinkedInMockup from "@/components/content/linkedin-mockup";
+import TweetMockup from "@/components/content/tweet-mockup";
+import ImageUpload from "@/components/content/image-upload";
 
 const CONTENT_TYPES = [
   { value: "all", label: "All Types" },
@@ -104,15 +107,22 @@ function ContentBankContent() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [activeTab, setActiveTab] = useState("mockup");
+  const [tweetImage, setTweetImage] = useState<string | null>(null);
+  const [linkedinImage, setLinkedinImage] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTweet, setEditedTweet] = useState("");
+  const [editedLinkedin, setEditedLinkedin] = useState("");
 
   const queryClient = useQueryClient();
 
-  // Fetch comments when extraction is selected
+  // Fetch comments when extraction is selected and reset images when dialog closes
   useEffect(() => {
     if (selectedExtraction) {
       fetchComments(selectedExtraction.id);
     } else {
       setComments([]);
+      setTweetImage(null);
+      setLinkedinImage(null);
     }
   }, [selectedExtraction?.id]);
 
@@ -157,6 +167,68 @@ function ContentBankContent() {
       toast.error("Failed to mark as used");
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, tweetDraft, linkedinDraft }: { id: string; tweetDraft: string; linkedinDraft: string }) => {
+      const res = await fetch(`/api/extractions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tweetDraft, linkedinDraft }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["extractions"] });
+      toast.success("Content updated");
+      setIsEditing(false);
+    },
+    onError: () => {
+      toast.error("Failed to update content");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/extractions/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["extractions"] });
+      toast.success("Content deleted");
+      setSelectedExtraction(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete content");
+    },
+  });
+
+  const startEditing = () => {
+    if (selectedExtraction) {
+      setEditedTweet(selectedExtraction.tweetDraft || "");
+      setEditedLinkedin(selectedExtraction.linkedinDraft || "");
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedTweet("");
+    setEditedLinkedin("");
+  };
+
+  const saveEdits = () => {
+    if (selectedExtraction) {
+      updateMutation.mutate({
+        id: selectedExtraction.id,
+        tweetDraft: editedTweet,
+        linkedinDraft: editedLinkedin,
+      });
+    }
+  };
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
@@ -401,47 +473,68 @@ function ContentBankContent() {
                   <TabsContent value="mockup" className="m-0 h-full">
                     <div className="bg-gradient-to-b from-gray-100 to-gray-50 p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
-                        <CommentableTweetMockup
-                          extractionId={selectedExtraction.id}
-                          clientName={selectedExtraction.clientName || "Client"}
-                          twitterHandle={selectedExtraction.clientTwitterHandle || undefined}
-                          tweetText={selectedExtraction.tweetDraft}
-                          onCommentAdded={() => fetchComments(selectedExtraction.id)}
-                          userName={session?.user?.name || "Writer"}
-                          userRole={(session?.user as { role?: string })?.role || "writer"}
-                        />
+                        {isEditing ? (
+                          <div className="bg-white rounded-xl p-6 border shadow-sm space-y-4">
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                                Edit Tweet
+                              </label>
+                              <Textarea
+                                value={editedTweet}
+                                onChange={(e) => setEditedTweet(e.target.value)}
+                                rows={6}
+                                className="resize-none"
+                                placeholder="Write your tweet..."
+                              />
+                              <p className="text-xs text-gray-500 mt-2">
+                                {editedTweet.length} characters
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <TweetMockup
+                            clientName={selectedExtraction.clientName || "Client"}
+                            twitterHandle={selectedExtraction.clientTwitterHandle || undefined}
+                            tweetText={selectedExtraction.tweetDraft}
+                            media={tweetImage ? [{ type: 'image', data: tweetImage }] : undefined}
+                          />
+                        )}
+
+                        {/* Image Upload */}
+                        <div className="bg-white rounded-xl p-4 border shadow-sm">
+                          <p className="text-sm font-medium text-gray-700 mb-3">Add Image to Tweet</p>
+                          <ImageUpload
+                            currentImage={tweetImage}
+                            onImageChange={setTweetImage}
+                          />
+                        </div>
 
                         {/* Actions */}
-                        <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
-                          <div className="flex items-center gap-4">
+                        {!isEditing && (
+                          <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
                             <span className="text-sm text-gray-500">
-                              {selectedExtraction.tweetDraft?.length || 0} / 280 characters
+                              {selectedExtraction.tweetDraft?.length || 0} characters
                             </span>
-                            {selectedExtraction.tweetDraft?.length <= 280 && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                Good length
-                              </Badge>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(selectedExtraction.tweetDraft, "tweetDraft")}
+                              className="gap-2"
+                            >
+                              {copiedField === "tweetDraft" ? (
+                                <>
+                                  <Check className="h-4 w-4 text-green-600" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  Copy Tweet
+                                </>
+                              )}
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(selectedExtraction.tweetDraft, "tweetDraft")}
-                            className="gap-2"
-                          >
-                            {copiedField === "tweetDraft" ? (
-                              <>
-                                <Check className="h-4 w-4 text-green-600" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy Tweet
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>
@@ -450,13 +543,41 @@ function ContentBankContent() {
                   <TabsContent value="linkedin" className="m-0 h-full">
                     <div className="bg-gradient-to-b from-blue-50/30 to-gray-50 p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
-                        {selectedExtraction.linkedinDraft ? (
+                        {isEditing ? (
+                          <div className="bg-white rounded-xl p-6 border shadow-sm space-y-4">
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                                Edit LinkedIn Post
+                              </label>
+                              <Textarea
+                                value={editedLinkedin}
+                                onChange={(e) => setEditedLinkedin(e.target.value)}
+                                rows={10}
+                                className="resize-none"
+                                placeholder="Write your LinkedIn post..."
+                              />
+                              <p className="text-xs text-gray-500 mt-2">
+                                {editedLinkedin.length} characters
+                              </p>
+                            </div>
+                          </div>
+                        ) : selectedExtraction.linkedinDraft ? (
                           <>
                             <LinkedInMockup
                               clientName={selectedExtraction.clientName || "Client"}
                               headline="Founder & CEO"
                               postText={selectedExtraction.linkedinDraft}
+                              imageUrl={linkedinImage || undefined}
                             />
+
+                            {/* Image Upload */}
+                            <div className="bg-white rounded-xl p-4 border shadow-sm">
+                              <p className="text-sm font-medium text-gray-700 mb-3">Add Image to Post</p>
+                              <ImageUpload
+                                currentImage={linkedinImage}
+                                onImageChange={setLinkedinImage}
+                              />
+                            </div>
 
                             {/* Actions */}
                             <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
@@ -602,17 +723,65 @@ function ContentBankContent() {
                 </div>
 
                 {/* Actions Footer */}
-                <div className="flex justify-end gap-2 p-6 pt-4 border-t bg-gray-50">
-                  {selectedExtraction.status === "extracted" && (
-                    <Button
-                      onClick={() => {
-                        markAsUsedMutation.mutate(selectedExtraction.id);
-                        setSelectedExtraction(null);
-                      }}
-                    >
-                      Mark as Used
-                    </Button>
-                  )}
+                <div className="flex justify-between p-6 pt-4 border-t bg-gray-50">
+                  <div className="flex gap-2">
+                    {isEditing ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={cancelEditing}
+                          className="gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={saveEdits}
+                          disabled={updateMutation.isPending}
+                          className="gap-2"
+                        >
+                          <Save className="h-4 w-4" />
+                          {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={startEditing}
+                          className="gap-2"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Edit Content
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this content?")) {
+                              deleteMutation.mutate(selectedExtraction.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedExtraction.status === "extracted" && !isEditing && (
+                      <Button
+                        onClick={() => {
+                          markAsUsedMutation.mutate(selectedExtraction.id);
+                          setSelectedExtraction(null);
+                        }}
+                      >
+                        Mark as Used
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Tabs>
             </>

@@ -27,7 +27,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Copy, Check, FileText, MessageSquare, Linkedin, Twitter, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import TweetMockup from "@/components/content/tweet-mockup";
+import CommentableTweetMockup from "@/components/content/commentable-tweet-mockup";
+import CommentList from "@/components/content/comment-list";
 import LinkedInMockup from "@/components/content/linkedin-mockup";
 
 const CONTENT_TYPES = [
@@ -60,6 +61,7 @@ interface Comment {
 
 interface Extraction {
   id: string;
+  interviewId: string | null;
   contentType: string;
   topics: string[];
   questionAsked: string;
@@ -78,6 +80,7 @@ interface Extraction {
   createdAt: string;
   clientName: string | null;
   clientTwitterHandle: string | null;
+  interviewTitle: string | null;
 }
 
 function ClientContentContent() {
@@ -86,6 +89,7 @@ function ClientContentContent() {
   const { data: session } = useSession();
 
   const [typeFilter, setTypeFilter] = useState(initialType);
+  const [interviewFilter, setInterviewFilter] = useState("all");
   const [selectedExtraction, setSelectedExtraction] = useState<Extraction | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -112,7 +116,7 @@ function ClientContentContent() {
     }
   };
 
-  const { data: extractions = [], isLoading } = useQuery<Extraction[]>({
+  const { data: allExtractions = [], isLoading } = useQuery<Extraction[]>({
     queryKey: ["client-extractions", typeFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -123,6 +127,19 @@ function ClientContentContent() {
       return res.json();
     },
   });
+
+  // Get unique interviews for filtering
+  const uniqueInterviews = allExtractions.reduce((acc, ext) => {
+    if (ext.interviewId && ext.interviewTitle && !acc.find(i => i.id === ext.interviewId)) {
+      acc.push({ id: ext.interviewId, title: ext.interviewTitle });
+    }
+    return acc;
+  }, [] as { id: string; title: string }[]);
+
+  // Filter by interview
+  const extractions = interviewFilter === "all"
+    ? allExtractions
+    : allExtractions.filter(e => e.interviewId === interviewFilter);
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
@@ -173,10 +190,28 @@ function ClientContentContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-gray-700">Filter by type:</span>
+      <div className="flex flex-wrap items-center gap-4">
+        {uniqueInterviews.length > 0 && (
+          <>
+            <span className="text-sm font-medium text-gray-700">Interview:</span>
+            <Select value={interviewFilter} onValueChange={setInterviewFilter}>
+              <SelectTrigger className="w-[250px]">
+                <SelectValue placeholder="Select Interview" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Interviews</SelectItem>
+                {uniqueInterviews.map((interview) => (
+                  <SelectItem key={interview.id} value={interview.id}>
+                    {interview.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
+        <span className="text-sm font-medium text-gray-700">Type:</span>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Content Type" />
           </SelectTrigger>
           <SelectContent>
@@ -309,7 +344,7 @@ function ClientContentContent() {
               {/* Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
                 <div className="px-6 pt-4 border-b bg-white">
-                  <TabsList className="grid w-full max-w-md grid-cols-3 bg-gray-100/80">
+                  <TabsList className="grid w-full max-w-lg grid-cols-4 bg-gray-100/80">
                     <TabsTrigger value="twitter" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <Twitter className="h-4 w-4" />
                       Twitter
@@ -317,6 +352,10 @@ function ClientContentContent() {
                     <TabsTrigger value="linkedin" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <Linkedin className="h-4 w-4" />
                       LinkedIn
+                    </TabsTrigger>
+                    <TabsTrigger value="comments" className="flex items-center gap-2 data-[state=active]:bg-white">
+                      <MessageSquare className="h-4 w-4" />
+                      Feedback ({comments.filter(c => !c.resolved).length})
                     </TabsTrigger>
                     <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <FileText className="h-4 w-4" />
@@ -330,24 +369,21 @@ function ClientContentContent() {
                   <TabsContent value="twitter" className="m-0 h-full">
                     <div className="bg-gradient-to-b from-gray-100 to-gray-50 p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
-                        <TweetMockup
+                        <CommentableTweetMockup
+                          extractionId={selectedExtraction.id}
                           clientName={selectedExtraction.clientName || "You"}
                           twitterHandle={selectedExtraction.clientTwitterHandle || undefined}
                           tweetText={selectedExtraction.tweetDraft}
+                          onCommentAdded={() => fetchComments(selectedExtraction.id)}
+                          userName={session?.user?.name || "Client"}
+                          userRole="client"
                         />
 
                         {/* Actions */}
                         <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-500">
-                              {selectedExtraction.tweetDraft?.length || 0} / 280 characters
-                            </span>
-                            {selectedExtraction.tweetDraft?.length <= 280 && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                Good length
-                              </Badge>
-                            )}
-                          </div>
+                          <span className="text-sm text-gray-500">
+                            {selectedExtraction.tweetDraft?.length || 0} characters
+                          </span>
                           <Button
                             variant="outline"
                             size="sm"
@@ -367,6 +403,10 @@ function ClientContentContent() {
                             )}
                           </Button>
                         </div>
+
+                        <p className="text-xs text-gray-500 text-center">
+                          Click on any text in the tweet to leave feedback
+                        </p>
                       </div>
                     </div>
                   </TabsContent>
@@ -420,6 +460,15 @@ function ClientContentContent() {
                         )}
                       </div>
                     </div>
+                  </TabsContent>
+
+                  {/* Comments/Feedback Tab */}
+                  <TabsContent value="comments" className="m-0 p-6">
+                    <CommentList
+                      comments={comments}
+                      onCommentUpdate={() => fetchComments(selectedExtraction.id)}
+                      currentUserId={session?.user?.id || null}
+                    />
                   </TabsContent>
 
                   {/* Details Tab */}
