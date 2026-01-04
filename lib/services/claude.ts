@@ -68,28 +68,83 @@ class ClaudeService {
 
               Response: ${response}
 
+              ═══════════════════════════════════════════════════════════════
               CONTENT GENERATION RULES (CRITICAL - MUST FOLLOW):
+              ═══════════════════════════════════════════════════════════════
 
-              1. NO HASHTAGS - Never include hashtags in any content
-              2. NO EM DASHES - Never use em dashes (—) in any content
-              3. NO RHETORICAL QUESTIONS - Avoid "The truth?", "Want to know why?", "Here's the thing..."
-              4. LENGTH FOR TWEETS: 280-450 characters with natural variation (not forced to exact limits)
-              5. SIMPLE LANGUAGE - Write at 5th grade reading level, conversational tone
-              6. VARY SENTENCE STRUCTURE - Mix short and longer sentences for natural rhythm
-              7. FIRST PERSON - Write from the founder's perspective ("I" not "they")
-              8. ONE CLEAR INSIGHT - Each tweet should focus on a single idea
-              9. AVOID PATTERNS:
-                 - No "Same X. Same Y. Same Z." staccato patterns
-                 - No "Thing isn't X. It's Y." patterns
-                 - No generic motivational phrases like "Your network is your net worth"
-              10. BE SPECIFIC - Include concrete details from the response
+              FORBIDDEN (NEVER USE):
+              - Hashtags (never include any)
+              - Em dashes (—)
+              - Rhetorical questions ("The truth?", "Want to know why?", "Here's the thing...")
+              - Staccato patterns ("Same X. Same Y. Same Z.")
+              - Formulaic patterns ("Thing isn't X. It's Y.")
+              - Generic motivational phrases ("Your network is your net worth")
+              - Clichés and buzzwords
 
-              PROVEN TWEET FORMATS THAT WORK (use these as inspiration):
-              - "I've [number/action]..." credential posts with specific insights
-              - "Quick [topic] tip:" with contrasting observations
-              - "Hot take:" for contrarian views
-              - Story format: Set scene, share tension, reveal insight
-              - "The biggest [domain] mistake is..." with explanation
+              ═══════════════════════════════════════════════════════════════
+              TWEET FORMATTING (280-450 characters):
+              ═══════════════════════════════════════════════════════════════
+
+              HOOK (First Line) - This is the most important part:
+              - Must stop the scroll and grab attention immediately
+              - Use a surprising fact, bold claim, or intriguing statement
+              - Front-load the value - best insight goes first
+              - Examples of strong hooks:
+                • "I lost $2M before I learned this..."
+                • "After 500 customer calls, one pattern kept showing up."
+                • "Most founders get pricing completely backwards."
+                • "The best hire I ever made almost didn't happen."
+                • "We grew 10x by doing the opposite of what VCs told us."
+
+              STRUCTURE - Use line breaks for readability:
+              - Put a blank line after the hook
+              - Break into 2-3 short paragraphs
+              - Each paragraph = one idea
+              - End with insight or takeaway
+
+              EXAMPLE OF GOOD TWEET FORMAT:
+              "We almost shut down in month 3.
+
+              Our biggest client ghosted us. Payroll was due in 5 days. I had $800 in the bank.
+
+              That week taught me more about sales than any book ever could. Desperation creates clarity."
+
+              ═══════════════════════════════════════════════════════════════
+              LINKEDIN FORMATTING (400-800 characters):
+              ═══════════════════════════════════════════════════════════════
+
+              STRUCTURE:
+              - Strong hook (first line visible before "see more")
+              - Blank line after hook
+              - 3-5 short paragraphs with line breaks between each
+              - Each paragraph = 1-2 sentences max
+              - End with reflection or lesson learned
+              - More professional tone than Twitter but still personal
+
+              EXAMPLE OF GOOD LINKEDIN FORMAT:
+              "I interviewed 200 candidates before making my first hire.
+
+              Everyone told me I was crazy. 'Just hire fast and fire fast,' they said.
+
+              But I knew culture would make or break us.
+
+              That first hire? She's now my COO.
+
+              The extra time upfront saved us years of pain later."
+
+              ═══════════════════════════════════════════════════════════════
+              WRITING STYLE:
+              ═══════════════════════════════════════════════════════════════
+
+              - 5th grade reading level, conversational
+              - First person ("I" not "they")
+              - One clear insight per post
+              - Specific details from the response (numbers, names, timeframes)
+              - Mix short and longer sentences for rhythm
+              - Active voice, not passive
+              - Show vulnerability when the story calls for it
+
+              ═══════════════════════════════════════════════════════════════
 
               Extract and return valid JSON with exactly these fields:
               {
@@ -97,15 +152,17 @@ class ClaudeService {
                 "topics": ["topic1", "topic2"],
                 "keyQuote": "The single best soundbite (under 280 chars)",
                 "summary": "1-2 sentence summary of the content",
-                "tweetDraft": "A tweet in founder's voice, 280-450 chars, no hashtags, follows rules above",
+                "tweetDraft": "A tweet with strong hook, line breaks for spacing, 280-450 chars, follows formatting rules above",
                 "threadOutline": ["Point 1", "Point 2", "Point 3"],
-                "linkedinDraft": "A LinkedIn post version if suitable (no hashtags)",
+                "linkedinDraft": "A LinkedIn post with hook, line breaks between paragraphs, 400-800 chars, professional but personal",
                 "suggestedFormats": ["tweet", "thread", "linkedin", "blog"],
                 "web2Friendly": true or false,
                 "technicalDepth": 1-5,
                 "controversyLevel": 1-5,
                 "storytellingPotential": 1-5
               }
+
+              IMPORTANT: Use \\n for line breaks in tweetDraft and linkedinDraft to create proper spacing.
 
               Return ONLY the JSON object, no other text.`;
 

@@ -7,9 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Select,
@@ -19,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -28,11 +24,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Copy, Check, FileText, MessageSquare, Linkedin, BookOpen, Twitter, Sparkles } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Copy, Check, FileText, MessageSquare, Linkedin, Twitter, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import CommentableTweetMockup from "@/components/content/commentable-tweet-mockup";
-import CommentList from "@/components/content/comment-list";
+import TweetMockup from "@/components/content/tweet-mockup";
 import LinkedInMockup from "@/components/content/linkedin-mockup";
 
 const CONTENT_TYPES = [
@@ -46,13 +41,6 @@ const CONTENT_TYPES = [
   { value: "technical", label: "Technical" },
   { value: "framework", label: "Framework" },
   { value: "advice", label: "Advice" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "all", label: "All Status" },
-  { value: "extracted", label: "Available" },
-  { value: "assigned", label: "Assigned" },
-  { value: "used", label: "Used" },
 ];
 
 interface Comment {
@@ -92,20 +80,16 @@ interface Extraction {
   clientTwitterHandle: string | null;
 }
 
-function ContentBankContent() {
+function ClientContentContent() {
   const searchParams = useSearchParams();
   const initialType = searchParams.get("type") || "all";
   const { data: session } = useSession();
 
   const [typeFilter, setTypeFilter] = useState(initialType);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedExtraction, setSelectedExtraction] =
-    useState<Extraction | null>(null);
+  const [selectedExtraction, setSelectedExtraction] = useState<Extraction | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [activeTab, setActiveTab] = useState("mockup");
-
-  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("twitter");
 
   // Fetch comments when extraction is selected
   useEffect(() => {
@@ -129,32 +113,14 @@ function ContentBankContent() {
   };
 
   const { data: extractions = [], isLoading } = useQuery<Extraction[]>({
-    queryKey: ["extractions", typeFilter, statusFilter],
+    queryKey: ["client-extractions", typeFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
-      if (statusFilter !== "all") params.append("status", statusFilter);
 
       const res = await fetch(`/api/extractions?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch extractions");
       return res.json();
-    },
-  });
-
-  const markAsUsedMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/extractions/${id}/use`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Failed to mark as used");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["extractions"] });
-      toast.success("Marked as used");
-    },
-    onError: () => {
-      toast.error("Failed to mark as used");
     },
   });
 
@@ -172,21 +138,6 @@ function ContentBankContent() {
     );
   };
 
-  const getFormatIcon = (format: string) => {
-    switch (format) {
-      case "tweet":
-        return <Twitter className="h-3 w-3" />;
-      case "thread":
-        return <FileText className="h-3 w-3" />;
-      case "linkedin":
-        return <Linkedin className="h-3 w-3" />;
-      case "blog":
-        return <BookOpen className="h-3 w-3" />;
-      default:
-        return <FileText className="h-3 w-3" />;
-    }
-  };
-
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       origin_story: "bg-purple-100 text-purple-800 border-purple-200",
@@ -202,6 +153,8 @@ function ContentBankContent() {
     return colors[type] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
+  const unresolvedComments = comments.filter(c => !c.resolved);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -211,16 +164,17 @@ function ContentBankContent() {
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Content Bank</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Your Content</h1>
             <p className="text-gray-500 mt-1">
-              Browse, review, and manage extracted content from interviews
+              Posts created from your interview responses
             </p>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex items-center gap-4">
+        <span className="text-sm font-medium text-gray-700">Filter by type:</span>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Content Type" />
@@ -233,32 +187,27 @@ function ContentBankContent() {
             ))}
           </SelectContent>
         </Select>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((status) => (
-              <SelectItem key={status.value} value={status.value}>
-                {status.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <span className="text-sm text-gray-500">
+          {extractions.length} {extractions.length === 1 ? 'post' : 'posts'} available
+        </span>
       </div>
 
       {/* Content Grid */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
+          <p className="text-gray-500">Loading your content...</p>
         </div>
       ) : extractions.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              No content found. Content will appear here after interviews are
-              processed.
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No content yet</h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              Content will appear here after your interviews are processed.
+              Complete an interview to see your posts!
             </p>
           </CardContent>
         </Card>
@@ -271,24 +220,13 @@ function ContentBankContent() {
               onClick={() => setSelectedExtraction(extraction)}
             >
               {/* Type Badge Header */}
-              <div className="px-5 pt-5 pb-3 flex justify-between items-start">
+              <div className="px-5 pt-5 pb-3">
                 <Badge className={`${getTypeColor(extraction.contentType)} border font-medium`}>
                   {getTypeLabel(extraction.contentType)}
                 </Badge>
-                <Badge
-                  variant={
-                    extraction.status === "extracted"
-                      ? "default"
-                      : extraction.status === "used"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  className="text-xs"
-                >
-                  {extraction.status}
-                </Badge>
               </div>
 
+              {/* Content Preview */}
               <CardContent className="pt-0 pb-5 space-y-4">
                 {/* Key Quote */}
                 <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
@@ -321,12 +259,9 @@ function ContentBankContent() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                    {extraction.clientName && (
-                      <span className="font-medium text-gray-600">{extraction.clientName}</span>
-                    )}
-                    <span>{new Date(extraction.createdAt).toLocaleDateString()}</span>
-                  </div>
+                  <span className="text-xs text-gray-400">
+                    {new Date(extraction.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -350,13 +285,10 @@ function ContentBankContent() {
                       <Badge className={`${getTypeColor(selectedExtraction.contentType)} border`}>
                         {getTypeLabel(selectedExtraction.contentType)}
                       </Badge>
-                      <span className="font-normal text-gray-600">Content Details</span>
+                      <span className="font-normal text-gray-600">Post Preview</span>
                     </DialogTitle>
                     <DialogDescription>
-                      {selectedExtraction.clientName && (
-                        <span className="font-medium text-gray-700">{selectedExtraction.clientName} - </span>
-                      )}
-                      Interview from{" "}
+                      Created from your interview on{" "}
                       {new Date(selectedExtraction.createdAt).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
@@ -365,29 +297,26 @@ function ContentBankContent() {
                       })}
                     </DialogDescription>
                   </div>
-                  {comments.filter(c => !c.resolved).length > 0 && (
+                  {unresolvedComments.length > 0 && (
                     <Badge variant="destructive" className="flex items-center gap-1">
                       <MessageSquare className="h-3 w-3" />
-                      {comments.filter(c => !c.resolved).length} feedback
+                      {unresolvedComments.length} feedback
                     </Badge>
                   )}
                 </div>
               </DialogHeader>
 
+              {/* Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
                 <div className="px-6 pt-4 border-b bg-white">
-                  <TabsList className="grid w-full max-w-xl grid-cols-4 bg-gray-100/80">
-                    <TabsTrigger value="mockup" className="flex items-center gap-2 data-[state=active]:bg-white">
+                  <TabsList className="grid w-full max-w-md grid-cols-3 bg-gray-100/80">
+                    <TabsTrigger value="twitter" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <Twitter className="h-4 w-4" />
                       Twitter
                     </TabsTrigger>
                     <TabsTrigger value="linkedin" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <Linkedin className="h-4 w-4" />
                       LinkedIn
-                    </TabsTrigger>
-                    <TabsTrigger value="comments" className="flex items-center gap-2 data-[state=active]:bg-white">
-                      <MessageSquare className="h-4 w-4" />
-                      Comments ({comments.filter(c => !c.resolved).length})
                     </TabsTrigger>
                     <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <FileText className="h-4 w-4" />
@@ -398,17 +327,13 @@ function ContentBankContent() {
 
                 <div className="flex-1 overflow-y-auto">
                   {/* Twitter Tab */}
-                  <TabsContent value="mockup" className="m-0 h-full">
+                  <TabsContent value="twitter" className="m-0 h-full">
                     <div className="bg-gradient-to-b from-gray-100 to-gray-50 p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
-                        <CommentableTweetMockup
-                          extractionId={selectedExtraction.id}
-                          clientName={selectedExtraction.clientName || "Client"}
+                        <TweetMockup
+                          clientName={selectedExtraction.clientName || "You"}
                           twitterHandle={selectedExtraction.clientTwitterHandle || undefined}
                           tweetText={selectedExtraction.tweetDraft}
-                          onCommentAdded={() => fetchComments(selectedExtraction.id)}
-                          userName={session?.user?.name || "Writer"}
-                          userRole={(session?.user as { role?: string })?.role || "writer"}
                         />
 
                         {/* Actions */}
@@ -426,10 +351,10 @@ function ContentBankContent() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => copyToClipboard(selectedExtraction.tweetDraft, "tweetDraft")}
+                            onClick={() => copyToClipboard(selectedExtraction.tweetDraft, "tweet")}
                             className="gap-2"
                           >
-                            {copiedField === "tweetDraft" ? (
+                            {copiedField === "tweet" ? (
                               <>
                                 <Check className="h-4 w-4 text-green-600" />
                                 Copied!
@@ -453,7 +378,7 @@ function ContentBankContent() {
                         {selectedExtraction.linkedinDraft ? (
                           <>
                             <LinkedInMockup
-                              clientName={selectedExtraction.clientName || "Client"}
+                              clientName={selectedExtraction.clientName || "You"}
                               headline="Founder & CEO"
                               postText={selectedExtraction.linkedinDraft}
                             />
@@ -466,10 +391,10 @@ function ContentBankContent() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => copyToClipboard(selectedExtraction.linkedinDraft, "linkedinDraft")}
+                                onClick={() => copyToClipboard(selectedExtraction.linkedinDraft, "linkedin")}
                                 className="gap-2"
                               >
-                                {copiedField === "linkedinDraft" ? (
+                                {copiedField === "linkedin" ? (
                                   <>
                                     <Check className="h-4 w-4 text-green-600" />
                                     Copied!
@@ -497,85 +422,54 @@ function ContentBankContent() {
                     </div>
                   </TabsContent>
 
-                  {/* Comments Tab */}
-                  <TabsContent value="comments" className="m-0 p-6">
-                    <CommentList
-                      comments={comments}
-                      onCommentUpdate={() => fetchComments(selectedExtraction.id)}
-                      currentUserId={session?.user?.id || null}
-                    />
-                  </TabsContent>
-
                   {/* Details Tab */}
                   <TabsContent value="details" className="m-0 p-6 space-y-6">
                     {/* Key Quote */}
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-                      <div className="flex justify-between items-start mb-3">
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-blue-600" />
-                          Key Quote
-                        </h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(selectedExtraction.keyQuote, "keyQuote")}
-                        >
-                          {copiedField === "keyQuote" ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-blue-600" />
+                        Key Quote
+                      </h4>
                       <blockquote className="text-lg text-gray-700 italic leading-relaxed">
                         &ldquo;{selectedExtraction.keyQuote}&rdquo;
                       </blockquote>
                     </div>
 
+                    {/* Summary */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-gray-900">Summary</h4>
+                      <p className="text-gray-600 leading-relaxed bg-gray-50 rounded-lg p-4">
+                        {selectedExtraction.summary}
+                      </p>
+                    </div>
+
                     {/* Thread Outline */}
-                    {selectedExtraction.threadOutline &&
-                      selectedExtraction.threadOutline.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            Thread Ideas
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                            {selectedExtraction.threadOutline.map((point, i) => (
-                              <div key={i} className="flex gap-3">
-                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center">
-                                  {i + 1}
-                                </span>
-                                <p className="text-gray-700 text-sm leading-relaxed pt-0.5">{point}</p>
-                              </div>
-                            ))}
-                          </div>
+                    {selectedExtraction.threadOutline && selectedExtraction.threadOutline.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900">Thread Ideas</h4>
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          {selectedExtraction.threadOutline.map((point, i) => (
+                            <div key={i} className="flex gap-3">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center">
+                                {i + 1}
+                              </span>
+                              <p className="text-gray-700 text-sm leading-relaxed pt-0.5">{point}</p>
+                            </div>
+                          ))}
                         </div>
-                      )}
+                      </div>
+                    )}
 
                     {/* Original Response */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-900">From the Interview</h4>
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-gray-900">From Your Interview</h4>
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Question Asked</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Question</p>
                           <p className="text-gray-700 text-sm">{selectedExtraction.questionAsked}</p>
                         </div>
                         <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Full Response</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(selectedExtraction.rawResponse, "rawResponse")}
-                            >
-                              {copiedField === "rawResponse" ? (
-                                <Check className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Response</p>
                           <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
                             {selectedExtraction.rawResponse}
                           </p>
@@ -600,20 +494,6 @@ function ContentBankContent() {
                     </div>
                   </TabsContent>
                 </div>
-
-                {/* Actions Footer */}
-                <div className="flex justify-end gap-2 p-6 pt-4 border-t bg-gray-50">
-                  {selectedExtraction.status === "extracted" && (
-                    <Button
-                      onClick={() => {
-                        markAsUsedMutation.mutate(selectedExtraction.id);
-                        setSelectedExtraction(null);
-                      }}
-                    >
-                      Mark as Used
-                    </Button>
-                  )}
-                </div>
               </Tabs>
             </>
           )}
@@ -623,7 +503,7 @@ function ContentBankContent() {
   );
 }
 
-export default function ContentBankPage() {
+export default function ClientContentPage() {
   return (
     <Suspense
       fallback={
@@ -632,7 +512,7 @@ export default function ContentBankPage() {
         </div>
       }
     >
-      <ContentBankContent />
+      <ClientContentContent />
     </Suspense>
   );
 }
