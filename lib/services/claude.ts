@@ -105,129 +105,97 @@ OTHER INSIGHTS FROM THIS INTERVIEW (for context/consistency):
         }
       }
 
-      const promptContent = `You are creating social media content for a founder based on their interview.
-
-${contextInfo}
+      const promptContent = `You are creating social media content for a founder based on ONE specific interview answer.
 
 ═══════════════════════════════════════════════════════════════
-CURRENT Q&A TO TRANSFORM INTO CONTENT:
+THE ANSWER TO TRANSFORM (THIS IS YOUR PRIMARY SOURCE):
 ═══════════════════════════════════════════════════════════════
 
-Question Asked: ${question}
+Question: ${question}
 
-Response: ${response}
-
-═══════════════════════════════════════════════════════════════
-CRITICAL: USE THE FULL CONTEXT
-═══════════════════════════════════════════════════════════════
-
-- Reference specific details from the founder's bio/background if provided
-- Connect to their products/services when relevant
-- Use their talking points and expertise areas to add depth
-- Make content specific to THEIR industry and experience
-- Use competitor/trending topics to make content timely
-- Reference other interview answers for consistency and completeness
-- The content should sound like it could ONLY come from this specific person
-- Include specific numbers, names, timeframes from their response
-- DO NOT create generic content that could apply to anyone
+Answer: ${response}
 
 ═══════════════════════════════════════════════════════════════
-CONTENT GENERATION RULES (CRITICAL - MUST FOLLOW):
+CONTEXT REFERENCE (USE SELECTIVELY - NOT ALL OF IT):
+═══════════════════════════════════════════════════════════════
+${contextInfo || "No additional context provided."}
+
+═══════════════════════════════════════════════════════════════
+CRITICAL RULES FOR CONTEXT USAGE:
 ═══════════════════════════════════════════════════════════════
 
-FORBIDDEN (NEVER USE):
-              - Hashtags (never include any)
-              - Em dashes (—)
-              - Rhetorical questions ("The truth?", "Want to know why?", "Here's the thing...")
-              - Staccato patterns ("Same X. Same Y. Same Z.")
-              - Formulaic patterns ("Thing isn't X. It's Y.")
-              - Generic motivational phrases ("Your network is your net worth")
-              - Clichés and buzzwords
+1. THE ANSWER IS PRIMARY: 90% of your content must come directly from the answer above. The answer contains the actual story, insight, or experience to share.
 
-              ═══════════════════════════════════════════════════════════════
-              TWEET FORMATTING:
-              ═══════════════════════════════════════════════════════════════
+2. CONTEXT IS OPTIONAL SEASONING: Only use context details IF they directly relate to what's being discussed in THIS specific answer. Most posts won't need any context.
 
-              HOOK (First Line) - This is the most important part:
-              - Must stop the scroll and grab attention immediately
-              - Use a surprising fact, bold claim, or intriguing statement
-              - Front-load the value - best insight goes first
-              - Examples of strong hooks:
-                • "I lost $2M before I learned this..."
-                • "After 500 customer calls, one pattern kept showing up."
-                • "Most founders get pricing completely backwards."
-                • "The best hire I ever made almost didn't happen."
-                • "We grew 10x by doing the opposite of what VCs told us."
+3. RELEVANCE TEST: Before adding ANY context detail, ask: "Does this directly connect to the topic of THIS answer?" If no, don't use it.
+   - If the answer is about writing for 50 paisa per word, do NOT mention Instagram followers
+   - If the answer is about hiring, do NOT mention their podcast
+   - If the answer is about a specific failure, do NOT add unrelated achievements
 
-              STRUCTURE - Use line breaks for readability:
-              - Put a blank line after the hook
-              - Break into 2-3 short paragraphs
-              - Each paragraph = one idea
-              - End with insight or takeaway
+4. NO FORCED ADDITIONS: Never add context just to make content "richer." A clean post from the answer alone is better than one stuffed with irrelevant details.
 
-              EXAMPLE OF GOOD TWEET FORMAT:
-              "We almost shut down in month 3.
+5. ONE STORY PER POST: Each post should tell ONE coherent story or make ONE point from the answer. Don't try to cram multiple achievements or facts.
 
-              Our biggest client ghosted us. Payroll was due in 5 days. I had $800 in the bank.
+6. USE OTHER Q&As ONLY FOR CONSISTENCY: The other interview answers are there so you don't contradict something they said elsewhere. They are NOT for mixing into this content.
 
-              That week taught me more about sales than any book ever could. Desperation creates clarity."
+═══════════════════════════════════════════════════════════════
+CONTENT RULES:
+═══════════════════════════════════════════════════════════════
 
-              ═══════════════════════════════════════════════════════════════
-              LINKEDIN FORMATTING:
-              ═══════════════════════════════════════════════════════════════
+FORBIDDEN:
+- Hashtags
+- Em dashes (—)
+- Rhetorical questions ("The truth?", "Want to know why?")
+- Staccato patterns ("Same X. Same Y. Same Z.")
+- Formulaic patterns ("Thing isn't X. It's Y.")
+- Generic motivational phrases
+- Mixing unrelated achievements/facts from context
 
-              STRUCTURE:
-              - Strong hook (first line visible before "see more")
-              - Blank line after hook
-              - 3-5 short paragraphs with line breaks between each
-              - Each paragraph = 1-2 sentences max
-              - End with reflection or lesson learned
-              - More professional tone than Twitter but still personal
+TWEET FORMAT:
+- Strong hook (surprising fact, bold claim from THE ANSWER)
+- Blank line after hook
+- 2-3 short paragraphs, each = one idea
+- End with insight from THE ANSWER
+- Example:
+  "We almost shut down in month 3.
 
-              EXAMPLE OF GOOD LINKEDIN FORMAT:
-              "I interviewed 200 candidates before making my first hire.
+  Our biggest client ghosted us. Payroll was due in 5 days. I had $800 in the bank.
 
-              Everyone told me I was crazy. 'Just hire fast and fire fast,' they said.
+  That week taught me more about sales than any book ever could."
 
-              But I knew culture would make or break us.
+LINKEDIN FORMAT:
+- Strong hook from THE ANSWER
+- 3-5 short paragraphs with line breaks
+- Each paragraph = 1-2 sentences
+- End with reflection or lesson from THE ANSWER
 
-              That first hire? She's now my COO.
+STYLE:
+- 5th grade reading level
+- First person ("I")
+- ONE clear insight per post
+- Specific details from THE ANSWER (numbers, names, timeframes)
+- Active voice
 
-              The extra time upfront saved us years of pain later."
+═══════════════════════════════════════════════════════════════
 
-              ═══════════════════════════════════════════════════════════════
-              WRITING STYLE:
-              ═══════════════════════════════════════════════════════════════
+Return valid JSON:
+{
+  "contentType": "origin_story|failure_story|success_story|turning_point|hot_take|contrarian_view|industry_critique|prediction|technical|framework|how_to|lessons|values|habits|influences|advice",
+  "topics": ["topic1", "topic2"],
+  "keyQuote": "Best soundbite from THE ANSWER (under 280 chars)",
+  "summary": "1-2 sentence summary",
+  "tweetDraft": "Tweet based primarily on THE ANSWER",
+  "threadOutline": ["Point 1", "Point 2", "Point 3"],
+  "linkedinDraft": "LinkedIn post based primarily on THE ANSWER",
+  "suggestedFormats": ["tweet", "thread", "linkedin", "blog"],
+  "web2Friendly": true or false,
+  "technicalDepth": 1-5,
+  "controversyLevel": 1-5,
+  "storytellingPotential": 1-5
+}
 
-              - 5th grade reading level, conversational
-              - First person ("I" not "they")
-              - One clear insight per post
-              - Specific details from the response (numbers, names, timeframes)
-              - Mix short and longer sentences for rhythm
-              - Active voice, not passive
-              - Show vulnerability when the story calls for it
-
-              ═══════════════════════════════════════════════════════════════
-
-              Extract and return valid JSON with exactly these fields:
-              {
-                "contentType": "origin_story|failure_story|success_story|turning_point|hot_take|contrarian_view|industry_critique|prediction|technical|framework|how_to|lessons|values|habits|influences|advice",
-                "topics": ["topic1", "topic2"],
-                "keyQuote": "The single best soundbite (under 280 chars)",
-                "summary": "1-2 sentence summary of the content",
-                "tweetDraft": "A tweet with strong hook, line breaks for spacing, follows formatting rules above",
-                "threadOutline": ["Point 1", "Point 2", "Point 3"],
-                "linkedinDraft": "A LinkedIn post with hook, line breaks between paragraphs, professional but personal",
-                "suggestedFormats": ["tweet", "thread", "linkedin", "blog"],
-                "web2Friendly": true or false,
-                "technicalDepth": 1-5,
-                "controversyLevel": 1-5,
-                "storytellingPotential": 1-5
-              }
-
-              IMPORTANT: Use \\n for line breaks in tweetDraft and linkedinDraft to create proper spacing.
-
-              Return ONLY the JSON object, no other text.`;
+Use \\n for line breaks. Return ONLY the JSON.`;
 
       const result = await fetch(this.baseUrl, {
         method: "POST",
