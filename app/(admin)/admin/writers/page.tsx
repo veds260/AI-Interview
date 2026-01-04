@@ -66,6 +66,7 @@ interface Writer {
 interface Interview {
   id: string;
   title: string | null;
+  clientName: string | null;
   mode: string;
   status: string;
   completedAt: string | null;
@@ -414,12 +415,16 @@ export default function WritersPage() {
                 <SelectContent>
                   {interviews?.map((interview) => (
                     <SelectItem key={interview.id} value={interview.id}>
-                      {interview.title || `Interview ${interview.id.slice(0, 8)}`}
-                      {interview.completedAt && (
-                        <span className="text-gray-500 ml-2">
-                          ({new Date(interview.completedAt).toLocaleDateString()})
+                      <span className="flex items-center gap-2">
+                        {interview.clientName && (
+                          <span className="font-medium">{interview.clientName}</span>
+                        )}
+                        <span className="text-gray-500">
+                          {interview.completedAt
+                            ? new Date(interview.completedAt).toLocaleDateString()
+                            : interview.title || `Interview ${interview.id.slice(0, 8)}`}
                         </span>
-                      )}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
