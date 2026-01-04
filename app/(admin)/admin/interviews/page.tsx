@@ -51,6 +51,7 @@ import {
   Check,
   Search,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,6 +106,8 @@ export default function AdminInterviewsPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [extractConfirmOpen, setExtractConfirmOpen] = useState(false);
   const [interviewToExtract, setInterviewToExtract] = useState<Interview | null>(null);
+  const [reextractConfirmOpen, setReextractConfirmOpen] = useState(false);
+  const [interviewToReextract, setInterviewToReextract] = useState<Interview | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -193,6 +196,28 @@ export default function AdminInterviewsPage() {
     },
     onError: () => {
       toast.error("Failed to extract content");
+    },
+  });
+
+  const reextractMutation = useMutation({
+    mutationFn: async (interviewId: string) => {
+      const res = await fetch("/api/extractions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interviewId, reextract: true }),
+      });
+      if (!res.ok) throw new Error("Failed to re-extract content");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-extractions"] });
+      toast.success(`Re-extracted ${data.count} content pieces with full context.`);
+      setReextractConfirmOpen(false);
+      setInterviewToReextract(null);
+    },
+    onError: () => {
+      toast.error("Failed to re-extract content");
     },
   });
 
@@ -556,17 +581,35 @@ export default function AdminInterviewsPage() {
                                 )}
                               </Button>
                             ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedInterview(interview);
-                                  setAssignDialogOpen(true);
-                                }}
-                              >
-                                <UserPlus className="mr-1 h-4 w-4" />
-                                Assign
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setInterviewToReextract(interview);
+                                    setReextractConfirmOpen(true);
+                                  }}
+                                  disabled={reextractMutation.isPending}
+                                  title="Re-extract with full context"
+                                >
+                                  {reextractMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedInterview(interview);
+                                    setAssignDialogOpen(true);
+                                  }}
+                                >
+                                  <UserPlus className="mr-1 h-4 w-4" />
+                                  Assign
+                                </Button>
+                              </>
                             )}
                           </>
                         )}
@@ -973,6 +1016,68 @@ export default function AdminInterviewsPage() {
                 <Play className="h-4 w-4 mr-2" />
               )}
               Extract & Complete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Re-extract Confirmation Dialog */}
+      <Dialog open={reextractConfirmOpen} onOpenChange={setReextractConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Re-extract Content?</DialogTitle>
+            <DialogDescription>
+              This will delete all existing extracted content for this interview and re-generate it using the full knowledge base context.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                The new extraction will use:
+              </p>
+              <ul className="text-sm text-blue-700 mt-2 list-disc list-inside space-y-1">
+                <li>Client&apos;s full knowledge base (bio, products, talking points)</li>
+                <li>Competitor topics for timely content</li>
+                <li>All other Q&As from this interview for context</li>
+                <li>Voice style guidelines</li>
+              </ul>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                Warning: This will permanently delete {interviewToReextract?.extractionsCount || 0} existing content pieces.
+              </p>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p><strong>Interview:</strong> {interviewToReextract?.title || `Interview ${interviewToReextract?.id?.slice(0, 8)}`}</p>
+              <p><strong>Client:</strong> {interviewToReextract?.clientName || "Unknown"}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReextractConfirmOpen(false);
+                setInterviewToReextract(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (interviewToReextract) {
+                  reextractMutation.mutate(interviewToReextract.id);
+                }
+              }}
+              disabled={reextractMutation.isPending}
+            >
+              {reextractMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Re-extract Content
             </Button>
           </DialogFooter>
         </DialogContent>

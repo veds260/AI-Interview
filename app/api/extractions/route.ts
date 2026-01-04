@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { interviewId } = await request.json();
+    const { interviewId, reextract } = await request.json();
 
     if (!interviewId) {
       return NextResponse.json(
@@ -129,6 +129,13 @@ export async function POST(request: Request) {
         { error: "Interview not found" },
         { status: 404 }
       );
+    }
+
+    // If re-extracting, delete existing extractions first
+    if (reextract) {
+      await db
+        .delete(contentExtractions)
+        .where(eq(contentExtractions.interviewId, interviewId));
     }
 
     // Get client info for context - including full knowledge base
