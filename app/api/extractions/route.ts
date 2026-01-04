@@ -70,6 +70,7 @@ export async function GET(request: Request) {
         createdAt: contentExtractions.createdAt,
         clientName: clients.name,
         clientTwitterHandle: clients.twitterHandle,
+        clientProfilePicture: clients.profilePicture,
         interviewTitle: interviews.title,
       })
       .from(contentExtractions)

@@ -77,6 +77,7 @@ export const clients = pgTable("clients", {
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   brandName: varchar("brand_name", { length: 255 }),
+  profilePicture: text("profile_picture"), // URL or base64 data URL for profile image
   twitterHandle: varchar("twitter_handle", { length: 100 }),
   telegramHandle: varchar("telegram_handle", { length: 100 }),
   linkedinUrl: text("linkedin_url"),

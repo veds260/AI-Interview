@@ -93,6 +93,7 @@ interface Extraction {
   createdAt: string;
   clientName: string | null;
   clientTwitterHandle: string | null;
+  clientProfilePicture: string | null;
   interviewTitle: string | null;
 }
 
@@ -555,6 +556,7 @@ function AdminContentContent() {
                           <TweetMockup
                             clientName={selectedExtraction.clientName || "Client"}
                             twitterHandle={selectedExtraction.clientTwitterHandle || undefined}
+                            profilePicture={selectedExtraction.clientProfilePicture || undefined}
                             tweetText={selectedExtraction.tweetDraft}
                             media={tweetImage ? [{ type: 'image', data: tweetImage }] : undefined}
                           />
@@ -641,6 +643,7 @@ function AdminContentContent() {
                             <LinkedInMockup
                               clientName={selectedExtraction.clientName || "Client"}
                               headline="Founder & CEO"
+                              profilePicture={selectedExtraction.clientProfilePicture || undefined}
                               postText={selectedExtraction.linkedinDraft}
                               imageUrl={linkedinImage || undefined}
                             />

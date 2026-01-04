@@ -80,6 +80,7 @@ interface Extraction {
   createdAt: string;
   clientName: string | null;
   clientTwitterHandle: string | null;
+  clientProfilePicture: string | null;
   interviewTitle: string | null;
 }
 
@@ -373,6 +374,7 @@ function ClientContentContent() {
                           extractionId={selectedExtraction.id}
                           clientName={selectedExtraction.clientName || "You"}
                           twitterHandle={selectedExtraction.clientTwitterHandle || undefined}
+                          profilePicture={selectedExtraction.clientProfilePicture || undefined}
                           tweetText={selectedExtraction.tweetDraft}
                           onCommentAdded={() => fetchComments(selectedExtraction.id)}
                           userName={session?.user?.name || "Client"}
@@ -420,6 +422,7 @@ function ClientContentContent() {
                             <LinkedInMockup
                               clientName={selectedExtraction.clientName || "You"}
                               headline="Founder & CEO"
+                              profilePicture={selectedExtraction.clientProfilePicture || undefined}
                               postText={selectedExtraction.linkedinDraft}
                             />
 
