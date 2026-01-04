@@ -558,14 +558,21 @@ export default function CommentableTweetMockup({
             &quot;{selection.text}&quot;
           </div>
 
-          {/* Guest Name Input */}
-          <Input
-            type="text"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            placeholder={`Your name (default: ${userName})`}
-            className="w-full mb-3 text-sm"
-          />
+          {/* Guest Name Input - Only show for anonymous/unauthenticated users */}
+          {userName === 'Anonymous' && (
+            <Input
+              type="text"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Your name"
+              className="w-full mb-3 text-sm"
+            />
+          )}
+          {userName !== 'Anonymous' && (
+            <p className="text-xs text-gray-500 mb-3">
+              Commenting as <span className="font-medium text-gray-700">{userName}</span>
+            </p>
+          )}
 
           <Textarea
             ref={textareaRef}

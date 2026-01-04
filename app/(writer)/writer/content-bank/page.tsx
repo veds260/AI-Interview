@@ -214,6 +214,32 @@ function ContentBankContent() {
     }
   };
 
+  // Handle image paste in text areas
+  const handleImagePaste = (
+    e: React.ClipboardEvent,
+    setImage: (url: string | null) => void
+  ) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const result = event.target?.result as string;
+            setImage(result);
+            toast.success("Image added from clipboard");
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
+  };
+
   const cancelEditing = () => {
     setIsEditing(false);
     setEditedTweet("");
@@ -482,14 +508,27 @@ function ContentBankContent() {
                               <Textarea
                                 value={editedTweet}
                                 onChange={(e) => setEditedTweet(e.target.value)}
+                                onPaste={(e) => handleImagePaste(e, setTweetImage)}
                                 rows={6}
                                 className="resize-none"
-                                placeholder="Write your tweet..."
+                                placeholder="Write your tweet... (paste image with Ctrl+V)"
                               />
                               <p className="text-xs text-gray-500 mt-2">
-                                {editedTweet.length} characters
+                                {editedTweet.length} characters · Paste image with Ctrl+V
                               </p>
                             </div>
+                            {/* Show pasted image preview */}
+                            {tweetImage && (
+                              <div className="relative">
+                                <img src={tweetImage} alt="Preview" className="w-full h-32 object-cover rounded-lg border" />
+                                <button
+                                  onClick={() => setTweetImage(null)}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <TweetMockup
@@ -552,14 +591,27 @@ function ContentBankContent() {
                               <Textarea
                                 value={editedLinkedin}
                                 onChange={(e) => setEditedLinkedin(e.target.value)}
+                                onPaste={(e) => handleImagePaste(e, setLinkedinImage)}
                                 rows={10}
                                 className="resize-none"
-                                placeholder="Write your LinkedIn post..."
+                                placeholder="Write your LinkedIn post... (paste image with Ctrl+V)"
                               />
                               <p className="text-xs text-gray-500 mt-2">
-                                {editedLinkedin.length} characters
+                                {editedLinkedin.length} characters · Paste image with Ctrl+V
                               </p>
                             </div>
+                            {/* Show pasted image preview */}
+                            {linkedinImage && (
+                              <div className="relative">
+                                <img src={linkedinImage} alt="Preview" className="w-full h-32 object-cover rounded-lg border" />
+                                <button
+                                  onClick={() => setLinkedinImage(null)}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : selectedExtraction.linkedinDraft ? (
                           <>
