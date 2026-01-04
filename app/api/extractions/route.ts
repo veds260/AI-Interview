@@ -14,7 +14,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const contentType = searchParams.get("type");
     const status = searchParams.get("status");
-    const clientId = searchParams.get("clientId");
+    let clientId = searchParams.get("clientId");
+
+    // For client users, automatically filter to only their own content
+    if (session.user.role === "client") {
+      const client = await db.query.clients.findFirst({
+        where: eq(clients.userId, session.user.id),
+      });
+      if (client) {
+        clientId = client.id;
+      } else {
+        // No client record found, return empty
+        return NextResponse.json([]);
+      }
+    }
 
     // Build where conditions
     const conditions = [];
