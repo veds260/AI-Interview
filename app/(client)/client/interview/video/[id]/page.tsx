@@ -206,7 +206,6 @@ function VideoInterviewContent() {
   const [captureError, setCaptureError] = useState<string | null>(null); // Error when speech capture fails
 
   // Refs
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const processingResponseRef = useRef(false);
   const pendingQuestionToSpeak = useRef<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -215,10 +214,7 @@ function VideoInterviewContent() {
   const preloadingAudioRef = useRef<Map<string, Promise<string | null>>>(new Map()); // Audio being preloaded
   const audioStreamRef = useRef<MediaStream | null>(null); // Audio stream for mute/unmute
 
-  // Scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // NOTE: Auto-scroll disabled - controls are at top, don't want to scroll users away from them
 
   // Initialize interview
   useEffect(() => {
@@ -1045,7 +1041,6 @@ function VideoInterviewContent() {
                 </div>
               </div>
             ))}
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Current question highlight */}
