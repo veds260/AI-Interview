@@ -169,7 +169,7 @@ export default function QuestionsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Question Bank</h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Manage interview questions by category
           </p>
         </div>
@@ -345,7 +345,7 @@ export default function QuestionsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : questions.length === 0 ? (
             <div className="text-center py-8">

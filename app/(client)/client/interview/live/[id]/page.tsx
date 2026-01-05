@@ -421,8 +421,8 @@ export default function LiveInterviewPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Preparing your interview...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Preparing your interview...</p>
         </div>
       </div>
     );
@@ -447,7 +447,7 @@ export default function LiveInterviewPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Live Interview</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Speak naturally with the AI interviewer
           </p>
         </div>
@@ -465,7 +465,7 @@ export default function LiveInterviewPage() {
       <Card>
         <CardContent className="pt-4">
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-gray-500">Progress</span>
+            <span className="text-muted-foreground">Progress</span>
             <span className="font-medium">{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -482,7 +482,7 @@ export default function LiveInterviewPage() {
               onError={(err) => console.error("Avatar error:", err)}
             />
             {isSpeaking && (
-              <div className="p-2 bg-gray-100 flex items-center justify-center gap-2">
+              <div className="p-2 bg-muted flex items-center justify-center gap-2">
                 <Volume2 className="w-4 h-4 text-green-600 animate-pulse" />
                 <span className="text-sm text-green-600">Speaking...</span>
               </div>
@@ -497,11 +497,11 @@ export default function LiveInterviewPage() {
             <CardDescription>Listen and respond when ready</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-4 min-h-[100px]">
+            <div className="bg-muted rounded-lg p-4 min-h-[100px]">
               {displayedQuestion ? (
-                <p className="text-gray-900">{displayedQuestion}</p>
+                <p className="text-foreground">{displayedQuestion}</p>
               ) : (
-                <p className="text-gray-400">Loading question...</p>
+                <p className="text-muted-foreground">Loading question...</p>
               )}
             </div>
 
@@ -520,9 +520,9 @@ export default function LiveInterviewPage() {
 
             {/* Live Transcript */}
             {transcript && !captureError && (
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm text-gray-500 mb-1">Your response:</p>
-                <p className="text-gray-900">{transcript}</p>
+              <div className="bg-blue-500/10 rounded-lg p-4">
+                <p className="text-sm text-muted-foreground mb-1">Your response:</p>
+                <p className="text-foreground">{transcript}</p>
               </div>
             )}
 
@@ -545,7 +545,7 @@ export default function LiveInterviewPage() {
               </Button>
             </div>
 
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-muted-foreground">
               {isProcessing
                 ? "Processing your response..."
                 : isRecording

@@ -764,10 +764,10 @@ function VideoInterviewContent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-950">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-          <p className="text-gray-400">Preparing your interview...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Preparing your interview...</p>
         </div>
       </div>
     );
@@ -775,8 +775,8 @@ function VideoInterviewContent() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-950">
-        <Card className="max-w-md bg-gray-900 border-gray-800">
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="max-w-md bg-card border-border">
           <CardContent className="pt-6 text-center">
             <p className="text-red-400 mb-4">{error}</p>
             <Button onClick={() => router.push("/client")} variant="secondary">
@@ -789,9 +789,9 @@ function VideoInterviewContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div
@@ -799,7 +799,7 @@ function VideoInterviewContent() {
                 isConnected ? "bg-green-500" : "bg-yellow-500"
               }`}
             />
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-muted-foreground">
               {isConnected ? "Connected" : "Connecting..."}
             </span>
           </div>
@@ -813,7 +813,7 @@ function VideoInterviewContent() {
             variant="ghost"
             size="sm"
             onClick={() => setShowEndDialog(true)}
-            className="text-gray-400 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
           >
             <PhoneOff className="w-4 h-4 mr-1" />
             End
@@ -830,19 +830,19 @@ function VideoInterviewContent() {
         <div className="lg:w-1/2 flex flex-col">
           {audioOnly ? (
             /* Audio-only mode - simple UI */
-            <div className="aspect-video bg-gray-900 rounded-lg flex flex-col items-center justify-center relative">
+            <div className="aspect-video bg-card rounded-lg flex flex-col items-center justify-center relative">
               <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-4 transition-all ${
-                isAvatarSpeaking ? "bg-blue-500/20 animate-pulse" : "bg-gray-800"
+                isAvatarSpeaking ? "bg-blue-500/20 animate-pulse" : "bg-muted"
               }`}>
-                <AudioLines className={`w-16 h-16 ${isAvatarSpeaking ? "text-blue-400" : "text-gray-500"}`} />
+                <AudioLines className={`w-16 h-16 ${isAvatarSpeaking ? "text-blue-400" : "text-muted-foreground"}`} />
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 {isAvatarSpeaking ? "Speaking..." : isRecordingAudio ? "Listening..." : "Tap mic to respond"}
               </p>
               {/* Current question display */}
               {currentQuestion && (
-                <div className="absolute bottom-4 left-4 right-4 bg-gray-800/80 backdrop-blur rounded-lg p-3">
-                  <p className="text-white text-sm">{currentQuestion}</p>
+                <div className="absolute bottom-4 left-4 right-4 bg-muted/80 backdrop-blur rounded-lg p-3">
+                  <p className="text-foreground text-sm">{currentQuestion}</p>
                 </div>
               )}
             </div>
@@ -888,12 +888,12 @@ function VideoInterviewContent() {
                         variant="outline"
                         size="lg"
                         onClick={skipAudio}
-                        className={`rounded-full w-14 h-14 ${isAvatarSpeaking ? "border-orange-500 text-orange-500 hover:bg-orange-500/10" : "border-gray-500 text-gray-400 hover:bg-gray-500/10"}`}
+                        className={`rounded-full w-14 h-14 ${isAvatarSpeaking ? "border-orange-500 text-orange-500 hover:bg-orange-500/10" : "border-muted-foreground text-muted-foreground hover:bg-muted/50"}`}
                         title={isAvatarSpeaking ? "Skip audio" : "Skip question"}
                       >
                         <SkipForward className="w-5 h-5" />
                       </Button>
-                      <span className={`text-xs ${isAvatarSpeaking ? "text-orange-400" : "text-gray-400"}`}>Skip</span>
+                      <span className={`text-xs ${isAvatarSpeaking ? "text-orange-400" : "text-muted-foreground"}`}>Skip</span>
                     </div>
 
                     {/* Record button */}
@@ -907,7 +907,7 @@ function VideoInterviewContent() {
                       >
                         <Mic className="w-7 h-7" />
                       </Button>
-                      <span className="text-xs text-gray-400">Record</span>
+                      <span className="text-xs text-muted-foreground">Record</span>
                     </div>
 
                     {/* Repeat button - only when not speaking */}
@@ -923,7 +923,7 @@ function VideoInterviewContent() {
                         >
                           <Volume2 className="w-5 h-5" />
                         </Button>
-                        <span className="text-xs text-gray-400">Repeat</span>
+                        <span className="text-xs text-muted-foreground">Repeat</span>
                       </div>
                     )}
                   </>
@@ -941,7 +941,7 @@ function VideoInterviewContent() {
                       >
                         {isPausedRecording ? <VolumeX className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                       </Button>
-                      <span className="text-xs text-gray-400">{isPausedRecording ? "Unmute" : "Mute"}</span>
+                      <span className="text-xs text-muted-foreground">{isPausedRecording ? "Unmute" : "Mute"}</span>
                     </div>
 
                     {/* Submit button */}
@@ -955,7 +955,7 @@ function VideoInterviewContent() {
                       >
                         <Send className="w-6 h-6" />
                       </Button>
-                      <span className="text-xs text-gray-400">Submit</span>
+                      <span className="text-xs text-muted-foreground">Submit</span>
                     </div>
 
                     {/* Retry button */}
@@ -969,7 +969,7 @@ function VideoInterviewContent() {
                       >
                         <RotateCcw className="w-5 h-5" />
                       </Button>
-                      <span className="text-xs text-gray-400">Retry</span>
+                      <span className="text-xs text-muted-foreground">Retry</span>
                     </div>
                   </>
                 )}
@@ -983,12 +983,12 @@ function VideoInterviewContent() {
                     variant="outline"
                     size="lg"
                     onClick={skipAudio}
-                    className={`rounded-full w-14 h-14 ${isAvatarSpeaking ? "border-orange-500 text-orange-500 hover:bg-orange-500/10" : "border-gray-500 text-gray-400 hover:bg-gray-500/10"}`}
+                    className={`rounded-full w-14 h-14 ${isAvatarSpeaking ? "border-orange-500 text-orange-500 hover:bg-orange-500/10" : "border-muted-foreground text-muted-foreground hover:bg-muted/50"}`}
                     title={isAvatarSpeaking ? "Skip audio" : "Skip question"}
                   >
                     <SkipForward className="w-5 h-5" />
                   </Button>
-                  <span className={`text-xs ${isAvatarSpeaking ? "text-orange-400" : "text-gray-400"}`}>Skip</span>
+                  <span className={`text-xs ${isAvatarSpeaking ? "text-orange-400" : "text-muted-foreground"}`}>Skip</span>
                 </div>
 
                 {/* Mic button for HeyGen */}
@@ -1001,7 +1001,7 @@ function VideoInterviewContent() {
                   >
                     {isMuted ? <MicOff className="w-7 h-7" /> : <Mic className="w-7 h-7" />}
                   </Button>
-                  <span className="text-xs text-gray-400">{isMuted ? "Unmute" : "Mute"}</span>
+                  <span className="text-xs text-muted-foreground">{isMuted ? "Unmute" : "Mute"}</span>
                 </div>
 
                 {/* Repeat button - hidden when speaking */}
@@ -1017,7 +1017,7 @@ function VideoInterviewContent() {
                     >
                       <Volume2 className="w-5 h-5" />
                     </Button>
-                    <span className="text-xs text-gray-400">Repeat</span>
+                    <span className="text-xs text-muted-foreground">Repeat</span>
                   </div>
                 )}
               </>
@@ -1043,22 +1043,22 @@ function VideoInterviewContent() {
                 </span>
               )
             ) : audioOnly ? (
-              <span className="text-gray-500">Tap Record to respond</span>
+              <span className="text-muted-foreground">Tap Record to respond</span>
             ) : isMuted ? (
-              <span className="text-gray-500">Tap mic to respond (Space)</span>
+              <span className="text-muted-foreground">Tap mic to respond (Space)</span>
             ) : isUserSpeaking ? (
               <span className="text-green-400">Listening to you...</span>
             ) : (
-              <span className="text-gray-400">Speak naturally when ready</span>
+              <span className="text-muted-foreground">Speak naturally when ready</span>
             )}
           </p>
         </div>
 
         {/* Transcript section */}
-        <div className="lg:w-1/2 flex flex-col bg-gray-900 rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-300">Conversation</span>
+        <div className="lg:w-1/2 flex flex-col bg-card rounded-lg overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Conversation</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1072,14 +1072,14 @@ function VideoInterviewContent() {
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
                     msg.role === "user"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-800 text-gray-100"
+                      ? "bg-blue-600 text-foreground"
+                      : "bg-muted text-foreground"
                   }`}
                 >
                   <p className="text-sm">{msg.content}</p>
                   <p
                     className={`text-xs mt-1 ${
-                      msg.role === "user" ? "text-blue-200" : "text-gray-500"
+                      msg.role === "user" ? "text-blue-200" : "text-muted-foreground"
                     }`}
                   >
                     {msg.timestamp.toLocaleTimeString([], {
@@ -1094,9 +1094,9 @@ function VideoInterviewContent() {
 
           {/* Current question highlight */}
           {currentQuestion && !interviewComplete && (
-            <div className="px-4 py-3 border-t border-gray-800 bg-gray-800/50">
-              <p className="text-xs text-gray-400 mb-1">Current Question</p>
-              <p className="text-sm text-gray-200">{currentQuestion}</p>
+            <div className="px-4 py-3 border-t border-border bg-muted/50">
+              <p className="text-xs text-muted-foreground mb-1">Current Question</p>
+              <p className="text-sm text-foreground">{currentQuestion}</p>
             </div>
           )}
         </div>
@@ -1104,16 +1104,16 @@ function VideoInterviewContent() {
 
       {/* End Interview Dialog */}
       <AlertDialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-        <AlertDialogContent className="bg-gray-900 border-gray-800">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">End Interview?</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">End Interview?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Your progress will be saved. You can return and continue the
               interview later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-800 text-white border-gray-700">
+            <AlertDialogCancel className="bg-muted text-foreground border-border">
               Continue
             </AlertDialogCancel>
             <AlertDialogAction
@@ -1128,13 +1128,13 @@ function VideoInterviewContent() {
 
       {/* Complete Dialog */}
       <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <AlertDialogContent className="bg-gray-900 border-gray-800">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-white">
+            <AlertDialogTitle className="flex items-center gap-2 text-foreground">
               <CheckCircle className="h-5 w-5 text-green-500" />
               Interview Complete!
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogDescription className="text-muted-foreground">
               Thank you for sharing your story. Your responses have been saved
               and will be processed to create amazing content.
             </AlertDialogDescription>
@@ -1157,10 +1157,10 @@ function VideoInterviewContent() {
 export default function VideoInterviewPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gray-950">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-400">Loading interview...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading interview...</p>
         </div>
       </div>
     }>

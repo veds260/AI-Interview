@@ -289,7 +289,7 @@ export default function AdminClipsPage() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">Media Library</h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Manage video clips and audio recordings from interviews
           </p>
         </div>
@@ -301,7 +301,7 @@ export default function AdminClipsPage() {
             <Video className="h-4 w-4" />
             Video Clips
             {clipsData?.clips?.length ? (
-              <span className="ml-1 text-xs bg-gray-200 px-1.5 rounded">
+              <span className="ml-1 text-xs bg-muted px-1.5 rounded">
                 {clipsData.clips.length}
               </span>
             ) : null}
@@ -310,7 +310,7 @@ export default function AdminClipsPage() {
             <Mic className="h-4 w-4" />
             Audio Recordings
             {audioData?.recordings?.length ? (
-              <span className="ml-1 text-xs bg-gray-200 px-1.5 rounded">
+              <span className="ml-1 text-xs bg-muted px-1.5 rounded">
                 {audioData.recordings.length}
               </span>
             ) : null}
@@ -321,7 +321,7 @@ export default function AdminClipsPage() {
           {/* Filter */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Filter by client:</span>
+          <span className="text-sm text-muted-foreground">Filter by client:</span>
           <Select value={clientFilter} onValueChange={setClientFilter}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="All Clients" />
@@ -370,7 +370,7 @@ export default function AdminClipsPage() {
                 value={stats.usagePercent}
                 className={stats.usagePercent > 80 ? "bg-red-100" : ""}
               />
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{stats.totalClips} clips</span>
                 <span>{stats.usagePercent.toFixed(1)}% of free tier</span>
               </div>
@@ -382,7 +382,7 @@ export default function AdminClipsPage() {
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">Storage not configured</p>
+            <p className="text-sm text-muted-foreground">Storage not configured</p>
           )}
         </CardContent>
       </Card>
@@ -415,16 +415,16 @@ export default function AdminClipsPage() {
       {/* Clips List */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : !filteredClips.length ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Video className="h-12 w-12 text-gray-300 mb-4" />
+            <Video className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">
               {clientFilter !== "all" ? "No clips for this client" : "No clips yet"}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {clientFilter !== "all"
                 ? "Try selecting a different client or clearing the filter"
                 : "Video recordings from interviews will appear here"}
@@ -443,7 +443,7 @@ export default function AdminClipsPage() {
                   checked={selectedClips.size === filteredClips.length && filteredClips.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
-                <span className="text-sm text-gray-500">Select all</span>
+                <span className="text-sm text-muted-foreground">Select all</span>
               </div>
             </div>
           </CardHeader>
@@ -452,7 +452,7 @@ export default function AdminClipsPage() {
               {filteredClips.map((clip) => (
                 <div
                   key={clip.id}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50"
+                  className="flex items-center gap-4 p-4 hover:bg-muted/50"
                 >
                   <Checkbox
                     checked={selectedClips.has(clip.id)}
@@ -460,10 +460,10 @@ export default function AdminClipsPage() {
                   />
 
                   <div
-                    className="w-24 h-16 bg-gray-900 rounded flex items-center justify-center cursor-pointer relative group"
+                    className="w-24 h-16 bg-card rounded flex items-center justify-center cursor-pointer relative group"
                     onClick={() => setPreviewClip(clip)}
                   >
-                    <Video className="h-6 w-6 text-gray-600" />
+                    <Video className="h-6 w-6 text-muted-foreground" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
                       <Play className="h-6 w-6 text-white" />
                     </div>
@@ -473,7 +473,7 @@ export default function AdminClipsPage() {
                     <p className="font-medium text-sm truncate">
                       {clip.title || clip.interviewTitle || `Clip ${clip.id.slice(0, 8)}`}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                       {clip.clientName && (
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />
@@ -521,11 +521,11 @@ export default function AdminClipsPage() {
                   <div className="flex items-center gap-6 text-sm">
                     <div>
                       <span className="text-2xl font-bold">{audioStats.totalRecordings}</span>
-                      <span className="text-gray-500 ml-1">recordings</span>
+                      <span className="text-muted-foreground ml-1">recordings</span>
                     </div>
                     <div>
                       <span className="text-2xl font-bold">{audioStats.totalMB.toFixed(1)}</span>
-                      <span className="text-gray-500 ml-1">MB used</span>
+                      <span className="text-muted-foreground ml-1">MB used</span>
                     </div>
                   </div>
                   <Button
@@ -549,14 +549,14 @@ export default function AdminClipsPage() {
           {/* Audio Recordings List */}
           {audioLoading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : !filteredAudio.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Mic className="h-12 w-12 text-gray-300 mb-4" />
+                <Mic className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-medium">No audio recordings yet</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Audio from interview responses will appear here
                 </p>
               </CardContent>
@@ -573,18 +573,18 @@ export default function AdminClipsPage() {
                   {filteredAudio.map((recording) => (
                     <div
                       key={recording.id}
-                      className="p-4 hover:bg-gray-50 space-y-2"
+                      className="p-4 hover:bg-muted/50 space-y-2"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 line-clamp-2">
+                          <p className="text-sm text-foreground line-clamp-2">
                             {recording.content}
                           </p>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                             <span className={`px-1.5 py-0.5 rounded ${
                               recording.role === "client"
                                 ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-700"
+                                : "bg-muted text-foreground"
                             }`}>
                               {recording.role === "client" ? "Response" : "Question"}
                             </span>

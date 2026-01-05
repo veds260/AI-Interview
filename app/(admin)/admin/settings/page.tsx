@@ -93,7 +93,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-gray-500 mt-1">Platform configuration and API settings</p>
+        <p className="text-muted-foreground mt-1">Platform configuration and API settings</p>
       </div>
 
       <Card>
@@ -114,15 +114,15 @@ export default function SettingsPage() {
                 className="flex items-center justify-between p-4 border rounded-lg"
               >
                 <div className="flex items-center gap-4">
-                  <div className="p-2 bg-gray-100 rounded-lg">
+                  <div className="p-2 bg-muted rounded-lg">
                     {service.icon}
                   </div>
                   <div>
                     <h3 className="font-medium">{service.name}</h3>
-                    <p className="text-sm text-gray-500">{service.description}</p>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="text-gray-500">
+                <Badge variant="outline" className="text-muted-foreground">
                   {service.envVar}
                 </Badge>
               </div>
@@ -144,14 +144,14 @@ export default function SettingsPage() {
         <CardContent>
           {loadingStatus ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <div className="space-y-4">
               {/* Post Comments Migration */}
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-4">
-                  <div className="p-2 bg-gray-100 rounded-lg">
+                  <div className="p-2 bg-muted rounded-lg">
                     {migrationStatus?.migrations.post_comments ? (
                       <CheckCircle className="h-5 w-5 text-green-600" />
                     ) : (
@@ -160,7 +160,7 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <h3 className="font-medium">Post Comments Table</h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Enables inline commenting on tweet mockups for content review
                     </p>
                   </div>
@@ -212,7 +212,7 @@ export default function SettingsPage() {
               {/* Table List */}
               {migrationStatus?.tables && (
                 <div className="pt-4 border-t">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">
                     Current Tables ({migrationStatus.tables.length})
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -242,19 +242,19 @@ export default function SettingsPage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="p-4 border rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500">Application</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Application</h3>
               <p className="text-lg font-semibold">Compound Interviewer</p>
             </div>
             <div className="p-4 border rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500">Database</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Database</h3>
               <p className="text-lg font-semibold">PostgreSQL (Railway)</p>
             </div>
             <div className="p-4 border rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500">Authentication</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Authentication</h3>
               <p className="text-lg font-semibold">NextAuth.js</p>
             </div>
             <div className="p-4 border rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500">Framework</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Framework</h3>
               <p className="text-lg font-semibold">Next.js 15</p>
             </div>
           </div>

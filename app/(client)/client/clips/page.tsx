@@ -111,11 +111,11 @@ export default function ClipsPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : !data?.clips?.length ? (
-            <Card className="border-gray-800 bg-gray-900/50">
+            <Card className="border-border bg-muted/50">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Video className="h-12 w-12 text-gray-600 mb-4" />
-                <h3 className="text-lg font-medium text-white">No clips yet</h3>
-                <p className="text-sm text-gray-400 mt-1">
+                <Video className="h-12 w-12 text-muted-foreground/70 mb-4" />
+                <h3 className="text-lg font-medium text-foreground">No clips yet</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Video recordings from your interviews will appear here
                 </p>
               </CardContent>
@@ -128,7 +128,7 @@ export default function ClipsPage() {
               className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => setSelectedClip(clip)}
             >
-              <div className="aspect-video bg-gray-900 relative flex items-center justify-center">
+              <div className="aspect-video bg-muted relative flex items-center justify-center">
                 {clip.thumbnailUrl ? (
                   <img
                     src={clip.thumbnailUrl}
@@ -136,15 +136,15 @@ export default function ClipsPage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Video className="h-12 w-12 text-gray-600" />
+                  <Video className="h-12 w-12 text-muted-foreground/70" />
                 )}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
                   <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
-                    <Play className="h-6 w-6 text-gray-900 ml-1" />
+                    <Play className="h-6 w-6 text-foreground ml-1" />
                   </div>
                 </div>
                 {clip.durationSeconds && (
-                  <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                  <div className="absolute bottom-2 right-2 bg-black/70 text-foreground text-xs px-1.5 py-0.5 rounded">
                     {formatDuration(clip.durationSeconds)}
                   </div>
                 )}
@@ -175,39 +175,39 @@ export default function ClipsPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : !audioData?.recordings?.length ? (
-            <Card className="border-gray-800 bg-gray-900/50">
+            <Card className="border-border bg-muted/50">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Mic className="h-12 w-12 text-gray-600 mb-4" />
-                <h3 className="text-lg font-medium text-white">No audio recordings yet</h3>
-                <p className="text-sm text-gray-400 mt-1">
+                <Mic className="h-12 w-12 text-muted-foreground/70 mb-4" />
+                <h3 className="text-lg font-medium text-foreground">No audio recordings yet</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Audio from your interview responses will appear here
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-gray-800 bg-gray-900/50">
+            <Card className="border-border bg-muted/50">
               <CardHeader>
-                <CardTitle className="text-lg text-white">Your Recordings</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-lg text-foreground">Your Recordings</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   {audioData.recordings.length} audio recordings from your interviews
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-gray-800">
+                <div className="divide-y divide-border">
                   {audioData.recordings.map((recording) => (
                     <div
                       key={recording.id}
-                      className="p-4 hover:bg-gray-800/50 space-y-2 transition-colors"
+                      className="p-4 hover:bg-muted/50 space-y-2 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-200 line-clamp-2">
+                        <p className="text-sm text-foreground line-clamp-2">
                           {recording.content}
                         </p>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span className={`px-1.5 py-0.5 rounded ${
                             recording.role === "client"
                               ? "bg-blue-500/20 text-blue-400"
-                              : "bg-gray-700 text-gray-300"
+                              : "bg-muted text-muted-foreground"
                           }`}>
                             {recording.role === "client" ? "Your Response" : "Question"}
                           </span>
@@ -249,7 +249,7 @@ export default function ClipsPage() {
                 videoKey={selectedClip.videoKey}
               />
             )}
-            <div className="text-sm text-gray-500 flex items-center gap-4">
+            <div className="text-sm text-muted-foreground flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 {selectedClip &&
@@ -264,9 +264,9 @@ export default function ClipsPage() {
               <span>{formatFileSize(selectedClip?.fileSizeBytes || null)}</span>
             </div>
             {selectedClip?.transcript && (
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-muted rounded-lg p-4">
                 <h4 className="text-sm font-medium mb-2">Transcript</h4>
-                <p className="text-sm text-gray-600">{selectedClip.transcript}</p>
+                <p className="text-sm text-muted-foreground/70">{selectedClip.transcript}</p>
               </div>
             )}
           </div>

@@ -169,7 +169,7 @@ export default function ProfilePage() {
   if (status === "loading" || profileLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -191,12 +191,12 @@ export default function ProfilePage() {
         <p className="text-muted-foreground mt-1">Manage your account and social media settings</p>
       </div>
 
-      <Card className="border-gray-800 bg-gray-900/50">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-white">Account Information</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className="text-foreground">Account Information</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Your profile details shown on post mockups
               </CardDescription>
             </div>
@@ -213,11 +213,11 @@ export default function ProfilePage() {
                 <img
                   src={formData.profilePicture}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-gray-700"
+                  className="w-24 h-24 rounded-full object-cover border-4 border-border"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center border-4 border-gray-700">
-                  <span className="text-2xl font-bold text-white">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center border-4 border-border">
+                  <span className="text-2xl font-bold text-foreground">
                     {getInitials(formData.name || session?.user?.name || "U")}
                   </span>
                 </div>
@@ -228,12 +228,12 @@ export default function ProfilePage() {
                     onClick={() => fileInputRef.current?.click()}
                     className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Camera className="w-6 h-6 text-white" />
+                    <Camera className="w-6 h-6 text-foreground" />
                   </button>
                   {formData.profilePicture && (
                     <button
                       onClick={() => setFormData({ ...formData, profilePicture: "" })}
-                      className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      className="absolute -top-1 -right-1 p-1 bg-red-500 text-foreground rounded-full hover:bg-red-600"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -249,15 +249,15 @@ export default function ProfilePage() {
               />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-lg text-white">
+              <p className="font-semibold text-lg text-foreground">
                 {formData.name || session?.user?.name || "User"}
               </p>
-              <p className="text-sm text-gray-400 flex items-center gap-1">
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <Mail className="w-3 h-3" />
                 {session?.user?.email}
               </p>
               {isEditing && (
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Click photo to change or paste image (Ctrl+V)
                 </p>
               )}
@@ -265,7 +265,7 @@ export default function ProfilePage() {
           </div>
 
           {isEditing ? (
-            <div className="space-y-4 pt-4 border-t border-gray-800">
+            <div className="space-y-4 pt-4 border-t border-border">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
@@ -298,7 +298,7 @@ export default function ProfilePage() {
                   Twitter/X Username
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
                   <Input
                     id="twitterHandle"
                     value={formData.twitterHandle}
@@ -411,24 +411,24 @@ export default function ProfilePage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 pt-4 border-t border-gray-800">
+            <div className="space-y-4 pt-4 border-t border-border">
               {/* Display current info */}
               {(formData.twitterHandle || formData.linkedinUrl || formData.websiteUrl) && (
                 <div className="flex flex-wrap gap-3">
                   {formData.twitterHandle && (
-                    <Badge variant="outline" className="gap-1 border-gray-700">
+                    <Badge variant="outline" className="gap-1 border-border">
                       <Twitter className="w-3 h-3" />
                       @{formData.twitterHandle}
                     </Badge>
                   )}
                   {formData.linkedinUrl && (
-                    <Badge variant="outline" className="gap-1 border-gray-700">
+                    <Badge variant="outline" className="gap-1 border-border">
                       <Linkedin className="w-3 h-3" />
                       LinkedIn
                     </Badge>
                   )}
                   {formData.websiteUrl && (
-                    <Badge variant="outline" className="gap-1 border-gray-700">
+                    <Badge variant="outline" className="gap-1 border-border">
                       <Globe className="w-3 h-3" />
                       Website
                     </Badge>
@@ -436,7 +436,7 @@ export default function ProfilePage() {
                 </div>
               )}
               {formData.bio && (
-                <p className="text-sm text-gray-300">{formData.bio}</p>
+                <p className="text-sm text-foreground">{formData.bio}</p>
               )}
               {formData.topics && (
                 <div className="flex flex-wrap gap-2">
@@ -447,7 +447,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
-              <Button className="bg-white text-gray-900 hover:bg-gray-100" onClick={() => setIsEditing(true)}>
+              <Button className="bg-foreground text-background hover:bg-foreground/90" onClick={() => setIsEditing(true)}>
                 Edit Profile
               </Button>
             </div>
@@ -455,24 +455,24 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card className="border-gray-800 bg-gray-900/50">
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-white">Interview Statistics</CardTitle>
-          <CardDescription className="text-gray-400">Your interview activity summary</CardDescription>
+          <CardTitle className="text-foreground">Interview Statistics</CardTitle>
+          <CardDescription className="text-muted-foreground">Your interview activity summary</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-gray-800/50 rounded-lg">
+            <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold text-red-500">-</p>
-              <p className="text-sm text-gray-400">Total Interviews</p>
+              <p className="text-sm text-muted-foreground">Total Interviews</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg">
+            <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold text-emerald-500">-</p>
-              <p className="text-sm text-gray-400">Completed</p>
+              <p className="text-sm text-muted-foreground">Completed</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg">
+            <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold text-blue-500">-</p>
-              <p className="text-sm text-gray-400">Content Pieces</p>
+              <p className="text-sm text-muted-foreground">Content Pieces</p>
             </div>
           </div>
         </CardContent>

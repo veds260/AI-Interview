@@ -69,7 +69,7 @@ function NewTextInterviewContent() {
           <AlertCircle className="w-10 h-10 text-red-500" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold text-gray-800">Something went wrong</h2>
+          <h2 className="text-xl font-semibold text-foreground">Something went wrong</h2>
           <p className="text-red-500 max-w-md">{error}</p>
         </div>
         <Link href="/client/interview/start">
@@ -138,7 +138,7 @@ function NewTextInterviewContent() {
       {/* Status text */}
       <div className="text-center space-y-2">
         <motion.h2
-          className="text-2xl font-semibold text-gray-800"
+          className="text-2xl font-semibold text-foreground"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -150,7 +150,7 @@ function NewTextInterviewContent() {
           <AnimatePresence mode="wait">
             <motion.p
               key={statusIndex}
-              className="text-gray-500 absolute inset-x-0"
+              className="text-muted-foreground absolute inset-x-0"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -184,7 +184,7 @@ function NewTextInterviewContent() {
 
       {/* Skeleton preview */}
       <motion.div
-        className="w-full max-w-xl bg-white/80 backdrop-blur rounded-2xl shadow-lg p-6 space-y-5 border border-gray-100"
+        className="w-full max-w-xl bg-card/80 backdrop-blur rounded-2xl shadow-lg p-6 space-y-5 border border-border"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5 }}
@@ -194,13 +194,13 @@ function NewTextInterviewContent() {
           {/* Interviewer message */}
           <div className="flex justify-start">
             <motion.div
-              className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-100"
+              className="max-w-[80%] rounded-lg px-4 py-3 bg-muted"
               animate={{ opacity: [0.5, 0.8, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <div className="h-3 w-16 rounded bg-gray-200 mb-2" />
-              <div className="h-4 w-48 rounded bg-gray-200" />
-              <div className="h-4 w-32 rounded bg-gray-200 mt-1" />
+              <div className="h-3 w-16 rounded bg-muted-foreground/20 mb-2" />
+              <div className="h-4 w-48 rounded bg-muted-foreground/20" />
+              <div className="h-4 w-32 rounded bg-muted-foreground/20 mt-1" />
             </motion.div>
           </div>
         </div>
@@ -208,13 +208,13 @@ function NewTextInterviewContent() {
         {/* Input skeleton */}
         <div className="border-t pt-4 space-y-3">
           <motion.div
-            className="h-24 w-full rounded-lg bg-gray-100"
+            className="h-24 w-full rounded-lg bg-muted/50"
             animate={{ opacity: [0.4, 0.6, 0.4] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           />
           <div className="flex justify-end">
             <motion.div
-              className="h-10 w-20 rounded-lg bg-gray-200"
+              className="h-10 w-20 rounded-lg bg-muted"
               animate={{ opacity: [0.4, 0.7, 0.4] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             />
@@ -229,7 +229,7 @@ function LoadingFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
       <Loader2 className="w-12 h-12 animate-spin text-green-600" />
-      <p className="text-gray-500">Loading...</p>
+      <p className="text-muted-foreground">Loading...</p>
     </div>
   );
 }

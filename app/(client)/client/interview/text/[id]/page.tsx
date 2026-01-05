@@ -298,7 +298,7 @@ export default function TextInterviewPage() {
             <div className="space-y-4 mb-4">
               <div className="flex justify-start">
                 <motion.div
-                  className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-100"
+                  className="max-w-[80%] rounded-lg px-4 py-3 bg-muted"
                   animate={{ opacity: [0.5, 0.8, 0.5] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 >
@@ -326,7 +326,7 @@ export default function TextInterviewPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Text Interview</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Answer thoughtfully - take your time
           </p>
         </div>
@@ -346,7 +346,7 @@ export default function TextInterviewPage() {
       <Card>
         <CardContent className="pt-4">
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-gray-500">Progress</span>
+            <span className="text-muted-foreground">Progress</span>
             <span className="font-medium">{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -391,7 +391,7 @@ export default function TextInterviewPage() {
               </motion.div>
             ) : messages.length === 0 ? (
               <motion.div
-                className="text-center text-gray-500 py-8"
+                className="text-center text-muted-foreground py-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
@@ -403,7 +403,7 @@ export default function TextInterviewPage() {
                   {[0, 1, 2].map((i) => (
                     <motion.div
                       key={i}
-                      className="w-2 h-2 rounded-full bg-gray-400"
+                      className="w-2 h-2 rounded-full bg-muted-foreground"
                       animate={{ y: [0, -8, 0] }}
                       transition={{
                         duration: 0.5,
@@ -437,8 +437,8 @@ export default function TextInterviewPage() {
                     <motion.div
                       className={`max-w-[80%] rounded-lg px-4 py-3 ${
                         msg.role === "client"
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-900"
+                          ? "bg-blue-600 text-foreground"
+                          : "bg-muted text-foreground"
                       }`}
                       whileHover={{ scale: 1.01 }}
                       transition={{ type: "spring", stiffness: 400 }}
@@ -483,7 +483,7 @@ export default function TextInterviewPage() {
                 Skip Question
               </Button>
               <div className="flex gap-2">
-                <span className="text-xs text-gray-400 self-center">
+                <span className="text-xs text-muted-foreground self-center">
                   Cmd+Enter to send
                 </span>
                 <Button onClick={handleSubmitResponse} disabled={isSending}>

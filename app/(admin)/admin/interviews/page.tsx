@@ -455,7 +455,7 @@ export default function AdminInterviewsPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by title or client..."
             value={searchQuery}
@@ -523,7 +523,7 @@ export default function AdminInterviewsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : filteredInterviews.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
@@ -577,7 +577,7 @@ export default function AdminInterviewsPage() {
                           {interview.extractionsCount} Available
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-gray-400 border-gray-700">
+                        <Badge variant="outline" className="text-muted-foreground border-border">
                           Not extracted
                         </Badge>
                       )}
@@ -709,11 +709,11 @@ export default function AdminInterviewsPage() {
               <TabsContent value="overview" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium text-sm text-gray-500">Status</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">Status</h4>
                     <p>{getStatusBadge(selectedInterview.status)}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-gray-500">Mode</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">Mode</h4>
                     <p className="flex items-center gap-2">
                       {getModeIcon(selectedInterview.mode)}
                       <span className="capitalize">
@@ -722,15 +722,15 @@ export default function AdminInterviewsPage() {
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-gray-500">Questions</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">Questions</h4>
                     <p>{selectedInterview.questionsCount || 0}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-gray-500">Extractions</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">Extractions</h4>
                     <p>{selectedInterview.extractionsCount || 0}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-gray-500">Completed</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
                     <p>
                       {selectedInterview.completedAt
                         ? new Date(selectedInterview.completedAt).toLocaleString()
@@ -738,7 +738,7 @@ export default function AdminInterviewsPage() {
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-gray-500">Recording</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">Recording</h4>
                     {selectedInterview.recordingUrl ? (
                       <a
                         href={selectedInterview.recordingUrl}
@@ -749,7 +749,7 @@ export default function AdminInterviewsPage() {
                         <ExternalLink className="h-4 w-4" /> View Recording
                       </a>
                     ) : (
-                      <p className="text-gray-400">No recording</p>
+                      <p className="text-muted-foreground">No recording</p>
                     )}
                   </div>
                 </div>
@@ -773,14 +773,14 @@ export default function AdminInterviewsPage() {
                               <Copy className="h-3 w-3" />
                             </Button>
                           </div>
-                          <p className="mt-2 text-gray-700 whitespace-pre-wrap">
+                          <p className="mt-2 text-foreground whitespace-pre-wrap">
                             {qa.response}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center py-8 text-gray-400">
+                    <p className="text-center py-8 text-muted-foreground">
                       No Q&A data available
                     </p>
                   )}
@@ -828,7 +828,7 @@ export default function AdminInterviewsPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-400 text-center py-8">
+                      <p className="text-muted-foreground text-center py-8">
                         No transcript available
                       </p>
                     )}
@@ -888,7 +888,7 @@ export default function AdminInterviewsPage() {
 
           <div className="space-y-4 py-4">
             {writers.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">
+              <p className="text-center text-muted-foreground py-4">
                 No writers available. Add writers first.
               </p>
             ) : (
@@ -910,7 +910,7 @@ export default function AdminInterviewsPage() {
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     {writer.name || writer.email}
-                    <span className="ml-auto text-xs text-gray-400">
+                    <span className="ml-auto text-xs text-muted-foreground">
                       {writer.assignmentsCount?.inProgress || 0} active
                     </span>
                   </Button>
@@ -955,7 +955,7 @@ export default function AdminInterviewsPage() {
                 </div>
 
                 {selectedInterview?.shareTokenExpiresAt && (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     Expires: {new Date(selectedInterview.shareTokenExpiresAt).toLocaleDateString()}
                   </p>
                 )}
@@ -976,10 +976,10 @@ export default function AdminInterviewsPage() {
               </div>
             ) : (
               <div className="text-center space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center">
-                  <Link className="h-8 w-8 text-gray-400" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center">
+                  <Link className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-gray-500">
+                <p className="text-muted-foreground">
                   No share link exists for this interview. Generate one to share with clients.
                 </p>
                 <Button
@@ -1024,7 +1024,7 @@ export default function AdminInterviewsPage() {
                 The client will no longer be able to continue this interview after extraction.
               </p>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               <p><strong>Interview:</strong> {interviewToExtract?.title || `Interview ${interviewToExtract?.id?.slice(0, 8)}`}</p>
               <p><strong>Questions answered:</strong> {interviewToExtract?.questionsCount || 0}</p>
             </div>
@@ -1086,7 +1086,7 @@ export default function AdminInterviewsPage() {
                 Warning: This will permanently delete {interviewToReextract?.extractionsCount || 0} existing content pieces.
               </p>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               <p><strong>Interview:</strong> {interviewToReextract?.title || `Interview ${interviewToReextract?.id?.slice(0, 8)}`}</p>
               <p><strong>Client:</strong> {interviewToReextract?.clientName || "Unknown"}</p>
             </div>
@@ -1142,7 +1142,7 @@ export default function AdminInterviewsPage() {
                 <li>All Q&A history</li>
               </ul>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               <p><strong>Interview:</strong> {interviewToDelete?.title || `Interview ${interviewToDelete?.id?.slice(0, 8)}`}</p>
               <p><strong>Client:</strong> {interviewToDelete?.clientName || "Unknown"}</p>
               <p><strong>Questions:</strong> {interviewToDelete?.questionsCount || 0}</p>

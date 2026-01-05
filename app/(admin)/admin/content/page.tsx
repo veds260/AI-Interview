@@ -295,11 +295,11 @@ function AdminContentContent() {
       hot_take: "bg-orange-100 text-orange-800 border-orange-200",
       contrarian_view: "bg-yellow-100 text-yellow-800 border-yellow-200",
       prediction: "bg-blue-100 text-blue-800 border-blue-200",
-      technical: "bg-gray-100 text-gray-800 border-gray-200",
+      technical: "bg-muted text-foreground border-border",
       framework: "bg-indigo-100 text-indigo-800 border-indigo-200",
       advice: "bg-teal-100 text-teal-800 border-teal-200",
     };
-    return colors[type] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[type] || "bg-muted text-foreground border-border";
   };
 
   return (
@@ -311,8 +311,8 @@ function AdminContentContent() {
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Content Bank</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="text-3xl font-bold text-foreground">Content Bank</h1>
+            <p className="text-muted-foreground mt-1">
               Manage all extracted content from client interviews
             </p>
           </div>
@@ -363,7 +363,7 @@ function AdminContentContent() {
           </SelectContent>
         </Select>
 
-        <span className="text-sm text-gray-500 self-center">
+        <span className="text-sm text-muted-foreground self-center">
           {extractions.length} {extractions.length === 1 ? 'post' : 'posts'}
         </span>
       </div>
@@ -371,7 +371,7 @@ function AdminContentContent() {
       {/* Content Grid */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : extractions.length === 0 ? (
         <Card>
@@ -411,18 +411,18 @@ function AdminContentContent() {
 
               <CardContent className="pt-0 pb-5 space-y-4">
                 {/* Key Quote */}
-                <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-                  <p className="text-sm text-gray-700 italic line-clamp-3">
+                <div className="bg-muted rounded-lg p-4 border-l-4 border-blue-500">
+                  <p className="text-sm text-foreground italic line-clamp-3">
                     &ldquo;{extraction.keyQuote}&rdquo;
                   </p>
                 </div>
 
                 {/* Tweet Preview */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Tweet Preview
                   </p>
-                  <p className="text-sm text-gray-900 line-clamp-3 leading-relaxed">
+                  <p className="text-sm text-foreground line-clamp-3 leading-relaxed">
                     {extraction.tweetDraft}
                   </p>
                 </div>
@@ -441,9 +441,9 @@ function AdminContentContent() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     {extraction.clientName && (
-                      <span className="font-medium text-gray-600">{extraction.clientName}</span>
+                      <span className="font-medium text-foreground">{extraction.clientName}</span>
                     )}
                     <span>{new Date(extraction.createdAt).toLocaleDateString()}</span>
                   </div>
@@ -470,11 +470,11 @@ function AdminContentContent() {
                       <Badge className={`${getTypeColor(selectedExtraction.contentType)} border`}>
                         {getTypeLabel(selectedExtraction.contentType)}
                       </Badge>
-                      <span className="font-normal text-gray-600">Content Details</span>
+                      <span className="font-normal text-muted-foreground">Content Details</span>
                     </DialogTitle>
                     <DialogDescription>
                       {selectedExtraction.clientName && (
-                        <span className="font-medium text-gray-700">{selectedExtraction.clientName} - </span>
+                        <span className="font-medium text-foreground">{selectedExtraction.clientName} - </span>
                       )}
                       Interview from{" "}
                       {new Date(selectedExtraction.createdAt).toLocaleDateString('en-US', {
@@ -496,7 +496,7 @@ function AdminContentContent() {
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
                 <div className="px-6 pt-4 border-b bg-white">
-                  <TabsList className="grid w-full max-w-xl grid-cols-4 bg-gray-100/80">
+                  <TabsList className="grid w-full max-w-xl grid-cols-4 bg-muted/80">
                     <TabsTrigger value="mockup" className="flex items-center gap-2 data-[state=active]:bg-white">
                       <Twitter className="h-4 w-4" />
                       Twitter
@@ -524,7 +524,7 @@ function AdminContentContent() {
                         {isEditing ? (
                           <div className="bg-white rounded-xl p-6 border shadow-sm space-y-4">
                             <div>
-                              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                              <label className="text-sm font-medium text-foreground mb-2 block">
                                 Edit Tweet
                               </label>
                               <Textarea
@@ -535,7 +535,7 @@ function AdminContentContent() {
                                 className="resize-none"
                                 placeholder="Write your tweet... (paste image with Ctrl+V)"
                               />
-                              <p className="text-xs text-gray-500 mt-2">
+                              <p className="text-xs text-muted-foreground mt-2">
                                 {editedTweet.length} characters · Paste image with Ctrl+V
                               </p>
                             </div>
@@ -565,7 +565,7 @@ function AdminContentContent() {
                         {/* Image Upload */}
                         {!isEditing && (
                           <div className="bg-white rounded-xl p-4 border shadow-sm">
-                            <p className="text-sm font-medium text-gray-700 mb-3">Add Image to Tweet</p>
+                            <p className="text-sm font-medium text-foreground mb-3">Add Image to Tweet</p>
                             <ImageUpload
                               currentImage={tweetImage}
                               onImageChange={setTweetImage}
@@ -576,7 +576,7 @@ function AdminContentContent() {
                         {/* Actions */}
                         {!isEditing && (
                           <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                               {selectedExtraction.tweetDraft?.length || 0} characters
                             </span>
                             <Button
@@ -610,7 +610,7 @@ function AdminContentContent() {
                         {isEditing ? (
                           <div className="bg-white rounded-xl p-6 border shadow-sm space-y-4">
                             <div>
-                              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                              <label className="text-sm font-medium text-foreground mb-2 block">
                                 Edit LinkedIn Post
                               </label>
                               <Textarea
@@ -621,7 +621,7 @@ function AdminContentContent() {
                                 className="resize-none"
                                 placeholder="Write your LinkedIn post... (paste image with Ctrl+V)"
                               />
-                              <p className="text-xs text-gray-500 mt-2">
+                              <p className="text-xs text-muted-foreground mt-2">
                                 {editedLinkedin.length} characters · Paste image with Ctrl+V
                               </p>
                             </div>
@@ -650,7 +650,7 @@ function AdminContentContent() {
 
                             {/* Image Upload */}
                             <div className="bg-white rounded-xl p-4 border shadow-sm">
-                              <p className="text-sm font-medium text-gray-700 mb-3">Add Image to Post</p>
+                              <p className="text-sm font-medium text-foreground mb-3">Add Image to Post</p>
                               <ImageUpload
                                 currentImage={linkedinImage}
                                 onImageChange={setLinkedinImage}
@@ -659,7 +659,7 @@ function AdminContentContent() {
 
                             {/* Actions */}
                             <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-muted-foreground">
                                 {selectedExtraction.linkedinDraft?.length || 0} characters
                               </span>
                               <Button
@@ -685,8 +685,8 @@ function AdminContentContent() {
                         ) : (
                           <Card className="border-dashed bg-white/50">
                             <CardContent className="py-12 text-center">
-                              <Linkedin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                              <p className="text-gray-500">
+                              <Linkedin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                              <p className="text-muted-foreground">
                                 No LinkedIn version available for this content.
                               </p>
                             </CardContent>
@@ -710,7 +710,7 @@ function AdminContentContent() {
                     {/* Key Quote */}
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
                       <div className="flex justify-between items-start mb-3">
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <h4 className="font-semibold text-foreground flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-blue-600" />
                           Key Quote
                         </h4>
@@ -726,7 +726,7 @@ function AdminContentContent() {
                           )}
                         </Button>
                       </div>
-                      <blockquote className="text-lg text-gray-700 italic leading-relaxed">
+                      <blockquote className="text-lg text-foreground italic leading-relaxed">
                         &ldquo;{selectedExtraction.keyQuote}&rdquo;
                       </blockquote>
                     </div>
@@ -735,17 +735,17 @@ function AdminContentContent() {
                     {selectedExtraction.threadOutline &&
                       selectedExtraction.threadOutline.length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <h4 className="font-semibold text-foreground flex items-center gap-2">
                             <FileText className="h-4 w-4" />
                             Thread Ideas
                           </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <div className="bg-muted rounded-lg p-4 space-y-3">
                             {selectedExtraction.threadOutline.map((point, i) => (
                               <div key={i} className="flex gap-3">
                                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center">
                                   {i + 1}
                                 </span>
-                                <p className="text-gray-700 text-sm leading-relaxed pt-0.5">{point}</p>
+                                <p className="text-foreground text-sm leading-relaxed pt-0.5">{point}</p>
                               </div>
                             ))}
                           </div>
@@ -754,15 +754,15 @@ function AdminContentContent() {
 
                     {/* Original Response */}
                     <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-900">From the Interview</h4>
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                      <h4 className="font-semibold text-foreground">From the Interview</h4>
+                      <div className="bg-muted rounded-lg p-4 space-y-4">
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Question Asked</p>
-                          <p className="text-gray-700 text-sm">{selectedExtraction.questionAsked}</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Question Asked</p>
+                          <p className="text-foreground text-sm">{selectedExtraction.questionAsked}</p>
                         </div>
                         <div>
                           <div className="flex justify-between items-center mb-1">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Full Response</p>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Full Response</p>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -775,7 +775,7 @@ function AdminContentContent() {
                               )}
                             </Button>
                           </div>
-                          <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                          <p className="text-foreground text-sm whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
                             {selectedExtraction.rawResponse}
                           </p>
                         </div>
@@ -784,24 +784,24 @@ function AdminContentContent() {
 
                     {/* Content Ratings */}
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-gray-900">{selectedExtraction.storytellingPotential}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Story Score</p>
+                      <div className="bg-muted rounded-lg p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">{selectedExtraction.storytellingPotential}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Story Score</p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-gray-900">{selectedExtraction.technicalDepth}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Technical</p>
+                      <div className="bg-muted rounded-lg p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">{selectedExtraction.technicalDepth}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Technical</p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-gray-900">{selectedExtraction.controversyLevel}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Hot Take</p>
+                      <div className="bg-muted rounded-lg p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">{selectedExtraction.controversyLevel}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Hot Take</p>
                       </div>
                     </div>
                   </TabsContent>
                 </div>
 
                 {/* Actions Footer */}
-                <div className="flex justify-between p-6 pt-4 border-t bg-gray-50">
+                <div className="flex justify-between p-6 pt-4 border-t bg-muted">
                   <div className="flex gap-2">
                     {isEditing ? (
                       <>

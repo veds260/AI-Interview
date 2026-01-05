@@ -164,11 +164,11 @@ function ClientContentContent() {
       hot_take: "bg-orange-500/20 text-orange-400 border-orange-500/30",
       contrarian_view: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
       prediction: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      technical: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+      technical: "bg-muted text-muted-foreground border-muted-foreground/30",
       framework: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
       advice: "bg-teal-500/20 text-teal-400 border-teal-500/30",
     };
-    return colors[type] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
+    return colors[type] || "bg-muted text-muted-foreground border-muted-foreground/30";
   };
 
   const unresolvedComments = comments.filter(c => !c.resolved);
@@ -176,14 +176,14 @@ function ClientContentContent() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="border-b border-gray-800 pb-6">
+      <div className="border-b border-border pb-6">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-xl">
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Your Content</h1>
-            <p className="text-gray-400 mt-1">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Your Content</h1>
+            <p className="text-muted-foreground mt-1">
               Posts created from your interview responses
             </p>
           </div>
@@ -194,7 +194,7 @@ function ClientContentContent() {
       <div className="flex flex-wrap items-center gap-4">
         {uniqueInterviews.length > 0 && (
           <>
-            <span className="text-sm font-medium text-gray-300">Interview:</span>
+            <span className="text-sm font-medium text-muted-foreground">Interview:</span>
             <Select value={interviewFilter} onValueChange={setInterviewFilter}>
               <SelectTrigger className="w-[250px]">
                 <SelectValue placeholder="Select Interview" />
@@ -210,7 +210,7 @@ function ClientContentContent() {
             </Select>
           </>
         )}
-        <span className="text-sm font-medium text-gray-300">Type:</span>
+        <span className="text-sm font-medium text-muted-foreground">Type:</span>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Content Type" />
@@ -223,7 +223,7 @@ function ClientContentContent() {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-gray-400">
+        <span className="text-sm text-muted-foreground">
           {extractions.length} {extractions.length === 1 ? 'post' : 'posts'} available
         </span>
       </div>
@@ -232,16 +232,16 @@ function ClientContentContent() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-16">
           <Loader2 className="h-10 w-10 animate-spin text-red-500 mb-4" />
-          <p className="text-gray-400">Loading your content...</p>
+          <p className="text-muted-foreground">Loading your content...</p>
         </div>
       ) : extractions.length === 0 ? (
-        <Card className="border-dashed border-gray-800 bg-gray-900/50">
+        <Card className="border-dashed border-border bg-card/50">
           <CardContent className="py-16 text-center">
-            <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-8 w-8 text-gray-500" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">No content yet</h3>
-            <p className="text-gray-400 max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No content yet</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
               Content will appear here after your interviews are processed.
               Complete an interview to see your posts!
             </p>
@@ -252,7 +252,7 @@ function ClientContentContent() {
           {extractions.map((extraction) => (
             <Card
               key={extraction.id}
-              className="group cursor-pointer border-gray-800 bg-gray-900/50 hover:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden"
+              className="group cursor-pointer border-border bg-card hover:border-muted-foreground/30 hover:shadow-lg transition-all duration-200 overflow-hidden"
               onClick={() => setSelectedExtraction(extraction)}
             >
               {/* Type Badge Header */}
@@ -265,24 +265,24 @@ function ClientContentContent() {
               {/* Content Preview */}
               <CardContent className="pt-0 pb-5 space-y-4">
                 {/* Key Quote */}
-                <div className="bg-gray-800/50 rounded-lg p-4 border-l-4 border-red-500">
-                  <p className="text-sm text-gray-300 italic line-clamp-3">
+                <div className="bg-muted/50 rounded-lg p-4 border-l-4 border-red-500">
+                  <p className="text-sm text-muted-foreground italic line-clamp-3">
                     &ldquo;{extraction.keyQuote}&rdquo;
                   </p>
                 </div>
 
                 {/* Tweet Preview */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide">
                     Tweet Preview
                   </p>
-                  <p className="text-sm text-gray-200 line-clamp-3 leading-relaxed">
+                  <p className="text-sm text-foreground line-clamp-3 leading-relaxed">
                     {extraction.tweetDraft}
                   </p>
                 </div>
 
                 {/* Meta Info */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                <div className="flex items-center justify-between pt-3 border-t border-border">
                   <div className="flex gap-2">
                     {extraction.suggestedFormats?.includes('tweet') && (
                       <div className="p-1.5 bg-blue-500/20 rounded-md">
@@ -295,7 +295,7 @@ function ClientContentContent() {
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(extraction.createdAt).toLocaleDateString()}
                   </span>
                 </div>

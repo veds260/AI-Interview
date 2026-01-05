@@ -84,7 +84,7 @@ function NewVideoInterviewContent() {
           <AlertCircle className="w-10 h-10 text-red-500" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold text-gray-800">Something went wrong</h2>
+          <h2 className="text-xl font-semibold text-foreground">Something went wrong</h2>
           <p className="text-red-500 max-w-md">{error}</p>
         </div>
         <Link href="/client/interview/start">
@@ -157,7 +157,7 @@ function NewVideoInterviewContent() {
       {/* Status text with smooth transitions */}
       <div className="text-center space-y-2">
         <motion.h2
-          className="text-2xl font-semibold text-gray-800"
+          className="text-2xl font-semibold text-foreground"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -169,7 +169,7 @@ function NewVideoInterviewContent() {
           <AnimatePresence mode="wait">
             <motion.p
               key={statusIndex}
-              className="text-gray-500 absolute inset-x-0"
+              className="text-muted-foreground absolute inset-x-0"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -203,7 +203,7 @@ function NewVideoInterviewContent() {
 
       {/* Skeleton preview of interview UI */}
       <motion.div
-        className="w-full max-w-xl bg-white/80 backdrop-blur rounded-2xl shadow-lg p-6 space-y-5 border border-gray-100"
+        className="w-full max-w-xl bg-card/80 backdrop-blur rounded-2xl shadow-lg p-6 space-y-5 border border-border"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5 }}
@@ -211,17 +211,17 @@ function NewVideoInterviewContent() {
         {/* Question skeleton */}
         <div className="space-y-2">
           <motion.div
-            className="h-3 w-20 rounded bg-gray-200"
+            className="h-3 w-20 rounded bg-muted"
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           />
           <motion.div
-            className="h-5 w-full rounded bg-gray-100"
+            className="h-5 w-full rounded bg-muted/50"
             animate={{ opacity: [0.3, 0.6, 0.3] }}
             transition={{ duration: 1.5, repeat: Infinity, delay: 0.1 }}
           />
           <motion.div
-            className="h-5 w-2/3 rounded bg-gray-100"
+            className="h-5 w-2/3 rounded bg-muted/50"
             animate={{ opacity: [0.3, 0.6, 0.3] }}
             transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
           />
@@ -249,17 +249,17 @@ function NewVideoInterviewContent() {
         {/* Controls skeleton */}
         <div className="flex justify-center gap-5">
           <motion.div
-            className="h-11 w-11 rounded-full bg-gray-200"
+            className="h-11 w-11 rounded-full bg-muted"
             animate={{ opacity: [0.4, 0.7, 0.4] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           />
           <motion.div
-            className="h-11 w-11 rounded-full bg-gray-200"
+            className="h-11 w-11 rounded-full bg-muted"
             animate={{ opacity: [0.4, 0.7, 0.4] }}
             transition={{ duration: 1.5, repeat: Infinity, delay: 0.15 }}
           />
           <motion.div
-            className="h-11 w-11 rounded-full bg-gray-200"
+            className="h-11 w-11 rounded-full bg-muted"
             animate={{ opacity: [0.4, 0.7, 0.4] }}
             transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
           />
@@ -273,7 +273,7 @@ function LoadingFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
       <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-      <p className="text-gray-500">Loading...</p>
+      <p className="text-muted-foreground">Loading...</p>
     </div>
   );
 }

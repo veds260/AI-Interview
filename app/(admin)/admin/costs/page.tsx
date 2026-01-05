@@ -111,7 +111,7 @@ export default function AdminCostsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">API Costs</h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Track API usage and costs across all interviews
           </p>
         </div>
@@ -140,14 +140,14 @@ export default function AdminCostsPage() {
 
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : !data ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500">No API usage data available yet.</p>
-            <p className="text-gray-400 text-sm mt-1">
+            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No API usage data available yet.</p>
+            <p className="text-muted-foreground text-sm mt-1">
               Start running interviews to see cost tracking.
             </p>
           </CardContent>
@@ -165,7 +165,7 @@ export default function AdminCostsPage() {
                 <div className="text-2xl font-bold text-green-600">
                   {formatCost(data.summary.totalCostCents)}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Last {data.summary.days} days
                 </p>
               </CardContent>
@@ -180,7 +180,7 @@ export default function AdminCostsPage() {
                 <div className="text-2xl font-bold text-blue-600">
                   {data.summary.totalCalls.toLocaleString()}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Total requests
                 </p>
               </CardContent>
@@ -195,7 +195,7 @@ export default function AdminCostsPage() {
                 <div className="text-2xl font-bold text-purple-600">
                   {formatCost(data.summary.avgCostPerCall)}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Per API request
                 </p>
               </CardContent>
@@ -210,7 +210,7 @@ export default function AdminCostsPage() {
                 <div className="text-2xl font-bold text-orange-600">
                   {formatCost(data.summary.totalCostCents / data.summary.days)}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Cost per day
                 </p>
               </CardContent>
@@ -236,7 +236,7 @@ export default function AdminCostsPage() {
                 </CardHeader>
                 <CardContent>
                   {data.byModel.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">
+                    <p className="text-center text-muted-foreground py-8">
                       No model usage data yet
                     </p>
                   ) : (
@@ -273,7 +273,7 @@ export default function AdminCostsPage() {
                             <TableCell className="text-right">
                               {row.totalOutputTokens?.toLocaleString() || "-"}
                             </TableCell>
-                            <TableCell className="text-right text-gray-500">
+                            <TableCell className="text-right text-muted-foreground">
                               {formatDuration(row.avgDurationMs)}
                             </TableCell>
                           </TableRow>
@@ -295,7 +295,7 @@ export default function AdminCostsPage() {
                 </CardHeader>
                 <CardContent>
                   {data.byClient.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">
+                    <p className="text-center text-muted-foreground py-8">
                       No client usage data yet
                     </p>
                   ) : (
@@ -321,7 +321,7 @@ export default function AdminCostsPage() {
                             <TableCell className="text-right">
                               {row.callCount.toLocaleString()}
                             </TableCell>
-                            <TableCell className="text-right text-gray-500">
+                            <TableCell className="text-right text-muted-foreground">
                               {formatDuration(row.avgDurationMs)}
                             </TableCell>
                             <TableCell className="text-right">
@@ -346,7 +346,7 @@ export default function AdminCostsPage() {
                 </CardHeader>
                 <CardContent>
                   {data.byEndpoint.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">
+                    <p className="text-center text-muted-foreground py-8">
                       No endpoint usage data yet
                     </p>
                   ) : (
@@ -380,7 +380,7 @@ export default function AdminCostsPage() {
                                 {row.successRate}%
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right text-gray-500">
+                            <TableCell className="text-right text-muted-foreground">
                               {formatDuration(row.avgDurationMs)}
                             </TableCell>
                           </TableRow>
@@ -402,7 +402,7 @@ export default function AdminCostsPage() {
                 </CardHeader>
                 <CardContent>
                   {data.recentCalls.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">
+                    <p className="text-center text-muted-foreground py-8">
                       No recent API calls
                     </p>
                   ) : (
@@ -422,12 +422,12 @@ export default function AdminCostsPage() {
                         <TableBody>
                           {data.recentCalls.map((call) => (
                             <TableRow key={call.id}>
-                              <TableCell className="text-gray-500 text-sm">
+                              <TableCell className="text-muted-foreground text-sm">
                                 {new Date(call.createdAt).toLocaleString()}
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col">
-                                  <span className="text-xs text-gray-500">{call.provider}</span>
+                                  <span className="text-xs text-muted-foreground">{call.provider}</span>
                                   <span className="font-mono text-sm">{call.model || "-"}</span>
                                 </div>
                               </TableCell>
@@ -440,7 +440,7 @@ export default function AdminCostsPage() {
                               <TableCell className="text-right font-medium text-green-600">
                                 {formatCost(call.costCents)}
                               </TableCell>
-                              <TableCell className="text-right text-gray-500">
+                              <TableCell className="text-right text-muted-foreground">
                                 {formatDuration(call.durationMs)}
                               </TableCell>
                               <TableCell>
@@ -470,19 +470,19 @@ export default function AdminCostsPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="font-medium">Claude 3 Haiku</p>
-                  <p className="text-gray-500">$0.25/1M in, $1.25/1M out</p>
+                  <p className="text-muted-foreground">$0.25/1M in, $1.25/1M out</p>
                 </div>
                 <div>
                   <p className="font-medium">Claude 3.5 Sonnet</p>
-                  <p className="text-gray-500">$3/1M in, $15/1M out</p>
+                  <p className="text-muted-foreground">$3/1M in, $15/1M out</p>
                 </div>
                 <div>
                   <p className="font-medium">HeyGen Streaming</p>
-                  <p className="text-gray-500">$0.10/min</p>
+                  <p className="text-muted-foreground">$0.10/min</p>
                 </div>
                 <div>
                   <p className="font-medium">Deepgram Nova-2</p>
-                  <p className="text-gray-500">$0.0077/min streaming</p>
+                  <p className="text-muted-foreground">$0.0077/min streaming</p>
                 </div>
               </div>
             </CardContent>

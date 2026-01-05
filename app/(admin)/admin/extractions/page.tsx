@@ -236,7 +236,7 @@ export default function AdminExtractionsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Content Extractions</h1>
-        <p className="text-gray-500 mt-1">
+        <p className="text-muted-foreground mt-1">
           View and edit extracted content drafts from interviews
         </p>
       </div>
@@ -245,7 +245,7 @@ export default function AdminExtractionsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Extractions
             </CardTitle>
           </CardHeader>
@@ -255,7 +255,7 @@ export default function AdminExtractionsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               With Tweet Draft
             </CardTitle>
           </CardHeader>
@@ -265,7 +265,7 @@ export default function AdminExtractionsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               With LinkedIn Draft
             </CardTitle>
           </CardHeader>
@@ -275,7 +275,7 @@ export default function AdminExtractionsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Used
             </CardTitle>
           </CardHeader>
@@ -288,7 +288,7 @@ export default function AdminExtractionsPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search quotes, summaries..."
             value={searchQuery}
@@ -360,7 +360,7 @@ export default function AdminExtractionsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : filteredExtractions.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
@@ -391,7 +391,7 @@ export default function AdminExtractionsPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-gray-600 truncate max-w-[150px] block">
+                      <span className="text-sm text-muted-foreground truncate max-w-[150px] block">
                         {extraction.interviewTitle || `#${extraction.interviewId?.slice(0, 6)}`}
                       </span>
                     </TableCell>
@@ -488,21 +488,21 @@ export default function AdminExtractionsPage() {
 
               <TabsContent value="content" className="space-y-4">
                 <div>
-                  <Label className="text-gray-500">Question Asked</Label>
+                  <Label className="text-muted-foreground">Question Asked</Label>
                   <p className="mt-1">{selectedExtraction.questionAsked || "N/A"}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-500">Key Quote</Label>
+                  <Label className="text-muted-foreground">Key Quote</Label>
                   <p className="mt-1 font-medium">
                     &quot;{selectedExtraction.keyQuote}&quot;
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-500">Summary</Label>
+                  <Label className="text-muted-foreground">Summary</Label>
                   <p className="mt-1">{selectedExtraction.summary || "N/A"}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-500">Full Response</Label>
+                  <Label className="text-muted-foreground">Full Response</Label>
                   <ScrollArea className="h-40 border rounded p-2 mt-1">
                     <p className="text-sm whitespace-pre-wrap">
                       {selectedExtraction.rawResponse}
@@ -532,13 +532,13 @@ export default function AdminExtractionsPage() {
                         {selectedExtraction.tweetDraft}
                       </p>
                     ) : (
-                      <p className="text-gray-400 text-center py-8">
+                      <p className="text-muted-foreground text-center py-8">
                         No tweet draft generated
                       </p>
                     )}
                   </div>
                   {selectedExtraction.tweetDraft && (
-                    <p className="text-sm text-gray-500 text-right">
+                    <p className="text-sm text-muted-foreground text-right">
                       {selectedExtraction.tweetDraft.length} / 280 characters
                     </p>
                   )}
@@ -567,7 +567,7 @@ export default function AdminExtractionsPage() {
                           {selectedExtraction.linkedinDraft}
                         </p>
                       ) : (
-                        <p className="text-gray-400 text-center py-8">
+                        <p className="text-muted-foreground text-center py-8">
                           No LinkedIn draft generated
                         </p>
                       )}
@@ -619,7 +619,7 @@ export default function AdminExtractionsPage() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <Label>Tweet Draft</Label>
-                  <span className={`text-sm ${editData.tweetDraft.length > 280 ? "text-red-500" : "text-gray-500"}`}>
+                  <span className={`text-sm ${editData.tweetDraft.length > 280 ? "text-red-500" : "text-muted-foreground"}`}>
                     {editData.tweetDraft.length} / 280
                   </span>
                 </div>

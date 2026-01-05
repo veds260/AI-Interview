@@ -224,7 +224,7 @@ export default function CompetitorsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Competitors</h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Track competitor Twitter accounts for voice and style analysis
           </p>
         </div>
@@ -388,10 +388,10 @@ export default function CompetitorsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : competitors.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No competitors yet</p>
               <p className="text-sm">Add competitor accounts to analyze their content style</p>
@@ -426,7 +426,7 @@ export default function CompetitorsPage() {
                     <TableCell>
                       {competitor.client?.name || "Unknown"}
                       {competitor.client?.brandName && (
-                        <span className="text-gray-500 text-sm ml-1">
+                        <span className="text-muted-foreground text-sm ml-1">
                           ({competitor.client.brandName})
                         </span>
                       )}

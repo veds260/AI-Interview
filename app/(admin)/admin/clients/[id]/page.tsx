@@ -314,7 +314,7 @@ export default function ClientDetailPage() {
           <div>
             <h1 className="text-3xl font-bold">{client.name}</h1>
             {client.brandName && (
-              <p className="text-gray-500">{client.brandName}</p>
+              <p className="text-muted-foreground">{client.brandName}</p>
             )}
           </div>
           <Badge variant={client.isActive ? "default" : "secondary"}>
@@ -345,7 +345,7 @@ export default function ClientDetailPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Interviews
             </CardTitle>
           </CardHeader>
@@ -355,7 +355,7 @@ export default function ClientDetailPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Completed
             </CardTitle>
           </CardHeader>
@@ -367,7 +367,7 @@ export default function ClientDetailPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Competitors
             </CardTitle>
           </CardHeader>
@@ -377,7 +377,7 @@ export default function ClientDetailPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Topics
             </CardTitle>
           </CardHeader>
@@ -512,31 +512,31 @@ export default function ClientDetailPage() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label className="text-gray-500">Name</Label>
+                    <Label className="text-muted-foreground">Name</Label>
                     <p className="font-medium">{client.name}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">Brand Name</Label>
+                    <Label className="text-muted-foreground">Brand Name</Label>
                     <p className="font-medium">{client.brandName || "-"}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">Twitter</Label>
+                    <Label className="text-muted-foreground">Twitter</Label>
                     <p className="font-medium">
                       {client.twitterHandle ? `@${client.twitterHandle}` : "-"}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">LinkedIn</Label>
+                    <Label className="text-muted-foreground">LinkedIn</Label>
                     <p className="font-medium truncate">
                       {client.linkedinUrl || "-"}
                     </p>
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-gray-500">Website</Label>
+                    <Label className="text-muted-foreground">Website</Label>
                     <p className="font-medium">{client.websiteUrl || "-"}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-gray-500">Topics of Expertise</Label>
+                    <Label className="text-muted-foreground">Topics of Expertise</Label>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {client.topicsOfExpertise?.length ? (
                         client.topicsOfExpertise.map((topic, idx) => (
@@ -545,12 +545,12 @@ export default function ClientDetailPage() {
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-gray-400">No topics set</span>
+                        <span className="text-muted-foreground">No topics set</span>
                       )}
                     </div>
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-gray-500">Voice Style</Label>
+                    <Label className="text-muted-foreground">Voice Style</Label>
                     <p className="font-medium whitespace-pre-wrap">
                       {client.voiceStyle || "-"}
                     </p>
@@ -637,7 +637,7 @@ export default function ClientDetailPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-400">No products added yet</p>
+                <p className="text-muted-foreground">No products added yet</p>
               )}
             </CardContent>
           </Card>
@@ -685,7 +685,7 @@ export default function ClientDetailPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-400">No talking points added yet</p>
+                <p className="text-muted-foreground">No talking points added yet</p>
               )}
             </CardContent>
           </Card>
@@ -796,9 +796,9 @@ export default function ClientDetailPage() {
                 <ScrollArea className="h-64">
                   <div className="space-y-3">
                     {(kb as KnowledgeBase).typefullyTweets?.map((tweet, idx) => (
-                      <div key={idx} className="p-3 border rounded bg-gray-50">
+                      <div key={idx} className="p-3 border rounded bg-muted">
                         <p className="text-sm whitespace-pre-wrap">{tweet.content}</p>
-                        <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                        <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                           {tweet.postedAt && <span>{tweet.postedAt}</span>}
                           {tweet.likes !== undefined && <span>{tweet.likes} likes</span>}
                           {tweet.retweets !== undefined && <span>{tweet.retweets} RTs</span>}
@@ -808,7 +808,7 @@ export default function ClientDetailPage() {
                   </div>
                 </ScrollArea>
               ) : (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-muted-foreground">
                   <Twitter className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No tweets imported yet</p>
                   {isEditing && (
@@ -842,7 +842,7 @@ export default function ClientDetailPage() {
                           <p className="font-medium">
                             {interview.title || `Interview ${interview.id.slice(0, 8)}`}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {new Date(interview.createdAt).toLocaleDateString()} -
                             {interview.questionsCount || 0} questions
                           </p>
@@ -861,7 +861,7 @@ export default function ClientDetailPage() {
                   </div>
                 </ScrollArea>
               ) : (
-                <p className="text-center py-8 text-gray-400">
+                <p className="text-center py-8 text-muted-foreground">
                   No interviews yet
                 </p>
               )}
@@ -899,7 +899,7 @@ export default function ClientDetailPage() {
                       <div>
                         <p className="font-medium">@{comp.twitterHandle}</p>
                         {comp.name && (
-                          <p className="text-sm text-gray-500">{comp.name}</p>
+                          <p className="text-sm text-muted-foreground">{comp.name}</p>
                         )}
                       </div>
                       <div className="flex gap-2">
@@ -913,7 +913,7 @@ export default function ClientDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-400">
+                <p className="text-center py-8 text-muted-foreground">
                   No competitors tracked yet
                 </p>
               )}

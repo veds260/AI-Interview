@@ -255,7 +255,7 @@ export default function ClientsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : clients.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">

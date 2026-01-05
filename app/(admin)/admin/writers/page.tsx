@@ -198,7 +198,7 @@ export default function WritersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Writers</h1>
-          <p className="text-gray-500 mt-1">Manage content writers and assignments</p>
+          <p className="text-muted-foreground mt-1">Manage content writers and assignments</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -325,7 +325,7 @@ export default function WritersPage() {
         </CardHeader>
         <CardContent>
           {!writers?.length ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No writers yet</p>
               <p className="text-sm">Add your first writer to get started</p>
@@ -419,7 +419,7 @@ export default function WritersPage() {
                         {interview.clientName && (
                           <span className="font-medium">{interview.clientName}</span>
                         )}
-                        <span className="text-gray-500">
+                        <span className="text-muted-foreground">
                           {interview.completedAt
                             ? new Date(interview.completedAt).toLocaleDateString()
                             : interview.title || `Interview ${interview.id.slice(0, 8)}`}
