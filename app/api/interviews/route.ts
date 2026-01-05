@@ -384,6 +384,19 @@ export async function POST(request: Request) {
       });
     }
 
+    // Collect ALL previously asked question texts (for text-based deduplication)
+    const allPreviouslyAskedTexts = new Set<string>();
+    previousInterviewContent.forEach(interview => {
+      interview.keyInsights.forEach(insight => {
+        const qMatch = insight.match(/Q: "([^"]+)"/);
+        if (qMatch) {
+          // Normalize: lowercase, trim, remove punctuation for comparison
+          allPreviouslyAskedTexts.add(qMatch[1].toLowerCase().trim().replace(/[?!.,]/g, ''));
+        }
+      });
+    });
+    console.log(`[Questions] Found ${allPreviouslyAskedTexts.size} previously asked question texts to exclude`);
+
     // Get questions for the interview, excluding previously asked ones
     const baseConditions = [
       eq(questionBank.isActive, true),
@@ -400,7 +413,13 @@ export async function POST(request: Request) {
       .from(questionBank)
       .where(and(...baseConditions))
       .orderBy(sql`RANDOM()`)
-      .limit(20);
+      .limit(40); // Get more to filter out text duplicates
+
+    // Filter out questions whose text was already asked (even if ID is different)
+    questions = questions.filter(q => {
+      const normalizedQ = q.question.toLowerCase().trim().replace(/[?!.,]/g, '');
+      return !allPreviouslyAskedTexts.has(normalizedQ);
+    }).slice(0, 20);
 
     // If no client-specific questions (or all exhausted), get global ones
     if (questions.length === 0) {
@@ -413,16 +432,23 @@ export async function POST(request: Request) {
         globalConditions.push(notInArray(questionBank.id, previouslyAskedQuestionIds));
       }
 
-      questions = await db
+      let globalQuestions = await db
         .select()
         .from(questionBank)
         .where(and(...globalConditions))
         .orderBy(sql`RANDOM()`)
-        .limit(20);
+        .limit(40);
+
+      // Filter by text too
+      questions = globalQuestions.filter(q => {
+        const normalizedQ = q.question.toLowerCase().trim().replace(/[?!.,]/g, '');
+        return !allPreviouslyAskedTexts.has(normalizedQ);
+      }).slice(0, 20);
     }
 
     // If still no questions (all exhausted), allow repeats but prioritize least used
     if (questions.length === 0) {
+      console.log("[Questions] All questions exhausted, allowing repeats");
       questions = await db
         .select()
         .from(questionBank)

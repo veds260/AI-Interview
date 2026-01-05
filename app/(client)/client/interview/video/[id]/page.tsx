@@ -27,6 +27,8 @@ import {
   MessageSquare,
   Volume2,
   AudioLines,
+  SkipForward,
+  VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
 import HeyGenAvatar from "@/components/interview/heygen-avatar";
@@ -50,6 +52,19 @@ async function preloadAudio(text: string, interviewId: string): Promise<string |
   } catch (error) {
     console.error("[TTS Preload] Failed:", error);
     return null;
+  }
+}
+
+// Global audio ref for skip functionality
+let currentAudioElement: HTMLAudioElement | null = null;
+
+// Stop current audio playback
+function stopCurrentAudio() {
+  if (currentAudioElement) {
+    currentAudioElement.pause();
+    currentAudioElement.currentTime = 0;
+    currentAudioElement = null;
+    console.log("[TTS] Audio stopped by user");
   }
 }
 
@@ -81,13 +96,22 @@ async function speakWithElevenLabs(
   const playAudio = (url: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       const audio = new Audio(url);
+      currentAudioElement = audio; // Store for skip functionality
       audio.onended = () => {
         console.log("[TTS] Audio finished");
+        currentAudioElement = null;
         resolve();
       };
       audio.onerror = (e) => {
         console.error("[TTS] Audio playback error:", e);
+        currentAudioElement = null;
         reject(e);
+      };
+      audio.onpause = () => {
+        // If paused externally (skip), resolve
+        if (audio.currentTime === 0) {
+          resolve();
+        }
       };
       audio.play().catch(reject);
     });
@@ -546,6 +570,13 @@ function VideoInterviewContent() {
     }
   }, [isRecordingAudio, currentQuestion, speak]);
 
+  // Skip/stop the current audio playback
+  const skipAudio = useCallback(() => {
+    stopCurrentAudio();
+    setIsAvatarSpeaking(false);
+    toast.success("Skipped");
+  }, []);
+
   // Toggle mute (for video mode) or start/stop recording (for audio mode)
   const toggleMute = useCallback(() => {
     // Clear any error when user taps mic
@@ -749,52 +780,94 @@ function VideoInterviewContent() {
 
           {/* Controls */}
           <div className="flex justify-center gap-3 mt-4">
-            <Button
-              variant={(audioOnly ? isRecordingAudio : !isMuted) ? "secondary" : "destructive"}
-              size="lg"
-              onClick={toggleMute}
-              className="rounded-full w-14 h-14"
-            >
-              {(audioOnly ? !isRecordingAudio : isMuted) ? (
-                <MicOff className="w-6 h-6" />
-              ) : (
-                <Mic className="w-6 h-6" />
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={repeatQuestion}
-              disabled={isAvatarSpeaking || !currentQuestion}
-              className="rounded-full w-14 h-14"
-              title="Repeat question"
-            >
-              <Volume2 className="w-5 h-5" />
-            </Button>
-
-            {audioOnly && (
+            {/* Mic button - main action */}
+            <div className="flex flex-col items-center gap-1">
               <Button
-                variant="outline"
+                variant={(audioOnly ? isRecordingAudio : !isMuted) ? "secondary" : "destructive"}
                 size="lg"
-                onClick={retakeAnswer}
-                disabled={isAvatarSpeaking || !currentQuestion}
-                className="rounded-full w-14 h-14"
-                title="Retake answer"
+                onClick={toggleMute}
+                className="rounded-full w-16 h-16"
               >
-                <RotateCcw className="w-5 h-5" />
+                {(audioOnly ? !isRecordingAudio : isMuted) ? (
+                  <MicOff className="w-7 h-7" />
+                ) : (
+                  <Mic className="w-7 h-7" />
+                )}
               </Button>
+              <span className="text-xs text-gray-400">
+                {audioOnly ? (isRecordingAudio ? "Stop" : "Record") : (isMuted ? "Unmute" : "Mute")}
+              </span>
+            </div>
+
+            {/* Skip button - shows when interviewer is speaking */}
+            {isAvatarSpeaking && (
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={skipAudio}
+                  className="rounded-full w-14 h-14 border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                  title="Skip audio"
+                >
+                  <SkipForward className="w-5 h-5" />
+                </Button>
+                <span className="text-xs text-orange-400">Skip</span>
+              </div>
+            )}
+
+            {/* Repeat button - hidden when speaking */}
+            {!isAvatarSpeaking && (
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={repeatQuestion}
+                  disabled={!currentQuestion}
+                  className="rounded-full w-14 h-14"
+                  title="Repeat question"
+                >
+                  <Volume2 className="w-5 h-5" />
+                </Button>
+                <span className="text-xs text-gray-400">Repeat</span>
+              </div>
+            )}
+
+            {/* Retake button - only in audio mode */}
+            {audioOnly && !isAvatarSpeaking && (
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={retakeAnswer}
+                  disabled={!currentQuestion}
+                  className="rounded-full w-14 h-14"
+                  title="Discard and retry"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </Button>
+                <span className="text-xs text-gray-400">Retry</span>
+              </div>
             )}
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-3">
-            {isMuted
-              ? "Tap to unmute and speak"
-              : isAvatarSpeaking
-              ? "Listening to interviewer..."
-              : isUserSpeaking
-              ? "Listening to you..."
-              : "Speak naturally when ready"}
+          <p className="text-center text-sm mt-3">
+            {isAvatarSpeaking ? (
+              <span className="text-blue-400 flex items-center justify-center gap-2">
+                <AudioLines className="w-4 h-4 animate-pulse" />
+                Interviewer speaking... tap Skip to continue
+              </span>
+            ) : isRecordingAudio ? (
+              <span className="text-red-400 flex items-center justify-center gap-2">
+                <Mic className="w-4 h-4 animate-pulse" />
+                Recording... tap to stop
+              </span>
+            ) : isMuted ? (
+              <span className="text-gray-500">Tap mic to respond</span>
+            ) : isUserSpeaking ? (
+              <span className="text-green-400">Listening to you...</span>
+            ) : (
+              <span className="text-gray-400">Speak naturally when ready</span>
+            )}
           </p>
         </div>
 
