@@ -113,14 +113,14 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Clients</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
+          <p className="text-muted-foreground mt-1">
             Manage founder profiles and knowledge bases
           </p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button variant="premium">
               <Plus className="mr-2 h-4 w-4" />
               Add Client
             </Button>

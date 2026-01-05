@@ -44,20 +44,20 @@ export default function InterviewsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-500" />;
       case "paused":
-        return <PauseCircle className="h-4 w-4 text-yellow-600" />;
+        return <PauseCircle className="h-4 w-4 text-amber-500" />;
       default:
-        return <Clock className="h-4 w-4 text-blue-600" />;
+        return <Clock className="h-4 w-4 text-blue-500" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge variant="default" className="bg-green-600">Completed</Badge>;
+        return <Badge variant="success">Completed</Badge>;
       case "paused":
-        return <Badge variant="secondary">Paused</Badge>;
+        return <Badge variant="warning">Paused</Badge>;
       default:
         return <Badge variant="default">In Progress</Badge>;
     }
@@ -67,11 +67,11 @@ export default function InterviewsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">My Interviews</h1>
-          <p className="text-gray-500 mt-1">View and continue your interviews</p>
+          <h1 className="text-3xl font-bold tracking-tight">My Interviews</h1>
+          <p className="text-muted-foreground mt-1">View and continue your interviews</p>
         </div>
         <Link href="/client/interview/start">
-          <Button>
+          <Button variant="premium">
             <Play className="mr-2 h-4 w-4" />
             New Interview
           </Button>
@@ -80,38 +80,45 @@ export default function InterviewsPage() {
 
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : interviews.length === 0 ? (
-        <Card>
+        <Card className="border-gray-800 bg-gray-900/50">
           <CardContent className="py-12 text-center">
+            <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Video className="h-6 w-6 text-muted-foreground" />
+            </div>
             <p className="text-muted-foreground mb-4">
               You haven&apos;t done any interviews yet.
             </p>
             <Link href="/client/interview/start">
-              <Button>Start Your First Interview</Button>
+              <Button variant="premium">Start Your First Interview</Button>
             </Link>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {interviews.map((interview) => (
-            <Card key={interview.id}>
+            <Card key={interview.id} className="border-gray-800 bg-gray-900/50 hover:border-gray-700 transition-colors">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    {interview.mode === "live_video" ? (
-                      <Video className="h-5 w-5 text-blue-600" />
-                    ) : (
-                      <MessageSquare className="h-5 w-5 text-green-600" />
-                    )}
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      interview.mode === "live_video" ? "bg-red-500/20" : "bg-emerald-500/20"
+                    }`}>
+                      {interview.mode === "live_video" ? (
+                        <Video className="h-5 w-5 text-red-500" />
+                      ) : (
+                        <MessageSquare className="h-5 w-5 text-emerald-500" />
+                      )}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-lg text-white">
                         {interview.mode === "live_video"
-                          ? "Video Interview"
-                          : "Text Interview"}
+                          ? "Voice Interview"
+                          : "Written Interview"}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-gray-400">
                         Started {new Date(interview.createdAt).toLocaleDateString()}{" "}
                         at {new Date(interview.createdAt).toLocaleTimeString()}
                       </CardDescription>
@@ -128,7 +135,7 @@ export default function InterviewsPage() {
                       {interview.status === "completed"
                         ? "Interview completed"
                         : interview.status === "paused"
-                        ? "Interview paused - you can resume anytime"
+                        ? "Interview paused - resume anytime"
                         : "Interview in progress"}
                     </span>
                   </div>
@@ -140,7 +147,7 @@ export default function InterviewsPage() {
                           : `/client/interview/text/${interview.id}`
                       }
                     >
-                      <Button variant="outline" size="sm">
+                      <Button size="sm" className="bg-white text-gray-900 hover:bg-gray-100">
                         {interview.status === "paused" ? "Resume" : "Continue"}
                       </Button>
                     </Link>

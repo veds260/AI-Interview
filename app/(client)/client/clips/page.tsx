@@ -87,8 +87,8 @@ export default function ClipsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Your Media</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-3xl font-bold tracking-tight">Your Media</h1>
+        <p className="text-muted-foreground mt-1">
           Recordings from your interview sessions
         </p>
       </div>
@@ -108,14 +108,14 @@ export default function ClipsPage() {
         <TabsContent value="video" className="space-y-6">
           {isLoading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : !data?.clips?.length ? (
-            <Card>
+            <Card className="border-gray-800 bg-gray-900/50">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Video className="h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">No clips yet</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <Video className="h-12 w-12 text-gray-600 mb-4" />
+                <h3 className="text-lg font-medium text-white">No clips yet</h3>
+                <p className="text-sm text-gray-400 mt-1">
                   Video recordings from your interviews will appear here
                 </p>
               </CardContent>
@@ -172,42 +172,42 @@ export default function ClipsPage() {
         <TabsContent value="audio" className="space-y-6">
           {audioLoading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : !audioData?.recordings?.length ? (
-            <Card>
+            <Card className="border-gray-800 bg-gray-900/50">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Mic className="h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">No audio recordings yet</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <Mic className="h-12 w-12 text-gray-600 mb-4" />
+                <h3 className="text-lg font-medium text-white">No audio recordings yet</h3>
+                <p className="text-sm text-gray-400 mt-1">
                   Audio from your interview responses will appear here
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <Card>
+            <Card className="border-gray-800 bg-gray-900/50">
               <CardHeader>
-                <CardTitle className="text-lg">Your Recordings</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg text-white">Your Recordings</CardTitle>
+                <CardDescription className="text-gray-400">
                   {audioData.recordings.length} audio recordings from your interviews
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y">
+                <div className="divide-y divide-gray-800">
                   {audioData.recordings.map((recording) => (
                     <div
                       key={recording.id}
-                      className="p-4 hover:bg-gray-50 space-y-2"
+                      className="p-4 hover:bg-gray-800/50 space-y-2 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 line-clamp-2">
+                        <p className="text-sm text-gray-200 line-clamp-2">
                           {recording.content}
                         </p>
                         <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                           <span className={`px-1.5 py-0.5 rounded ${
                             recording.role === "client"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : "bg-gray-700 text-gray-300"
                           }`}>
                             {recording.role === "client" ? "Your Response" : "Question"}
                           </span>

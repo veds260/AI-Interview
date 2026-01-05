@@ -328,11 +328,11 @@ export default function AdminInterviewsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+        return <Badge variant="success">Completed</Badge>;
       case "in_progress":
-        return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400">In Progress</Badge>;
       case "paused":
-        return <Badge className="bg-yellow-100 text-yellow-800">Paused</Badge>;
+        return <Badge variant="warning">Paused</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -404,8 +404,8 @@ export default function AdminInterviewsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Interviews</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-3xl font-bold tracking-tight">Interviews</h1>
+        <p className="text-muted-foreground mt-1">
           View, extract content, and manage all interview sessions
         </p>
       </div>
@@ -568,16 +568,16 @@ export default function AdminInterviewsPage() {
                     <TableCell>{interview.questionsCount || 0}</TableCell>
                     <TableCell>
                       {extractingInterviewId === interview.id ? (
-                        <Badge className="bg-blue-100 text-blue-800 animate-pulse">
+                        <Badge className="bg-blue-500/20 text-blue-400 animate-pulse">
                           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                           Extracting...
                         </Badge>
                       ) : (interview.extractionsCount || 0) > 0 ? (
-                        <Badge className="bg-green-100 text-green-800">
+                        <Badge variant="success">
                           {interview.extractionsCount} Available
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-gray-500">
+                        <Badge variant="outline" className="text-gray-400 border-gray-700">
                           Not extracted
                         </Badge>
                       )}

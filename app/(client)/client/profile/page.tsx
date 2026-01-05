@@ -187,20 +187,20 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6" onPaste={isEditing ? handlePaste : undefined}>
       <div>
-        <h1 className="text-3xl font-bold">Profile</h1>
-        <p className="text-gray-500 mt-1">Manage your account and social media settings</p>
+        <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
+        <p className="text-muted-foreground mt-1">Manage your account and social media settings</p>
       </div>
 
-      <Card>
+      <Card className="border-gray-800 bg-gray-900/50">
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>Account Information</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Account Information</CardTitle>
+              <CardDescription className="text-gray-400">
                 Your profile details shown on post mockups
               </CardDescription>
             </div>
-            <Badge variant="outline" className="capitalize">
+            <Badge variant="premium" className="capitalize">
               {session?.user?.role || "client"}
             </Badge>
           </div>
@@ -213,10 +213,10 @@ export default function ProfilePage() {
                 <img
                   src={formData.profilePicture}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-gray-100"
+                  className="w-24 h-24 rounded-full object-cover border-4 border-gray-700"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-4 border-gray-100">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center border-4 border-gray-700">
                   <span className="text-2xl font-bold text-white">
                     {getInitials(formData.name || session?.user?.name || "U")}
                   </span>
@@ -249,15 +249,15 @@ export default function ProfilePage() {
               />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-lg">
+              <p className="font-semibold text-lg text-white">
                 {formData.name || session?.user?.name || "User"}
               </p>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <p className="text-sm text-gray-400 flex items-center gap-1">
                 <Mail className="w-3 h-3" />
                 {session?.user?.email}
               </p>
               {isEditing && (
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-500 mt-2">
                   Click photo to change or paste image (Ctrl+V)
                 </p>
               )}
@@ -265,7 +265,7 @@ export default function ProfilePage() {
           </div>
 
           {isEditing ? (
-            <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-4 pt-4 border-t border-gray-800">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
@@ -411,24 +411,24 @@ export default function ProfilePage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-4 pt-4 border-t border-gray-800">
               {/* Display current info */}
               {(formData.twitterHandle || formData.linkedinUrl || formData.websiteUrl) && (
                 <div className="flex flex-wrap gap-3">
                   {formData.twitterHandle && (
-                    <Badge variant="outline" className="gap-1">
+                    <Badge variant="outline" className="gap-1 border-gray-700">
                       <Twitter className="w-3 h-3" />
                       @{formData.twitterHandle}
                     </Badge>
                   )}
                   {formData.linkedinUrl && (
-                    <Badge variant="outline" className="gap-1">
+                    <Badge variant="outline" className="gap-1 border-gray-700">
                       <Linkedin className="w-3 h-3" />
                       LinkedIn
                     </Badge>
                   )}
                   {formData.websiteUrl && (
-                    <Badge variant="outline" className="gap-1">
+                    <Badge variant="outline" className="gap-1 border-gray-700">
                       <Globe className="w-3 h-3" />
                       Website
                     </Badge>
@@ -436,7 +436,7 @@ export default function ProfilePage() {
                 </div>
               )}
               {formData.bio && (
-                <p className="text-sm text-gray-600">{formData.bio}</p>
+                <p className="text-sm text-gray-300">{formData.bio}</p>
               )}
               {formData.topics && (
                 <div className="flex flex-wrap gap-2">
@@ -447,7 +447,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Button className="bg-white text-gray-900 hover:bg-gray-100" onClick={() => setIsEditing(true)}>
                 Edit Profile
               </Button>
             </div>
@@ -455,24 +455,24 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-gray-800 bg-gray-900/50">
         <CardHeader>
-          <CardTitle>Interview Statistics</CardTitle>
-          <CardDescription>Your interview activity summary</CardDescription>
+          <CardTitle className="text-white">Interview Statistics</CardTitle>
+          <CardDescription className="text-gray-400">Your interview activity summary</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">-</p>
-              <p className="text-sm text-muted-foreground">Total Interviews</p>
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-2xl font-bold text-red-500">-</p>
+              <p className="text-sm text-gray-400">Total Interviews</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">-</p>
-              <p className="text-sm text-muted-foreground">Completed</p>
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-2xl font-bold text-emerald-500">-</p>
+              <p className="text-sm text-gray-400">Completed</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600">-</p>
-              <p className="text-sm text-muted-foreground">Content Pieces</p>
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-2xl font-bold text-blue-500">-</p>
+              <p className="text-sm text-gray-400">Content Pieces</p>
             </div>
           </div>
         </CardContent>

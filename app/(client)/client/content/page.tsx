@@ -176,14 +176,14 @@ function ClientContentContent() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="border-b pb-6">
+      <div className="border-b border-gray-800 pb-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+          <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-xl">
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Your Content</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="text-3xl font-bold tracking-tight text-white">Your Content</h1>
+            <p className="text-gray-400 mt-1">
               Posts created from your interview responses
             </p>
           </div>
@@ -194,7 +194,7 @@ function ClientContentContent() {
       <div className="flex flex-wrap items-center gap-4">
         {uniqueInterviews.length > 0 && (
           <>
-            <span className="text-sm font-medium text-gray-700">Interview:</span>
+            <span className="text-sm font-medium text-gray-300">Interview:</span>
             <Select value={interviewFilter} onValueChange={setInterviewFilter}>
               <SelectTrigger className="w-[250px]">
                 <SelectValue placeholder="Select Interview" />
@@ -210,7 +210,7 @@ function ClientContentContent() {
             </Select>
           </>
         )}
-        <span className="text-sm font-medium text-gray-700">Type:</span>
+        <span className="text-sm font-medium text-gray-300">Type:</span>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Content Type" />
@@ -223,7 +223,7 @@ function ClientContentContent() {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-gray-400">
           {extractions.length} {extractions.length === 1 ? 'post' : 'posts'} available
         </span>
       </div>
@@ -231,17 +231,17 @@ function ClientContentContent() {
       {/* Content Grid */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
-          <p className="text-gray-500">Loading your content...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-red-500 mb-4" />
+          <p className="text-gray-400">Loading your content...</p>
         </div>
       ) : extractions.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-gray-800 bg-gray-900/50">
           <CardContent className="py-16 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-8 w-8 text-gray-400" />
+            <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-8 w-8 text-gray-500" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No content yet</h3>
-            <p className="text-gray-500 max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-white mb-2">No content yet</h3>
+            <p className="text-gray-400 max-w-md mx-auto">
               Content will appear here after your interviews are processed.
               Complete an interview to see your posts!
             </p>
@@ -252,7 +252,7 @@ function ClientContentContent() {
           {extractions.map((extraction) => (
             <Card
               key={extraction.id}
-              className="group cursor-pointer hover:shadow-lg hover:border-blue-200 transition-all duration-200 overflow-hidden"
+              className="group cursor-pointer border-gray-800 bg-gray-900/50 hover:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden"
               onClick={() => setSelectedExtraction(extraction)}
             >
               {/* Type Badge Header */}
@@ -265,8 +265,8 @@ function ClientContentContent() {
               {/* Content Preview */}
               <CardContent className="pt-0 pb-5 space-y-4">
                 {/* Key Quote */}
-                <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-                  <p className="text-sm text-gray-700 italic line-clamp-3">
+                <div className="bg-gray-800/50 rounded-lg p-4 border-l-4 border-red-500">
+                  <p className="text-sm text-gray-300 italic line-clamp-3">
                     &ldquo;{extraction.keyQuote}&rdquo;
                   </p>
                 </div>
@@ -276,26 +276,26 @@ function ClientContentContent() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                     Tweet Preview
                   </p>
-                  <p className="text-sm text-gray-900 line-clamp-3 leading-relaxed">
+                  <p className="text-sm text-gray-200 line-clamp-3 leading-relaxed">
                     {extraction.tweetDraft}
                   </p>
                 </div>
 
                 {/* Meta Info */}
-                <div className="flex items-center justify-between pt-3 border-t">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-800">
                   <div className="flex gap-2">
                     {extraction.suggestedFormats?.includes('tweet') && (
-                      <div className="p-1.5 bg-blue-50 rounded-md">
-                        <Twitter className="h-4 w-4 text-blue-500" />
+                      <div className="p-1.5 bg-blue-500/20 rounded-md">
+                        <Twitter className="h-4 w-4 text-blue-400" />
                       </div>
                     )}
                     {extraction.linkedinDraft && (
-                      <div className="p-1.5 bg-blue-50 rounded-md">
-                        <Linkedin className="h-4 w-4 text-blue-700" />
+                      <div className="p-1.5 bg-blue-500/20 rounded-md">
+                        <Linkedin className="h-4 w-4 text-blue-400" />
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-500">
                     {new Date(extraction.createdAt).toLocaleDateString()}
                   </span>
                 </div>
