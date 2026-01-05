@@ -36,17 +36,30 @@ interface GeneratedQuestion {
 const questionCache = new Map<string, { questions: GeneratedQuestion[]; timestamp: number }>();
 const CACHE_TTL_MS = 0; // Disabled - always generate fresh questions
 
-// DISABLED: AI-generated questions were hallucinating facts about clients
-// (e.g., asking about "marketing agency" when client never mentioned one)
-// Fall back to curated question bank with proper deduplication instead
+// Check if we have enough context to generate custom questions
 function hasRichContext(
   kb: KnowledgeBase | undefined,
   previousInterviews: PreviousInterviewContent[],
   competitorTopics: string[]
 ): boolean {
-  // Always return false to use question bank instead of AI generation
-  // AI was making up facts and asking irrelevant questions
-  return false;
+  const hasBio = !!kb?.bio && kb.bio.length > 50;
+  const hasProducts = (kb?.products?.length || 0) > 0;
+  const hasTalkingPoints = (kb?.talkingPoints?.length || 0) > 0;
+  const hasPastInterviews = previousInterviews.length > 0;
+  const hasCompetitorTopics = competitorTopics.length > 0;
+  const hasTweets = (kb?.typefullyTweets?.length || 0) > 0;
+
+  // Need at least 2 sources of context for good questions
+  const contextSources = [
+    hasBio,
+    hasProducts,
+    hasTalkingPoints,
+    hasPastInterviews,
+    hasCompetitorTopics,
+    hasTweets,
+  ].filter(Boolean).length;
+
+  return contextSources >= 2;
 }
 
 // Generate custom questions using AI based on client context
@@ -134,29 +147,28 @@ async function generateCustomQuestions(
         messages: [
           {
             role: "system",
-            content: `You generate personalized interview questions that extract great stories and insights.
+            content: `You generate interview questions based ONLY on facts explicitly provided.
 
-CRITICAL RULE - NO REPETITION:
-- If a topic/theme was already discussed, DO NOT ask about it again in different words
-- "What's your biggest failure?" and "Tell me about a time you failed" are THE SAME question
-- "How did you start?" and "What's your origin story?" are THE SAME question
-- Each question must explore a COMPLETELY NEW angle or topic
+CRITICAL - NO HALLUCINATION:
+- ONLY reference things EXPLICITLY stated in the context below
+- If bio says "writer", do NOT assume they run an "agency" or "company"
+- If they mention "crypto", do NOT assume "fundraising" or "investors"
+- NEVER infer or assume roles, companies, strategies, or facts not stated
+- When in doubt, ask OPEN questions that let THEM define their work
 
-QUESTION STYLE:
-- Context buildup is fine ("Given your work on X...")
-- End with ONE clear question - never multiple questions
-- Natural conversational tone
+CRITICAL - NO REPETITION:
+- "What's your biggest failure?" and "Tell me about a time you failed" are THE SAME
+- Each question must be on a COMPLETELY DIFFERENT topic
 
-GOOD VARIETY EXAMPLES:
-- Origin/journey: "What made you take the leap into [field]?"
-- Failure: "What's a decision you'd take back if you could?"
-- Hot take: "What do most people in your industry get completely wrong?"
-- Tactical: "What's your actual daily routine look like?"
-- Prediction: "Where do you see [industry] in 5 years?"
-- Behind scenes: "What does your team not know about how you operate?"
+GOOD OPEN QUESTIONS (when context is limited):
+- "What's been the most surprising part of your journey so far?"
+- "What do most people misunderstand about what you do?"
+- "What's a belief you hold that others in your space would disagree with?"
+- "What's something you've changed your mind about recently?"
+- "If you could go back 5 years, what advice would you give yourself?"
 
-Return JSON array with 12-15 DIVERSE questions (each covering a different theme):
-[{"question": "...", "category": "origin_story|failure_story|hot_take|behind_scenes|prediction|tactical", "reasoning": "why this is NEW/different"}]`,
+Return JSON array with 10-12 questions:
+[{"question": "...", "category": "origin_story|failure_story|hot_take|lessons|prediction|tactical", "reasoning": "what EXPLICIT fact this references"}]`,
           },
           {
             role: "user",
@@ -433,11 +445,9 @@ export async function POST(request: Request) {
       }).slice(0, 20);
     }
 
-    // If still no questions (all exhausted), DO NOT allow repeats
-    // Better to have a shorter interview than repeat questions the client already answered
+    // If still no questions (all exhausted), use open-ended fallbacks that work for anyone
     if (questions.length === 0) {
-      console.log("[Questions] All unique questions exhausted - will create minimal interview");
-      // Return just 3 generic questions that are always okay to ask
+      console.log("[Questions] All unique questions exhausted - using open fallbacks");
       const fallbackQuestions = [
         {
           id: "fallback-1",
@@ -445,7 +455,7 @@ export async function POST(request: Request) {
           category: "open_ended" as const,
           difficulty: "easy" as const,
           topics: ["general"],
-          expectedClipPotential: 7,
+          expectedClipPotential: 8,
           web2Friendly: true,
           isActive: true,
           clientId: null,
@@ -455,8 +465,22 @@ export async function POST(request: Request) {
         },
         {
           id: "fallback-2",
-          question: "If you could give advice to yourself from 5 years ago, what would it be?",
-          category: "advice" as const,
+          question: "What's something most people misunderstand about what you do?",
+          category: "hot_take" as const,
+          difficulty: "easy" as const,
+          topics: ["perception"],
+          expectedClipPotential: 9,
+          web2Friendly: true,
+          isActive: true,
+          clientId: null,
+          timesUsed: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "fallback-3",
+          question: "What's a question you wish more people would ask you?",
+          category: "open_ended" as const,
           difficulty: "easy" as const,
           topics: ["reflection"],
           expectedClipPotential: 8,
@@ -468,12 +492,12 @@ export async function POST(request: Request) {
           updatedAt: new Date(),
         },
         {
-          id: "fallback-3",
-          question: "What's something you've changed your mind about recently?",
+          id: "fallback-4",
+          question: "What's the most counterintuitive lesson you've learned in your work?",
           category: "lessons" as const,
-          difficulty: "easy" as const,
-          topics: ["growth"],
-          expectedClipPotential: 8,
+          difficulty: "medium" as const,
+          topics: ["insights"],
+          expectedClipPotential: 9,
           web2Friendly: true,
           isActive: true,
           clientId: null,
