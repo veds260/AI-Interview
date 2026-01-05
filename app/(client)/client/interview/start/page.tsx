@@ -81,16 +81,16 @@ function InterviewStartContent() {
             className={`cursor-pointer transition-all duration-300 h-full ${
               selectedMode === "live_video"
                 ? "border-2 border-red-500 bg-red-500/5 shadow-[0_0_30px_-10px_rgba(255,0,0,0.3)]"
-                : "border-2 border-transparent hover:border-gray-700 hover:shadow-xl bg-gray-900/30"
+                : "border-2 border-transparent hover:border-border hover:shadow-xl bg-card/30"
             }`}
             onClick={() => setSelectedMode("live_video")}
           >
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300 ${
-                  selectedMode === "live_video" ? "bg-red-500/20" : "bg-gray-800"
+                  selectedMode === "live_video" ? "bg-red-500/20" : "bg-muted"
                 }`}>
-                  <Mic className={`h-6 w-6 ${selectedMode === "live_video" ? "text-red-500" : "text-gray-400"}`} />
+                  <Mic className={`h-6 w-6 ${selectedMode === "live_video" ? "text-red-500" : "text-muted-foreground"}`} />
                 </div>
                 <AnimatePresence>
                   {selectedMode === "live_video" && (
@@ -107,22 +107,22 @@ function InterviewStartContent() {
                 </AnimatePresence>
               </div>
               <CardTitle className="mt-4 text-xl">Voice Interview</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-muted-foreground">
                 Speak naturally. We'll listen and ask follow-ups.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="text-sm text-gray-500 space-y-2">
+              <ul className="text-sm text-muted-foreground space-y-2">
                 <li className="flex items-center gap-2">
                   <Zap className="h-3 w-3 text-amber-500" />
                   <span>Instant response times</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-3 h-3 flex items-center justify-center text-gray-600">-</span>
+                  <span className="w-3 h-3 flex items-center justify-center text-muted-foreground/60">-</span>
                   <span>Natural conversation flow</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-3 h-3 flex items-center justify-center text-gray-600">-</span>
+                  <span className="w-3 h-3 flex items-center justify-center text-muted-foreground/60">-</span>
                   <span>AI adapts to your answers</span>
                 </li>
               </ul>
@@ -133,7 +133,7 @@ function InterviewStartContent() {
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between"
+                    className="mt-4 pt-4 border-t border-border flex items-center justify-between"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Label htmlFor="audio-only" className="text-sm cursor-pointer">
@@ -145,7 +145,7 @@ function InterviewStartContent() {
                           </span>
                         )}
                       </span>
-                      <span className="block text-xs text-gray-500 mt-0.5">
+                      <span className="block text-xs text-muted-foreground mt-0.5">
                         {audioOnly ? "Fast start, high-quality voice" : "5-10s to connect"}
                       </span>
                     </Label>
@@ -171,16 +171,16 @@ function InterviewStartContent() {
             className={`cursor-pointer transition-all duration-300 h-full ${
               selectedMode === "text_chat"
                 ? "border-2 border-emerald-500 bg-emerald-500/5 shadow-[0_0_30px_-10px_rgba(16,185,129,0.3)]"
-                : "border-2 border-transparent hover:border-gray-700 hover:shadow-xl bg-gray-900/30"
+                : "border-2 border-transparent hover:border-border hover:shadow-xl bg-card/30"
             }`}
             onClick={() => setSelectedMode("text_chat")}
           >
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300 ${
-                  selectedMode === "text_chat" ? "bg-emerald-500/20" : "bg-gray-800"
+                  selectedMode === "text_chat" ? "bg-emerald-500/20" : "bg-muted"
                 }`}>
-                  <MessageSquare className={`h-6 w-6 ${selectedMode === "text_chat" ? "text-emerald-500" : "text-gray-400"}`} />
+                  <MessageSquare className={`h-6 w-6 ${selectedMode === "text_chat" ? "text-emerald-500" : "text-muted-foreground"}`} />
                 </div>
                 <AnimatePresence>
                   {selectedMode === "text_chat" && (
@@ -197,22 +197,22 @@ function InterviewStartContent() {
                 </AnimatePresence>
               </div>
               <CardTitle className="mt-4 text-xl">Written Interview</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-muted-foreground">
                 Type at your own pace. Edit before sending.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="text-sm text-gray-500 space-y-2">
+              <ul className="text-sm text-muted-foreground space-y-2">
                 <li className="flex items-center gap-2">
-                  <span className="w-3 h-3 flex items-center justify-center text-gray-600">-</span>
+                  <span className="w-3 h-3 flex items-center justify-center text-muted-foreground/60">-</span>
                   <span>Type your responses</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-3 h-3 flex items-center justify-center text-gray-600">-</span>
+                  <span className="w-3 h-3 flex items-center justify-center text-muted-foreground/60">-</span>
                   <span>Pause and resume anytime</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-3 h-3 flex items-center justify-center text-gray-600">-</span>
+                  <span className="w-3 h-3 flex items-center justify-center text-muted-foreground/60">-</span>
                   <span>Review before submitting</span>
                 </li>
               </ul>
@@ -229,7 +229,7 @@ function InterviewStartContent() {
         transition={{ delay: 0.3 }}
       >
         <Link href="/client">
-          <Button variant="ghost" className="text-gray-400 hover:text-white">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
             Cancel
           </Button>
         </Link>

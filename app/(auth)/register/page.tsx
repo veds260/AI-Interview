@@ -71,7 +71,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="py-8 px-4">
         <div className="max-w-md mx-auto">
           <Link href="/">
@@ -87,12 +87,12 @@ export default function RegisterPage() {
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <Card className="w-full max-w-md border-gray-800/50 bg-gray-900/90 backdrop-blur-md shadow-2xl">
+        <Card className="w-full max-w-md border-border bg-card backdrop-blur-md shadow-2xl">
           <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-2xl font-bold text-center text-white tracking-tight">
+            <CardTitle className="text-2xl font-bold text-center text-card-foreground tracking-tight">
               Get Started
             </CardTitle>
-            <CardDescription className="text-center text-gray-400">
+            <CardDescription className="text-center text-muted-foreground">
               Create your account in seconds
             </CardDescription>
           </CardHeader>
@@ -107,7 +107,7 @@ export default function RegisterPage() {
 
               {/* Role Selection */}
               <div className="space-y-3">
-                <Label className="text-gray-300">I am a...</Label>
+                <Label className="text-muted-foreground">I am a...</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -116,8 +116,8 @@ export default function RegisterPage() {
                     className={cn(
                       "relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200",
                       role === "client"
-                        ? "border-red-500 bg-red-500/10 text-white"
-                        : "border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-300 bg-gray-800/30"
+                        ? "border-red-500 bg-red-500/10 text-foreground"
+                        : "border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground bg-muted/30"
                     )}
                   >
                     {role === "client" && (
@@ -127,7 +127,7 @@ export default function RegisterPage() {
                     )}
                     <Mic className={cn("h-6 w-6", role === "client" ? "text-red-500" : "")} />
                     <span className="font-medium">Founder</span>
-                    <span className="text-xs text-gray-500">Share my story</span>
+                    <span className="text-xs text-muted-foreground">Share my story</span>
                   </button>
                   <button
                     type="button"
@@ -136,8 +136,8 @@ export default function RegisterPage() {
                     className={cn(
                       "relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200",
                       role === "writer"
-                        ? "border-red-500 bg-red-500/10 text-white"
-                        : "border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-300 bg-gray-800/30"
+                        ? "border-red-500 bg-red-500/10 text-foreground"
+                        : "border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground bg-muted/30"
                     )}
                   >
                     {role === "writer" && (
@@ -147,13 +147,13 @@ export default function RegisterPage() {
                     )}
                     <PenTool className={cn("h-6 w-6", role === "writer" ? "text-red-500" : "")} />
                     <span className="font-medium">Writer</span>
-                    <span className="text-xs text-gray-500">Create posts</span>
+                    <span className="text-xs text-muted-foreground">Create posts</span>
                   </button>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-300">Full Name</Label>
+                <Label htmlFor="name" className="text-muted-foreground">Full Name</Label>
                 <Input
                   id="name"
                   type="text"
@@ -162,12 +162,12 @@ export default function RegisterPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="bg-input border-input text-foreground placeholder:text-muted-foreground/50"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-300">Email</Label>
+                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -176,12 +176,12 @@ export default function RegisterPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="bg-input border-input text-foreground placeholder:text-muted-foreground/50"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <Label htmlFor="password" className="text-muted-foreground">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -190,12 +190,12 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="bg-input border-input text-foreground placeholder:text-muted-foreground/50"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-gray-300">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-muted-foreground">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -204,7 +204,7 @@ export default function RegisterPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="bg-input border-input text-foreground placeholder:text-muted-foreground/50"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export default function RegisterPage() {
             </form>
 
             <div className="mt-8 text-center text-sm">
-              <span className="text-gray-500">Already have an account? </span>
+              <span className="text-muted-foreground">Already have an account? </span>
               <Link
                 href="/login"
                 className="text-red-500 hover:text-red-400 font-medium transition-colors"

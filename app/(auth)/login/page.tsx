@@ -57,12 +57,12 @@ function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-gray-800/50 bg-gray-900/90 backdrop-blur-md shadow-2xl">
+    <Card className="w-full max-w-md border-border bg-card backdrop-blur-md shadow-2xl">
       <CardHeader className="space-y-1 pb-6">
-        <CardTitle className="text-2xl font-bold text-center text-white tracking-tight">
+        <CardTitle className="text-2xl font-bold text-center text-card-foreground tracking-tight">
           Welcome back
         </CardTitle>
-        <CardDescription className="text-center text-gray-400">
+        <CardDescription className="text-center text-muted-foreground">
           Pick up where you left off
         </CardDescription>
       </CardHeader>
@@ -76,7 +76,7 @@ function LoginForm() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-gray-300">Email</Label>
+            <Label htmlFor="email" className="text-muted-foreground">Email</Label>
             <Input
               id="email"
               type="email"
@@ -85,12 +85,12 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+              className="bg-input border-input text-foreground placeholder:text-muted-foreground/50"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-gray-300">Password</Label>
+            <Label htmlFor="password" className="text-muted-foreground">Password</Label>
             <Input
               id="password"
               type="password"
@@ -99,7 +99,7 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
-              className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+              className="bg-input border-input text-foreground placeholder:text-muted-foreground/50"
             />
           </div>
 
@@ -116,7 +116,7 @@ function LoginForm() {
         </form>
 
         <div className="mt-8 text-center text-sm">
-          <span className="text-gray-500">New here? </span>
+          <span className="text-muted-foreground">New here? </span>
           <Link
             href="/register"
             className="text-red-500 hover:text-red-400 font-medium transition-colors"
@@ -131,7 +131,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="py-8 px-4">
         <div className="max-w-md mx-auto">
           <Link href="/">
@@ -149,9 +149,9 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <Suspense
           fallback={
-            <Card className="w-full max-w-md border-gray-800/50 bg-gray-900/90">
+            <Card className="w-full max-w-md border-border bg-card">
               <CardContent className="flex justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </CardContent>
             </Card>
           }

@@ -158,17 +158,17 @@ function ClientContentContent() {
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      origin_story: "bg-purple-100 text-purple-800 border-purple-200",
-      failure_story: "bg-red-100 text-red-800 border-red-200",
-      success_story: "bg-green-100 text-green-800 border-green-200",
-      hot_take: "bg-orange-100 text-orange-800 border-orange-200",
-      contrarian_view: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      prediction: "bg-blue-100 text-blue-800 border-blue-200",
-      technical: "bg-gray-100 text-gray-800 border-gray-200",
-      framework: "bg-indigo-100 text-indigo-800 border-indigo-200",
-      advice: "bg-teal-100 text-teal-800 border-teal-200",
+      origin_story: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      failure_story: "bg-red-500/20 text-red-400 border-red-500/30",
+      success_story: "bg-green-500/20 text-green-400 border-green-500/30",
+      hot_take: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      contrarian_view: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      prediction: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      technical: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+      framework: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+      advice: "bg-teal-500/20 text-teal-400 border-teal-500/30",
     };
-    return colors[type] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[type] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
   };
 
   const unresolvedComments = comments.filter(c => !c.resolved);
@@ -314,14 +314,14 @@ function ClientContentContent() {
           {selectedExtraction && (
             <>
               {/* Dialog Header */}
-              <DialogHeader className="p-6 pb-4 border-b bg-gradient-to-r from-gray-50 to-white">
+              <DialogHeader className="p-6 pb-4 border-b border-border bg-card">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <DialogTitle className="flex items-center gap-3 text-xl">
                       <Badge className={`${getTypeColor(selectedExtraction.contentType)} border`}>
                         {getTypeLabel(selectedExtraction.contentType)}
                       </Badge>
-                      <span className="font-normal text-gray-600">Post Preview</span>
+                      <span className="font-normal text-muted-foreground">Post Preview</span>
                     </DialogTitle>
                     <DialogDescription>
                       Created from your interview on{" "}
@@ -344,21 +344,21 @@ function ClientContentContent() {
 
               {/* Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 pt-4 border-b bg-white">
-                  <TabsList className="grid w-full max-w-lg grid-cols-4 bg-gray-100/80">
-                    <TabsTrigger value="twitter" className="flex items-center gap-2 data-[state=active]:bg-white">
+                <div className="px-6 pt-4 border-b border-border bg-card">
+                  <TabsList className="grid w-full max-w-lg grid-cols-4 bg-muted">
+                    <TabsTrigger value="twitter" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <Twitter className="h-4 w-4" />
                       Twitter
                     </TabsTrigger>
-                    <TabsTrigger value="linkedin" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="linkedin" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <Linkedin className="h-4 w-4" />
                       LinkedIn
                     </TabsTrigger>
-                    <TabsTrigger value="comments" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="comments" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <MessageSquare className="h-4 w-4" />
                       Feedback ({comments.filter(c => !c.resolved).length})
                     </TabsTrigger>
-                    <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <FileText className="h-4 w-4" />
                       Details
                     </TabsTrigger>
@@ -368,7 +368,7 @@ function ClientContentContent() {
                 <div className="flex-1 overflow-y-auto">
                   {/* Twitter Tab */}
                   <TabsContent value="twitter" className="m-0 h-full">
-                    <div className="bg-gradient-to-b from-gray-100 to-gray-50 p-8 min-h-full">
+                    <div className="bg-muted/30 p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
                         <CommentableTweetMockup
                           extractionId={selectedExtraction.id}
@@ -382,8 +382,8 @@ function ClientContentContent() {
                         />
 
                         {/* Actions */}
-                        <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
-                          <span className="text-sm text-gray-500">
+                        <div className="flex items-center justify-between bg-card rounded-xl p-4 border border-border shadow-sm">
+                          <span className="text-sm text-muted-foreground">
                             {selectedExtraction.tweetDraft?.length || 0} characters
                           </span>
                           <Button
@@ -394,7 +394,7 @@ function ClientContentContent() {
                           >
                             {copiedField === "tweet" ? (
                               <>
-                                <Check className="h-4 w-4 text-green-600" />
+                                <Check className="h-4 w-4 text-green-500" />
                                 Copied!
                               </>
                             ) : (
@@ -406,7 +406,7 @@ function ClientContentContent() {
                           </Button>
                         </div>
 
-                        <p className="text-xs text-gray-500 text-center">
+                        <p className="text-xs text-muted-foreground text-center">
                           Click on any text in the tweet to leave feedback
                         </p>
                       </div>
@@ -415,7 +415,7 @@ function ClientContentContent() {
 
                   {/* LinkedIn Tab */}
                   <TabsContent value="linkedin" className="m-0 h-full">
-                    <div className="bg-gradient-to-b from-blue-50/30 to-gray-50 p-8 min-h-full">
+                    <div className="bg-muted/30 p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
                         {selectedExtraction.linkedinDraft ? (
                           <>
@@ -427,8 +427,8 @@ function ClientContentContent() {
                             />
 
                             {/* Actions */}
-                            <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
-                              <span className="text-sm text-gray-500">
+                            <div className="flex items-center justify-between bg-card rounded-xl p-4 border border-border shadow-sm">
+                              <span className="text-sm text-muted-foreground">
                                 {selectedExtraction.linkedinDraft?.length || 0} characters
                               </span>
                               <Button
@@ -439,7 +439,7 @@ function ClientContentContent() {
                               >
                                 {copiedField === "linkedin" ? (
                                   <>
-                                    <Check className="h-4 w-4 text-green-600" />
+                                    <Check className="h-4 w-4 text-green-500" />
                                     Copied!
                                   </>
                                 ) : (
@@ -452,10 +452,10 @@ function ClientContentContent() {
                             </div>
                           </>
                         ) : (
-                          <Card className="border-dashed bg-white/50">
+                          <Card className="border-dashed border-border bg-card/50">
                             <CardContent className="py-12 text-center">
-                              <Linkedin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                              <p className="text-gray-500">
+                              <Linkedin className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                              <p className="text-muted-foreground">
                                 No LinkedIn version available for this content.
                               </p>
                             </CardContent>
@@ -477,20 +477,20 @@ function ClientContentContent() {
                   {/* Details Tab */}
                   <TabsContent value="details" className="m-0 p-6 space-y-6">
                     {/* Key Quote */}
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-blue-600" />
+                    <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl p-6 border border-blue-500/20">
+                      <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-blue-400" />
                         Key Quote
                       </h4>
-                      <blockquote className="text-lg text-gray-700 italic leading-relaxed">
+                      <blockquote className="text-lg text-muted-foreground italic leading-relaxed">
                         &ldquo;{selectedExtraction.keyQuote}&rdquo;
                       </blockquote>
                     </div>
 
                     {/* Summary */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-900">Summary</h4>
-                      <p className="text-gray-600 leading-relaxed bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-foreground">Summary</h4>
+                      <p className="text-muted-foreground leading-relaxed bg-muted rounded-lg p-4">
                         {selectedExtraction.summary}
                       </p>
                     </div>
@@ -498,14 +498,14 @@ function ClientContentContent() {
                     {/* Thread Outline */}
                     {selectedExtraction.threadOutline && selectedExtraction.threadOutline.length > 0 && (
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-gray-900">Thread Ideas</h4>
-                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <h4 className="font-semibold text-foreground">Thread Ideas</h4>
+                        <div className="bg-muted rounded-lg p-4 space-y-3">
                           {selectedExtraction.threadOutline.map((point, i) => (
                             <div key={i} className="flex gap-3">
-                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium flex items-center justify-center">
                                 {i + 1}
                               </span>
-                              <p className="text-gray-700 text-sm leading-relaxed pt-0.5">{point}</p>
+                              <p className="text-muted-foreground text-sm leading-relaxed pt-0.5">{point}</p>
                             </div>
                           ))}
                         </div>
@@ -514,15 +514,15 @@ function ClientContentContent() {
 
                     {/* Original Response */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-900">From Your Interview</h4>
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <h4 className="font-semibold text-foreground">From Your Interview</h4>
+                      <div className="bg-muted rounded-lg p-4 space-y-3">
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Question</p>
-                          <p className="text-gray-700 text-sm">{selectedExtraction.questionAsked}</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Question</p>
+                          <p className="text-foreground text-sm">{selectedExtraction.questionAsked}</p>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Response</p>
-                          <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Your Response</p>
+                          <p className="text-foreground text-sm whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
                             {selectedExtraction.rawResponse}
                           </p>
                         </div>
@@ -531,17 +531,17 @@ function ClientContentContent() {
 
                     {/* Content Ratings */}
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-gray-900">{selectedExtraction.storytellingPotential}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Story Score</p>
+                      <div className="bg-muted rounded-lg p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">{selectedExtraction.storytellingPotential}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Story Score</p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-gray-900">{selectedExtraction.technicalDepth}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Technical</p>
+                      <div className="bg-muted rounded-lg p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">{selectedExtraction.technicalDepth}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Technical</p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-gray-900">{selectedExtraction.controversyLevel}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Hot Take</p>
+                      <div className="bg-muted rounded-lg p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">{selectedExtraction.controversyLevel}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Hot Take</p>
                       </div>
                     </div>
                   </TabsContent>
