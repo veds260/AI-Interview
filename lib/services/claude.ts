@@ -334,11 +334,54 @@ Use \\n for line breaks. Return ONLY the JSON.`;
 
   async generateFollowUp(
     question: string,
-    response: string
+    response: string,
+    context?: {
+      clientName?: string;
+      industry?: string;
+      topics?: string[];
+      competitorTopics?: string[];
+      previousQuestions?: string[];
+      questionNumber?: number;
+    }
   ): Promise<string | null> {
     if (!this.isConfigured()) {
       return null;
     }
+
+    // Build context info
+    let contextInfo = "";
+    if (context) {
+      if (context.clientName) {
+        contextInfo += `Founder: ${context.clientName}\n`;
+      }
+      if (context.industry) {
+        contextInfo += `Industry: ${context.industry}\n`;
+      }
+      if (context.topics?.length) {
+        contextInfo += `Their expertise: ${context.topics.join(", ")}\n`;
+      }
+      if (context.competitorTopics?.length) {
+        contextInfo += `Hot topics in their space: ${context.competitorTopics.slice(0, 5).join(", ")}\n`;
+      }
+      if (context.previousQuestions?.length) {
+        contextInfo += `Already asked (DO NOT repeat similar questions): ${context.previousQuestions.join(" | ")}\n`;
+      }
+    }
+
+    // Vary the question type based on question number
+    const questionTypes = [
+      "Dig deeper into a specific detail or claim they made",
+      "Ask about a challenge or obstacle related to what they said",
+      "Explore the 'why' behind their decision or approach",
+      "Ask about what surprised them or what they learned",
+      "Connect their answer to a broader trend or hot topic in their industry",
+      "Ask about the impact or results of what they described",
+      "Explore an alternative approach they considered",
+      "Ask about advice they'd give based on this experience",
+    ];
+
+    const typeIndex = (context?.questionNumber || 0) % questionTypes.length;
+    const questionFocus = questionTypes[typeIndex];
 
     try {
       const result = await fetch(this.baseUrl, {
@@ -350,22 +393,30 @@ Use \\n for line breaks. Return ONLY the JSON.`;
           "X-Title": "Compound Interviewer",
         },
         body: JSON.stringify({
-          model: this.model,
-          max_tokens: 500,
+          model: "anthropic/claude-3-haiku", // Use Haiku for faster follow-ups
+          max_tokens: 200,
           messages: [
             {
               role: "user",
-              content: `Based on this interview exchange, generate a natural follow-up question to dig deeper.
+              content: `You are interviewing a founder. Generate ONE follow-up question.
 
-Question: ${question}
-Response: ${response}
+${contextInfo ? `CONTEXT:\n${contextInfo}\n` : ""}
+LAST EXCHANGE:
+Q: ${question}
+A: ${response}
 
-Generate a single follow-up question that:
-1. Explores something interesting from their response
-2. Asks for a specific example or story
-3. Sounds natural and conversational
+QUESTION FOCUS FOR THIS FOLLOW-UP:
+${questionFocus}
 
-Return ONLY the follow-up question, nothing else.`,
+RULES:
+- Ask ONE specific, conversational question
+- Make it relevant to THEIR industry/experience, not generic
+- DO NOT ask for "an example" or "a specific story" (too repetitive)
+- DO NOT repeat topics from previous questions
+- Connect to hot topics in their space if relevant
+- Keep it short (under 25 words)
+
+Return ONLY the follow-up question.`,
             },
           ],
         }),

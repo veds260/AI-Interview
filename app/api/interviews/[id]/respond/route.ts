@@ -48,51 +48,51 @@ async function generateFollowUpQuestion(
     clientContext?: ClientKnowledgeSummary;
     previousInterviews?: PreviousInterviewSummary[];
     competitorTopics?: string[];
+    questionNumber?: number;
+    previousQuestions?: string[];
   },
   trackingContext?: { interviewId: string; clientId?: string }
 ): Promise<string | null> {
   try {
-    // Build separate sections for knowledge base vs previous interviews
-    let knowledgeBaseInfo = "";
-    let previousInterviewsInfo = "";
+    // Build context info
+    let contextInfo = "";
 
     if (sessionContext.clientName) {
-      knowledgeBaseInfo += `Name: ${sessionContext.clientName}\n`;
+      contextInfo += `Founder: ${sessionContext.clientName}\n`;
     }
 
     if (sessionContext.topics?.length) {
-      knowledgeBaseInfo += `Topics of expertise: ${sessionContext.topics.join(", ")}\n`;
+      contextInfo += `Their expertise: ${sessionContext.topics.join(", ")}\n`;
     }
 
-    // Add knowledge base context (STATIC INFO - NOT from conversations)
     const kb = sessionContext.clientContext;
     if (kb) {
-      if (kb.bio) knowledgeBaseInfo += `Bio: ${kb.bio}\n`;
-      if (kb.products?.length) knowledgeBaseInfo += `Products/Services: ${kb.products.join(", ")}\n`;
-      if (kb.talkingPoints?.length) knowledgeBaseInfo += `Key talking points they want to discuss: ${kb.talkingPoints.join("; ")}\n`;
-      if (kb.voiceGuidelines) knowledgeBaseInfo += `Voice style: ${kb.voiceGuidelines}\n`;
-      if (kb.recentTweets?.length) knowledgeBaseInfo += `Recent tweets/posts: ${kb.recentTweets.slice(0, 5).join(" | ")}\n`;
+      if (kb.products?.length) contextInfo += `Their products: ${kb.products.join(", ")}\n`;
+      if (kb.talkingPoints?.length) contextInfo += `Topics they want to discuss: ${kb.talkingPoints.slice(0, 3).join("; ")}\n`;
     }
 
-    // Add competitor/trending topics
     if (sessionContext.competitorTopics?.length) {
-      knowledgeBaseInfo += `Trending topics from competitors: ${sessionContext.competitorTopics.join(", ")}\n`;
+      contextInfo += `Hot topics in their space: ${sessionContext.competitorTopics.slice(0, 5).join(", ")}\n`;
     }
 
-    // Add ACTUAL previous interview Q&A (things they actually said in past sessions)
-    if (sessionContext.previousInterviews?.length) {
-      previousInterviewsInfo = "\n=== ACTUAL PREVIOUS INTERVIEW CONVERSATIONS ===\n";
-      previousInterviewsInfo += "(You CAN reference these as 'last time we talked' or 'you mentioned before')\n";
-      sessionContext.previousInterviews.forEach((prev, i) => {
-        previousInterviewsInfo += `\n--- Interview ${i + 1}${prev.topic ? ` (${prev.topic})` : ""} ---\n`;
-        previousInterviewsInfo += `Topics covered: ${prev.topicsDiscussed.join(", ")}\n`;
-        previousInterviewsInfo += "Q&A:\n";
-        prev.keyInsights.forEach((insight) => {
-          previousInterviewsInfo += `${insight}\n`;
-        });
-      });
-      previousInterviewsInfo += "\n=== END PREVIOUS INTERVIEWS ===\n";
+    if (sessionContext.previousQuestions?.length) {
+      contextInfo += `Already asked (AVOID similar): ${sessionContext.previousQuestions.slice(-3).join(" | ")}\n`;
     }
+
+    // Rotate through different question approaches to add variety
+    const questionApproaches = [
+      "Ask about a CHALLENGE or obstacle they faced with this",
+      "Ask WHY they made this choice over alternatives",
+      "Ask about the IMPACT or results they saw",
+      "Connect to a HOT TOPIC in their industry",
+      "Ask what SURPRISED them about this",
+      "Ask what they would do DIFFERENTLY now",
+      "Ask about the TURNING POINT in this situation",
+      "Ask what ADVICE they'd give based on this",
+    ];
+
+    const approachIndex = (sessionContext.questionNumber || 0) % questionApproaches.length;
+    const currentApproach = questionApproaches[approachIndex];
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return null;
@@ -106,28 +106,25 @@ async function generateFollowUpQuestion(
       },
       body: JSON.stringify({
         model: "anthropic/claude-3-haiku",
-        max_tokens: 100, // Keep questions SHORT
+        max_tokens: 100,
         messages: [
           {
-            role: "system",
-            content: `You generate SHORT, CLEAR follow-up questions for content interviews.
+            role: "user",
+            content: `Generate ONE follow-up question for a founder interview.
 
-CONTEXT (for reference only):
-${knowledgeBaseInfo || "No background available"}
-${previousInterviewsInfo}
+${contextInfo ? `CONTEXT:\n${contextInfo}\n` : ""}
+THEIR LAST ANSWER: "${response.slice(0, 400)}"
+
+YOUR TASK: ${currentApproach}
 
 RULES:
-1. Questions must be 1 sentence, under 20 words
-2. Be direct and specific - no fluff
-3. Ask for: examples, numbers, stories, or hot takes
-4. NEVER reference knowledge base as "you told me" - use "given your work in X..."
-5. Match their energy - casual if they're casual`,
-          },
-          {
-            role: "user",
-            content: `They answered: "${response.slice(0, 500)}"
+- Keep under 20 words
+- Be specific to THEIR industry, not generic
+- DO NOT ask for "an example" or "a specific story" (overused)
+- Make it conversational
+- Connect to trending topics if relevant
 
-Ask ONE short follow-up (under 20 words). Just the question, nothing else.`,
+Return ONLY the question.`,
           },
         ],
       }),
@@ -152,7 +149,6 @@ Ask ONE short follow-up (under 20 words). Just the question, nothing else.`,
     const data = await res.json();
     const result = data.choices?.[0]?.message?.content?.trim() || null;
 
-    // Track successful API call
     await trackApiCall({
       interviewId: trackingContext?.interviewId,
       clientId: trackingContext?.clientId,
@@ -396,6 +392,12 @@ export async function POST(
     // BACKGROUND: Generate follow-up for the NEXT question cycle (don't await)
     // This runs async so it doesn't block the response
     if (!isFollowUp && response.trim().length > 50 && !completed) {
+      // Get previous questions to avoid repetition
+      const previousQuestions = questionsAsked
+        .slice(-5)
+        .map((qa: any) => qa.question)
+        .filter(Boolean);
+
       // Fire and forget - generate follow-up in background
       generateFollowUpQuestion(
         currentQuestionData?.question || "",
@@ -406,6 +408,8 @@ export async function POST(
           clientContext: state.clientContext,
           previousInterviews: state.previousInterviews,
           competitorTopics: state.competitorTopics,
+          questionNumber: questionsAsked.length,
+          previousQuestions,
         },
         { interviewId: id, clientId: interview.clientId || undefined }
       ).then(async (followUp) => {

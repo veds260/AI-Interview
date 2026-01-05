@@ -22,7 +22,7 @@ import {
   Loader2,
   Phone,
   PhoneOff,
-  RefreshCw,
+  RotateCcw,
   CheckCircle,
   MessageSquare,
   Volume2,
@@ -518,12 +518,33 @@ function VideoInterviewContent() {
     [interviewId, progress, currentQuestion, speak]
   );
 
-  // Repeat current question
+  // Repeat current question (plays the question audio again)
   const repeatQuestion = useCallback(() => {
     if (currentQuestion && !isAvatarSpeaking) {
       speak(currentQuestion);
     }
   }, [currentQuestion, isAvatarSpeaking, speak]);
+
+  // Retake answer - discard current recording and start fresh
+  const retakeAnswer = useCallback(() => {
+    // Stop any ongoing recording without submitting
+    if (isRecordingAudio && mediaRecorderRef.current) {
+      // Clear the ondataavailable handler to prevent processing
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+      setIsRecordingAudio(false);
+    }
+    // Clear audio chunks
+    audioChunksRef.current = [];
+    // Clear any error
+    setCaptureError(null);
+    // Re-speak the question so they can try again
+    if (currentQuestion) {
+      toast.success("Recording discarded. Try again!");
+      speak(currentQuestion);
+    }
+  }, [isRecordingAudio, currentQuestion, speak]);
 
   // Toggle mute (for video mode) or start/stop recording (for audio mode)
   const toggleMute = useCallback(() => {
@@ -749,8 +770,21 @@ function VideoInterviewContent() {
               className="rounded-full w-14 h-14"
               title="Repeat question"
             >
-              <RefreshCw className="w-5 h-5" />
+              <Volume2 className="w-5 h-5" />
             </Button>
+
+            {audioOnly && (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={retakeAnswer}
+                disabled={isAvatarSpeaking || !currentQuestion}
+                className="rounded-full w-14 h-14"
+                title="Retake answer"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </Button>
+            )}
           </div>
 
           <p className="text-center text-sm text-gray-500 mt-3">

@@ -36,47 +36,50 @@ async function generateFollowUpQuestion(
     clientContext?: ClientKnowledgeSummary;
     previousInterviews?: PreviousInterviewSummary[];
     competitorTopics?: string[];
+    questionNumber?: number;
+    previousQuestions?: string[];
   }
 ): Promise<string | null> {
   try {
-    // Build rich context from knowledge base and previous interviews
+    // Build context info
     let contextInfo = "";
 
     if (sessionContext.clientName) {
-      contextInfo += `Client: ${sessionContext.clientName}\n`;
+      contextInfo += `Founder: ${sessionContext.clientName}\n`;
     }
 
     if (sessionContext.topics?.length) {
-      contextInfo += `Topics of expertise: ${sessionContext.topics.join(", ")}\n`;
+      contextInfo += `Their expertise: ${sessionContext.topics.join(", ")}\n`;
     }
 
-    // Add knowledge base context
     const kb = sessionContext.clientContext;
     if (kb) {
-      if (kb.bio) contextInfo += `Bio: ${kb.bio}\n`;
-      if (kb.products?.length) contextInfo += `Products/Services: ${kb.products.join(", ")}\n`;
-      if (kb.talkingPoints?.length) contextInfo += `Key talking points: ${kb.talkingPoints.join("; ")}\n`;
-      if (kb.voiceGuidelines) contextInfo += `Voice style: ${kb.voiceGuidelines}\n`;
+      if (kb.products?.length) contextInfo += `Their products: ${kb.products.join(", ")}\n`;
+      if (kb.talkingPoints?.length) contextInfo += `Topics they want to discuss: ${kb.talkingPoints.slice(0, 3).join("; ")}\n`;
     }
 
-    // Add previous interview insights with FULL Q&A (critical for continuity)
-    if (sessionContext.previousInterviews?.length) {
-      contextInfo += "\n=== PREVIOUS INTERVIEWS - FULL HISTORY (you MUST reference this when relevant) ===\n";
-      sessionContext.previousInterviews.forEach((prev, i) => {
-        contextInfo += `\n--- Interview ${i + 1}${prev.topic ? ` (${prev.topic})` : ""} ---\n`;
-        contextInfo += `Topics covered: ${prev.topicsDiscussed.join(", ")}\n`;
-        contextInfo += "Previous Q&A:\n";
-        prev.keyInsights.forEach((insight) => {
-          contextInfo += `${insight}\n`;
-        });
-      });
-      contextInfo += "\n=== END PREVIOUS INTERVIEWS ===\n";
-    }
-
-    // Add competitor/trending topics
     if (sessionContext.competitorTopics?.length) {
-      contextInfo += `\nTrending topics from competitors: ${sessionContext.competitorTopics.join(", ")}\n`;
+      contextInfo += `Hot topics in their space: ${sessionContext.competitorTopics.slice(0, 5).join(", ")}\n`;
     }
+
+    if (sessionContext.previousQuestions?.length) {
+      contextInfo += `Already asked (AVOID similar): ${sessionContext.previousQuestions.slice(-3).join(" | ")}\n`;
+    }
+
+    // Rotate through different question approaches to add variety
+    const questionApproaches = [
+      "Ask about a CHALLENGE or obstacle they faced with this",
+      "Ask WHY they made this choice over alternatives",
+      "Ask about the IMPACT or results they saw",
+      "Connect to a HOT TOPIC in their industry",
+      "Ask what SURPRISED them about this",
+      "Ask what they would do DIFFERENTLY now",
+      "Ask about the TURNING POINT in this situation",
+      "Ask what ADVICE they'd give based on this",
+    ];
+
+    const approachIndex = (sessionContext.questionNumber || 0) % questionApproaches.length;
+    const currentApproach = questionApproaches[approachIndex];
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return null;
@@ -88,38 +91,26 @@ async function generateFollowUpQuestion(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "anthropic/claude-3-haiku", // Using Haiku for cost efficiency
-        max_tokens: 300,
+        model: "anthropic/claude-3-haiku",
+        max_tokens: 100,
         messages: [
           {
-            role: "system",
-            content: `You are an expert interviewer having an ongoing conversation with a founder across multiple sessions.
-Your goal is to dig deeper into interesting responses to extract content that can become viral tweets, threads, and posts.
-
-${contextInfo}
-
-CRITICAL GUIDELINES:
-1. You have FULL MEMORY of all previous interviews above. REFERENCE them when relevant.
-2. If the founder mentions something they discussed before, acknowledge it: "Yes, you mentioned [topic] last time..."
-3. If they ask what they said before, QUOTE their previous answer from the history above.
-4. If they point out a topic was already covered, apologize and ask about a DIFFERENT aspect or a NEW topic.
-5. NEVER ask the exact same question as in previous interviews.
-6. Connect current answers to themes from past sessions to show continuity.
-7. Look for unique insights, contrarian views, or unexpected lessons.
-8. Try to get specific examples, numbers, or memorable quotes.
-9. Keep questions conversational and natural.`,
-          },
-          {
             role: "user",
-            content: `The interviewer asked: "${question}"
+            content: `Generate ONE follow-up question for a founder interview.
 
-The founder responded: "${response}"
+${contextInfo ? `CONTEXT:\n${contextInfo}\n` : ""}
+THEIR LAST ANSWER: "${response.slice(0, 400)}"
 
-IMPORTANT: If the founder is asking about what they said before, complaining about a repeated question, or referencing past discussions, address that FIRST using the previous interview history above.
+YOUR TASK: ${currentApproach}
 
-Otherwise, generate a single, natural follow-up question that digs deeper. Connect to themes from their previous interviews when relevant.
+RULES:
+- Keep under 20 words
+- Be specific to THEIR industry, not generic
+- DO NOT ask for "an example" or "a specific story" (overused)
+- Make it conversational
+- Connect to trending topics if relevant
 
-Return ONLY your response (either addressing their concern OR a follow-up question), nothing else.`,
+Return ONLY the question.`,
           },
         ],
       }),
@@ -236,16 +227,23 @@ export async function POST(
 
     // Only generate follow-up if we haven't already for this base question
     if (followUpCount === 0 && response.trim().length > 50) {
+      // Get previous questions to avoid repetition
+      const previousQuestions = questionsAsked
+        .slice(-5)
+        .map((qa: any) => qa.question)
+        .filter(Boolean);
+
       nextQuestion = await generateFollowUpQuestion(
         currentQuestion?.question || "",
         response.trim(),
         {
           clientName,
           topics: clientTopics,
-          // Use rich context from session state (populated at interview creation)
           clientContext: state.clientContext,
           previousInterviews: state.previousInterviews,
           competitorTopics: state.competitorTopics,
+          questionNumber: questionsAsked.length,
+          previousQuestions,
         }
       );
       if (nextQuestion) {

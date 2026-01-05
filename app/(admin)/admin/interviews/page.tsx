@@ -108,6 +108,7 @@ export default function AdminInterviewsPage() {
   const [interviewToExtract, setInterviewToExtract] = useState<Interview | null>(null);
   const [reextractConfirmOpen, setReextractConfirmOpen] = useState(false);
   const [interviewToReextract, setInterviewToReextract] = useState<Interview | null>(null);
+  const [extractingInterviewId, setExtractingInterviewId] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -180,6 +181,7 @@ export default function AdminInterviewsPage() {
 
   const extractMutation = useMutation({
     mutationFn: async (interviewId: string) => {
+      setExtractingInterviewId(interviewId);
       const res = await fetch("/api/extractions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,17 +192,20 @@ export default function AdminInterviewsPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
-      toast.success(`Extracted ${data.count} content pieces. Interview marked as completed.`);
+      toast.success(`Extracted ${data.count} content pieces.`);
       setExtractConfirmOpen(false);
       setInterviewToExtract(null);
+      setExtractingInterviewId(null);
     },
     onError: () => {
       toast.error("Failed to extract content");
+      setExtractingInterviewId(null);
     },
   });
 
   const reextractMutation = useMutation({
     mutationFn: async (interviewId: string) => {
+      setExtractingInterviewId(interviewId);
       const res = await fetch("/api/extractions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,12 +217,14 @@ export default function AdminInterviewsPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
       queryClient.invalidateQueries({ queryKey: ["admin-extractions"] });
-      toast.success(`Re-extracted ${data.count} content pieces with full context.`);
+      toast.success(`Re-extracted ${data.count} content pieces.`);
       setReextractConfirmOpen(false);
       setInterviewToReextract(null);
+      setExtractingInterviewId(null);
     },
     onError: () => {
       toast.error("Failed to re-extract content");
+      setExtractingInterviewId(null);
     },
   });
 
@@ -538,12 +545,19 @@ export default function AdminInterviewsPage() {
                     <TableCell>{getStatusBadge(interview.status)}</TableCell>
                     <TableCell>{interview.questionsCount || 0}</TableCell>
                     <TableCell>
-                      {(interview.extractionsCount || 0) > 0 ? (
-                        <Badge variant="outline" className="text-purple-600">
-                          {interview.extractionsCount}
+                      {extractingInterviewId === interview.id ? (
+                        <Badge className="bg-blue-100 text-blue-800 animate-pulse">
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Extracting...
+                        </Badge>
+                      ) : (interview.extractionsCount || 0) > 0 ? (
+                        <Badge className="bg-green-100 text-green-800">
+                          {interview.extractionsCount} Available
                         </Badge>
                       ) : (
-                        <span className="text-gray-400">0</span>
+                        <Badge variant="outline" className="text-gray-500">
+                          Not extracted
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -569,45 +583,35 @@ export default function AdminInterviewsPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleExtractClick(interview)}
-                                disabled={extractMutation.isPending}
+                                disabled={extractMutation.isPending || extractingInterviewId === interview.id}
+                                title="Extract content"
                               >
-                                {extractMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Play className="mr-1 h-4 w-4" />
-                                    Extract
-                                  </>
-                                )}
+                                <Play className="h-4 w-4" />
                               </Button>
                             ) : (
                               <>
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="ghost"
                                   onClick={() => {
                                     setInterviewToReextract(interview);
                                     setReextractConfirmOpen(true);
                                   }}
-                                  disabled={reextractMutation.isPending}
+                                  disabled={reextractMutation.isPending || extractingInterviewId === interview.id}
                                   title="Re-extract with full context"
                                 >
-                                  {reextractMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4" />
-                                  )}
+                                  <RefreshCw className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="ghost"
                                   onClick={() => {
                                     setSelectedInterview(interview);
                                     setAssignDialogOpen(true);
                                   }}
+                                  title="Assign to writer"
                                 >
-                                  <UserPlus className="mr-1 h-4 w-4" />
-                                  Assign
+                                  <UserPlus className="h-4 w-4" />
                                 </Button>
                               </>
                             )}
