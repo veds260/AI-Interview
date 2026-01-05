@@ -83,7 +83,7 @@ export default function InterviewsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : interviews.length === 0 ? (
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card>
           <CardContent className="py-12 text-center">
             <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
               <Video className="h-6 w-6 text-muted-foreground" />
@@ -99,7 +99,7 @@ export default function InterviewsPage() {
       ) : (
         <div className="grid gap-4">
           {interviews.map((interview) => (
-            <Card key={interview.id} className="border-gray-800 bg-gray-900/50 hover:border-gray-700 transition-colors">
+            <Card key={interview.id} className="hover:border-muted-foreground/30 transition-colors">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -113,12 +113,12 @@ export default function InterviewsPage() {
                       )}
                     </div>
                     <div>
-                      <CardTitle className="text-lg text-white">
+                      <CardTitle className="text-lg">
                         {interview.mode === "live_video"
                           ? "Voice Interview"
                           : "Written Interview"}
                       </CardTitle>
-                      <CardDescription className="text-gray-400">
+                      <CardDescription>
                         Started {new Date(interview.createdAt).toLocaleDateString()}{" "}
                         at {new Date(interview.createdAt).toLocaleTimeString()}
                       </CardDescription>
@@ -147,7 +147,7 @@ export default function InterviewsPage() {
                           : `/client/interview/text/${interview.id}`
                       }
                     >
-                      <Button size="sm" className="bg-white text-gray-900 hover:bg-gray-100">
+                      <Button size="sm" variant="secondary">
                         {interview.status === "paused" ? "Resume" : "Continue"}
                       </Button>
                     </Link>

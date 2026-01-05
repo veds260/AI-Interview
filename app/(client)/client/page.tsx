@@ -48,13 +48,13 @@ export default function ClientDashboard() {
 
       {/* Interview Mode Cards */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="group border border-gray-800 hover:border-red-500/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gray-900/80">
+        <Card className="group hover:border-red-500/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
           <CardHeader className="pb-4">
             <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-red-500/30 transition-colors duration-300">
               <Mic className="h-6 w-6 text-red-500" />
             </div>
-            <CardTitle className="text-xl text-white">Voice Interview</CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardTitle className="text-xl">Voice Interview</CardTitle>
+            <CardDescription>
               Speak naturally. Our AI listens and asks follow-up questions.
             </CardDescription>
           </CardHeader>
@@ -68,13 +68,13 @@ export default function ClientDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="group border border-gray-800 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gray-900/80">
+        <Card className="group hover:border-emerald-500/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
           <CardHeader className="pb-4">
             <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-500/30 transition-colors duration-300">
               <MessageSquare className="h-6 w-6 text-emerald-500" />
             </div>
-            <CardTitle className="text-xl text-white">Written Interview</CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardTitle className="text-xl">Written Interview</CardTitle>
+            <CardDescription>
               Type at your own pace. Save and continue anytime.
             </CardDescription>
           </CardHeader>
