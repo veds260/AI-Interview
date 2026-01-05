@@ -36,30 +36,17 @@ interface GeneratedQuestion {
 const questionCache = new Map<string, { questions: GeneratedQuestion[]; timestamp: number }>();
 const CACHE_TTL_MS = 0; // Disabled - always generate fresh questions
 
-// Check if we have enough context to generate custom questions
+// DISABLED: AI-generated questions were hallucinating facts about clients
+// (e.g., asking about "marketing agency" when client never mentioned one)
+// Fall back to curated question bank with proper deduplication instead
 function hasRichContext(
   kb: KnowledgeBase | undefined,
   previousInterviews: PreviousInterviewContent[],
   competitorTopics: string[]
 ): boolean {
-  const hasBio = !!kb?.bio && kb.bio.length > 50;
-  const hasProducts = (kb?.products?.length || 0) > 0;
-  const hasTalkingPoints = (kb?.talkingPoints?.length || 0) > 0;
-  const hasPastInterviews = previousInterviews.length > 0;
-  const hasCompetitorTopics = competitorTopics.length > 0;
-  const hasTweets = (kb?.typefullyTweets?.length || 0) > 0;
-
-  // Need at least 2 sources of context for good questions
-  const contextSources = [
-    hasBio,
-    hasProducts,
-    hasTalkingPoints,
-    hasPastInterviews,
-    hasCompetitorTopics,
-    hasTweets,
-  ].filter(Boolean).length;
-
-  return contextSources >= 2;
+  // Always return false to use question bank instead of AI generation
+  // AI was making up facts and asking irrelevant questions
+  return false;
 }
 
 // Generate custom questions using AI based on client context
@@ -446,17 +433,56 @@ export async function POST(request: Request) {
       }).slice(0, 20);
     }
 
-    // If still no questions (all exhausted), allow repeats but prioritize least used
+    // If still no questions (all exhausted), DO NOT allow repeats
+    // Better to have a shorter interview than repeat questions the client already answered
     if (questions.length === 0) {
-      console.log("[Questions] All questions exhausted, allowing repeats");
-      questions = await db
-        .select()
-        .from(questionBank)
-        .where(
-          and(eq(questionBank.isActive, true), isNull(questionBank.clientId))
-        )
-        .orderBy(questionBank.timesUsed)
-        .limit(20);
+      console.log("[Questions] All unique questions exhausted - will create minimal interview");
+      // Return just 3 generic questions that are always okay to ask
+      const fallbackQuestions = [
+        {
+          id: "fallback-1",
+          question: "What's been on your mind lately that you haven't had a chance to talk about?",
+          category: "open_ended" as const,
+          difficulty: "easy" as const,
+          topics: ["general"],
+          expectedClipPotential: 7,
+          web2Friendly: true,
+          isActive: true,
+          clientId: null,
+          timesUsed: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "fallback-2",
+          question: "If you could give advice to yourself from 5 years ago, what would it be?",
+          category: "advice" as const,
+          difficulty: "easy" as const,
+          topics: ["reflection"],
+          expectedClipPotential: 8,
+          web2Friendly: true,
+          isActive: true,
+          clientId: null,
+          timesUsed: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "fallback-3",
+          question: "What's something you've changed your mind about recently?",
+          category: "lessons" as const,
+          difficulty: "easy" as const,
+          topics: ["growth"],
+          expectedClipPotential: 8,
+          web2Friendly: true,
+          isActive: true,
+          clientId: null,
+          timesUsed: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+      questions = fallbackQuestions as any;
     }
 
     // If STILL no questions (database is empty), create default starter questions

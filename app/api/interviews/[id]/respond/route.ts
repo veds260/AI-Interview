@@ -110,21 +110,22 @@ async function generateFollowUpQuestion(
         messages: [
           {
             role: "user",
-            content: `Generate ONE follow-up question for a founder interview.
+            content: `Generate ONE follow-up question based ONLY on what they just said.
 
-${contextInfo ? `CONTEXT:\n${contextInfo}\n` : ""}
-THEIR LAST ANSWER: "${response.slice(0, 400)}"
+ORIGINAL QUESTION: "${question}"
+
+THEIR ANSWER: "${response.slice(0, 400)}"
 
 YOUR TASK: ${currentApproach}
 
-RULES:
+CRITICAL RULES:
+- ONLY reference things they EXPLICITLY mentioned in their answer
+- NEVER assume facts they didn't state (jobs, companies, strategies they never mentioned)
 - Keep under 20 words
-- Be specific to THEIR industry, not generic
-- DO NOT ask for "an example" or "a specific story" (overused)
-- Make it conversational
-- Connect to trending topics if relevant
+- If their answer is short/vague, ask them to elaborate on what they DID say
+- NO generic questions like "how did that feel?" or "tell me more"
 
-Return ONLY the question.`,
+Return ONLY the question, nothing else.`,
           },
         ],
       }),
