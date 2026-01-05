@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle, Video, PenTool } from "lucide-react";
+import { Loader2, AlertCircle, Mic, PenTool, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type UserRole = "client" | "writer";
@@ -71,149 +71,165 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <div className="bg-gray-900 py-6 px-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
+      <div className="py-8 px-4">
         <div className="max-w-md mx-auto">
-          <Image
-            src="/logo.svg"
-            alt="Compound"
-            width={180}
-            height={42}
-            className="h-10 w-auto"
-            priority
-          />
+          <Link href="/">
+            <Image
+              src="/logo.svg"
+              alt="Compound"
+              width={140}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
+          </Link>
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Create an account
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md border-gray-800/50 bg-gray-900/90 backdrop-blur-md shadow-2xl">
+          <CardHeader className="space-y-1 pb-6">
+            <CardTitle className="text-2xl font-bold text-center text-white tracking-tight">
+              Get Started
             </CardTitle>
-            <CardDescription className="text-center">
-              Get started with Compound
+            <CardDescription className="text-center text-gray-400">
+              Create your account in seconds
             </CardDescription>
           </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Role Selection */}
-            <div className="space-y-2">
-              <Label>I am a...</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole("client")}
-                  disabled={loading}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
-                    role === "client"
-                      ? "border-red-500 bg-red-50 text-red-700"
-                      : "border-gray-200 hover:border-gray-300 text-gray-600"
-                  )}
-                >
-                  <Video className="h-6 w-6" />
-                  <span className="font-medium">Founder</span>
-                  <span className="text-xs text-gray-500">Take interviews</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("writer")}
-                  disabled={loading}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
-                    role === "writer"
-                      ? "border-red-500 bg-red-50 text-red-700"
-                      : "border-gray-200 hover:border-gray-300 text-gray-600"
-                  )}
-                >
-                  <PenTool className="h-6 w-6" />
-                  <span className="font-medium">Writer</span>
-                  <span className="text-xs text-gray-500">Create content</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                "Create account"
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-            </Button>
-          </form>
 
-          <div className="mt-6 text-center text-sm">
-            <span className="text-gray-600">Already have an account? </span>
-            <Link
-              href="/login"
-              className="text-blue-600 hover:underline font-medium"
-            >
-              Sign in
-            </Link>
-          </div>
-        </CardContent>
+              {/* Role Selection */}
+              <div className="space-y-3">
+                <Label className="text-gray-300">I am a...</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole("client")}
+                    disabled={loading}
+                    className={cn(
+                      "relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200",
+                      role === "client"
+                        ? "border-red-500 bg-red-500/10 text-white"
+                        : "border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-300 bg-gray-800/30"
+                    )}
+                  >
+                    {role === "client" && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="h-4 w-4 text-red-500" />
+                      </div>
+                    )}
+                    <Mic className={cn("h-6 w-6", role === "client" ? "text-red-500" : "")} />
+                    <span className="font-medium">Founder</span>
+                    <span className="text-xs text-gray-500">Share my story</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("writer")}
+                    disabled={loading}
+                    className={cn(
+                      "relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200",
+                      role === "writer"
+                        ? "border-red-500 bg-red-500/10 text-white"
+                        : "border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-300 bg-gray-800/30"
+                    )}
+                  >
+                    {role === "writer" && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="h-4 w-4 text-red-500" />
+                      </div>
+                    )}
+                    <PenTool className={cn("h-6 w-6", role === "writer" ? "text-red-500" : "")} />
+                    <span className="font-medium">Writer</span>
+                    <span className="text-xs text-gray-500">Create posts</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-gray-300">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-300">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-gray-300">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                />
+              </div>
+
+              <Button type="submit" variant="premium" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create account"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-8 text-center text-sm">
+              <span className="text-gray-500">Already have an account? </span>
+              <Link
+                href="/login"
+                className="text-red-500 hover:text-red-400 font-medium transition-colors"
+              >
+                Sign in
+              </Link>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>

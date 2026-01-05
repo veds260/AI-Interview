@@ -57,26 +57,26 @@ function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">
+    <Card className="w-full max-w-md border-gray-800/50 bg-gray-900/90 backdrop-blur-md shadow-2xl">
+      <CardHeader className="space-y-1 pb-6">
+        <CardTitle className="text-2xl font-bold text-center text-white tracking-tight">
           Welcome back
         </CardTitle>
-        <CardDescription className="text-center">
-          Sign in to your Compound Interviewer account
+        <CardDescription className="text-center text-gray-400">
+          Pick up where you left off
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {authError && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{authError}</AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-gray-300">Email</Label>
             <Input
               id="email"
               type="email"
@@ -85,11 +85,12 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-gray-300">Password</Label>
             <Input
               id="password"
               type="password"
@@ -98,10 +99,11 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" variant="premium" className="w-full" disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -113,13 +115,13 @@ function LoginForm() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm">
-          <span className="text-gray-600">Don&apos;t have an account? </span>
+        <div className="mt-8 text-center text-sm">
+          <span className="text-gray-500">New here? </span>
           <Link
             href="/register"
-            className="text-blue-600 hover:underline font-medium"
+            className="text-red-500 hover:text-red-400 font-medium transition-colors"
           >
-            Sign up
+            Create an account
           </Link>
         </div>
       </CardContent>
@@ -129,25 +131,27 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <div className="bg-gray-900 py-6 px-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
+      <div className="py-8 px-4">
         <div className="max-w-md mx-auto">
-          <Image
-            src="/logo.svg"
-            alt="Compound"
-            width={180}
-            height={42}
-            className="h-10 w-auto"
-            priority
-          />
+          <Link href="/">
+            <Image
+              src="/logo.svg"
+              alt="Compound"
+              width={140}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
+          </Link>
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
         <Suspense
           fallback={
-            <Card className="w-full max-w-md">
+            <Card className="w-full max-w-md border-gray-800/50 bg-gray-900/90">
               <CardContent className="flex justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
               </CardContent>
             </Card>
           }

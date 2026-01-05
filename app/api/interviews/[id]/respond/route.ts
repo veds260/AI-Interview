@@ -371,7 +371,14 @@ export async function POST(
     // Calculate next index - always move forward for skipped
     const shouldMoveToNext = isSkipped || !isFollowUp;
     const nextIndex = shouldMoveToNext ? currentIndex + 1 : currentIndex;
-    const completed = nextIndex >= totalQuestions;
+
+    // Count actual answered questions (not skipped ones)
+    const answeredCount = questionsAsked.length;
+
+    // Interview only completes when:
+    // 1. We've gone through all questions AND
+    // 2. At least one question was actually answered
+    const completed = nextIndex >= totalQuestions && answeredCount > 0;
 
     // Now await client info (was fetching in background while we did other work)
     const client = await clientPromise;
@@ -506,12 +513,29 @@ export async function POST(
       });
     }
 
+    // If we've gone through all questions but haven't answered any
+    if (nextIndex >= totalQuestions && answeredCount === 0) {
+      return NextResponse.json({
+        completed: false,
+        allSkipped: true,
+        message: "Please answer at least one question to complete the interview.",
+        questionsAnswered: 0,
+        totalQuestions,
+      });
+    }
+
+    // Progress based on answered questions, not position
+    // This ensures skipped questions don't artificially inflate progress
+    const progressPercent = (answeredCount / totalQuestions) * 100;
+
     return NextResponse.json({
       completed: false,
       nextQuestion,
       nextQuestionAudioUrl,
       isFollowUp,
-      progress: ((nextIndex + 1) / totalQuestions) * 100,
+      progress: progressPercent,
+      questionsAnswered: answeredCount,
+      totalQuestions,
     });
   } catch (error) {
     console.error("Error responding to interview:", error);

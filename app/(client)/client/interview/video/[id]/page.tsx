@@ -595,6 +595,10 @@ function VideoInterviewContent() {
       if (data.completed) {
         setInterviewComplete(true);
         setShowCompleteDialog(true);
+      } else if (data.allSkipped) {
+        // User skipped all questions without answering any
+        toast.error(data.message || "Please answer at least one question to complete the interview.");
+        // Don't mark as complete - they need to answer something
       } else if (data.nextQuestion) {
         setCurrentQuestion(data.nextQuestion);
         setProgress(data.progress || progress);
