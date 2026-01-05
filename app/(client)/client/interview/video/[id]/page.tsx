@@ -418,7 +418,13 @@ function VideoInterviewContent() {
   // Handle user transcript from HeyGen's voice chat STT
   const handleTranscript = useCallback(
     async (text: string, isFinal: boolean, audioKey?: string) => {
-      if (!isFinal || processingResponseRef.current || !text.trim()) return;
+      // Block if: not final, already processing, empty text, or avatar is speaking
+      if (!isFinal || processingResponseRef.current || !text.trim() || isAvatarSpeaking) {
+        if (isAvatarSpeaking) {
+          console.log("[handleTranscript] Blocked - avatar is still speaking");
+        }
+        return;
+      }
 
       const cleanText = text.trim();
 
@@ -540,7 +546,7 @@ function VideoInterviewContent() {
         processingResponseRef.current = false;
       }
     },
-    [interviewId, progress, currentQuestion, speak]
+    [interviewId, progress, currentQuestion, speak, isAvatarSpeaking]
   );
 
   // Repeat current question (plays the question audio again)
@@ -673,6 +679,12 @@ function VideoInterviewContent() {
   const submitRecording = useCallback(async () => {
     if (!mediaRecorderRef.current || !isRecordingAudio) return;
 
+    // Don't allow submitting while avatar is still speaking
+    if (isAvatarSpeaking) {
+      toast.error("Please wait for the question to finish");
+      return;
+    }
+
     // Stop the recorder
     mediaRecorderRef.current.stop();
     setIsRecordingAudio(false);
@@ -709,7 +721,7 @@ function VideoInterviewContent() {
         speak(errorMessage);
       }
     };
-  }, [isRecordingAudio, interviewId, handleTranscript, speak]);
+  }, [isRecordingAudio, interviewId, handleTranscript, speak, isAvatarSpeaking]);
 
   // Toggle mute for video mode (HeyGen)
   const toggleVideoMute = useCallback(() => {
