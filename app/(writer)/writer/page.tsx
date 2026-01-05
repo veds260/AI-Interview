@@ -43,7 +43,7 @@ export default function WriterDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Writer Dashboard</h1>
-        <p className="text-gray-500 mt-1">
+        <p className="text-muted-foreground mt-1">
           Access interview content and create posts
         </p>
       </div>
@@ -143,13 +143,13 @@ export default function WriterDashboard() {
                   <Link
                     key={assignment.id}
                     href="/writer/assignments"
-                    className="flex items-center justify-between p-2 rounded hover:bg-gray-50"
+                    className="flex items-center justify-between p-2 rounded hover:bg-muted"
                   >
                     <div>
                       <p className="font-medium text-sm">
                         {assignment.interviewTitle || `Interview ${assignment.interviewId?.slice(0, 8)}`}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {assignment.clientName || "Unknown client"} -{" "}
                         {new Date(assignment.assignedAt).toLocaleDateString()}
                       </p>

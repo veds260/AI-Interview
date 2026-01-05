@@ -576,7 +576,7 @@ export default function HeyGenAvatar({
   // This is handled by the parent component (video/[id]/page.tsx) which falls back to audio-only mode
   if (useFallback) {
     return (
-      <div className="aspect-video bg-gray-900 rounded-lg relative overflow-hidden">
+      <div className="aspect-video bg-card rounded-lg relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-3 transition-all ${
@@ -584,8 +584,8 @@ export default function HeyGenAvatar({
             }`}>
               <Video className="w-10 h-10 text-white" />
             </div>
-            <p className="text-white text-sm font-medium">AI Interviewer</p>
-            <p className="text-gray-400 text-xs mt-1">
+            <p className="text-foreground text-sm font-medium">AI Interviewer</p>
+            <p className="text-muted-foreground text-xs mt-1">
               {isAvatarSpeaking ? "Speaking..." : "Voice mode (HeyGen unavailable)"}
             </p>
           </div>
@@ -597,7 +597,7 @@ export default function HeyGenAvatar({
   return (
     <div className="relative">
       {/* Video container */}
-      <div className="aspect-video bg-gray-900 rounded-lg relative overflow-hidden">
+      <div className="aspect-video bg-card rounded-lg relative overflow-hidden">
         <video
           ref={videoRef}
           autoPlay
@@ -609,8 +609,8 @@ export default function HeyGenAvatar({
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-2" />
-              <p className="text-white text-sm">{statusMessage}</p>
+              <Loader2 className="h-8 w-8 animate-spin text-foreground mx-auto mb-2" />
+              <p className="text-foreground text-sm">{statusMessage}</p>
             </div>
           </div>
         )}
@@ -637,21 +637,21 @@ export default function HeyGenAvatar({
         {isConnected && (
           <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center">
             {isAvatarSpeaking && (
-              <div className="flex items-center gap-1.5 bg-black/60 px-2.5 py-1 rounded-full">
+              <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-full">
                 <Volume2 className="w-3.5 h-3.5 text-green-400 animate-pulse" />
                 <span className="text-green-400 text-xs">Speaking</span>
               </div>
             )}
 
             {isRecording && !isMuted && (
-              <div className="flex items-center gap-1.5 bg-black/60 px-2.5 py-1 rounded-full ml-auto">
+              <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-full ml-auto">
                 <Mic className="w-3.5 h-3.5 text-red-400 animate-pulse" />
                 <span className="text-red-400 text-xs">Recording</span>
               </div>
             )}
 
             {isTranscribing && (
-              <div className="flex items-center gap-1.5 bg-black/60 px-2.5 py-1 rounded-full ml-auto">
+              <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-full ml-auto">
                 <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
                 <span className="text-blue-400 text-xs">Processing</span>
               </div>
@@ -747,7 +747,7 @@ export default function HeyGenAvatar({
 
       {/* Recording hint */}
       {isConnected && !useTextInput && (
-        <p className="text-center text-xs text-gray-500 mt-2">
+        <p className="text-center text-xs text-muted-foreground mt-2">
           {isMuted
             ? isAvatarSpeaking
               ? "Wait for the question to finish, then click to record"

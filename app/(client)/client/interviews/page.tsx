@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 interface Interview {
   id: string;
   mode: "text_chat" | "live_video";
+  audioOnly: boolean | null;
   status: "in_progress" | "paused" | "completed";
   createdAt: string;
   updatedAt: string;
@@ -143,7 +144,7 @@ export default function InterviewsPage() {
                     <Link
                       href={
                         interview.mode === "live_video"
-                          ? `/client/interview/video/${interview.id}`
+                          ? `/client/interview/video/${interview.id}${interview.audioOnly !== false ? '?audioOnly=true' : ''}`
                           : `/client/interview/text/${interview.id}`
                       }
                     >

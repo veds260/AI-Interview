@@ -431,13 +431,13 @@ function AdminContentContent() {
                 <div className="flex items-center justify-between pt-3 border-t">
                   <div className="flex gap-2">
                     {extraction.suggestedFormats?.includes('tweet') && (
-                      <div className="p-1.5 bg-blue-50 rounded-md">
-                        <Twitter className="h-4 w-4 text-blue-500" />
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <Twitter className="h-4 w-4 text-primary" />
                       </div>
                     )}
                     {extraction.linkedinDraft && (
-                      <div className="p-1.5 bg-blue-50 rounded-md">
-                        <Linkedin className="h-4 w-4 text-blue-700" />
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <Linkedin className="h-4 w-4 text-primary" />
                       </div>
                     )}
                   </div>
@@ -463,7 +463,7 @@ function AdminContentContent() {
           {selectedExtraction && (
             <>
               {/* Dialog Header */}
-              <DialogHeader className="p-6 pb-4 border-b bg-gradient-to-r from-gray-50 to-white">
+              <DialogHeader className="p-6 pb-4 border-b bg-gradient-to-r from-muted to-background">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <DialogTitle className="flex items-center gap-3 text-xl">
@@ -495,21 +495,21 @@ function AdminContentContent() {
               </DialogHeader>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 pt-4 border-b bg-white">
+                <div className="px-6 pt-4 border-b bg-background">
                   <TabsList className="grid w-full max-w-xl grid-cols-4 bg-muted/80">
-                    <TabsTrigger value="mockup" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="mockup" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <Twitter className="h-4 w-4" />
                       Twitter
                     </TabsTrigger>
-                    <TabsTrigger value="linkedin" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="linkedin" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <Linkedin className="h-4 w-4" />
                       LinkedIn
                     </TabsTrigger>
-                    <TabsTrigger value="comments" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="comments" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <MessageSquare className="h-4 w-4" />
                       Comments ({comments.filter(c => !c.resolved).length})
                     </TabsTrigger>
-                    <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-card">
                       <FileText className="h-4 w-4" />
                       Details
                     </TabsTrigger>
@@ -519,10 +519,10 @@ function AdminContentContent() {
                 <div className="flex-1 overflow-y-auto">
                   {/* Twitter Tab */}
                   <TabsContent value="mockup" className="m-0 h-full">
-                    <div className="bg-gradient-to-b from-gray-100 to-gray-50 p-8 min-h-full">
+                    <div className="bg-muted p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
                         {isEditing ? (
-                          <div className="bg-white rounded-xl p-6 border shadow-sm space-y-4">
+                          <div className="bg-card rounded-xl p-6 border shadow-sm space-y-4">
                             <div>
                               <label className="text-sm font-medium text-foreground mb-2 block">
                                 Edit Tweet
@@ -564,7 +564,7 @@ function AdminContentContent() {
 
                         {/* Image Upload */}
                         {!isEditing && (
-                          <div className="bg-white rounded-xl p-4 border shadow-sm">
+                          <div className="bg-card rounded-xl p-4 border shadow-sm">
                             <p className="text-sm font-medium text-foreground mb-3">Add Image to Tweet</p>
                             <ImageUpload
                               currentImage={tweetImage}
@@ -575,7 +575,7 @@ function AdminContentContent() {
 
                         {/* Actions */}
                         {!isEditing && (
-                          <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
+                          <div className="flex items-center justify-between bg-card rounded-xl p-4 border shadow-sm">
                             <span className="text-sm text-muted-foreground">
                               {selectedExtraction.tweetDraft?.length || 0} characters
                             </span>
@@ -605,10 +605,10 @@ function AdminContentContent() {
 
                   {/* LinkedIn Tab */}
                   <TabsContent value="linkedin" className="m-0 h-full">
-                    <div className="bg-gradient-to-b from-blue-50/30 to-gray-50 p-8 min-h-full">
+                    <div className="bg-muted p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
                         {isEditing ? (
-                          <div className="bg-white rounded-xl p-6 border shadow-sm space-y-4">
+                          <div className="bg-card rounded-xl p-6 border shadow-sm space-y-4">
                             <div>
                               <label className="text-sm font-medium text-foreground mb-2 block">
                                 Edit LinkedIn Post
@@ -649,7 +649,7 @@ function AdminContentContent() {
                             />
 
                             {/* Image Upload */}
-                            <div className="bg-white rounded-xl p-4 border shadow-sm">
+                            <div className="bg-card rounded-xl p-4 border shadow-sm">
                               <p className="text-sm font-medium text-foreground mb-3">Add Image to Post</p>
                               <ImageUpload
                                 currentImage={linkedinImage}
@@ -658,7 +658,7 @@ function AdminContentContent() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center justify-between bg-white rounded-xl p-4 border shadow-sm">
+                            <div className="flex items-center justify-between bg-card rounded-xl p-4 border shadow-sm">
                               <span className="text-sm text-muted-foreground">
                                 {selectedExtraction.linkedinDraft?.length || 0} characters
                               </span>
@@ -683,7 +683,7 @@ function AdminContentContent() {
                             </div>
                           </>
                         ) : (
-                          <Card className="border-dashed bg-white/50">
+                          <Card className="border-dashed bg-card/50">
                             <CardContent className="py-12 text-center">
                               <Linkedin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                               <p className="text-muted-foreground">
@@ -708,10 +708,10 @@ function AdminContentContent() {
                   {/* Details Tab */}
                   <TabsContent value="details" className="m-0 p-6 space-y-6">
                     {/* Key Quote */}
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                    <div className="bg-primary/5 rounded-xl p-6 border border-primary/20">
                       <div className="flex justify-between items-start mb-3">
                         <h4 className="font-semibold text-foreground flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-blue-600" />
+                          <Sparkles className="h-4 w-4 text-primary" />
                           Key Quote
                         </h4>
                         <Button
@@ -742,7 +742,7 @@ function AdminContentContent() {
                           <div className="bg-muted rounded-lg p-4 space-y-3">
                             {selectedExtraction.threadOutline.map((point, i) => (
                               <div key={i} className="flex gap-3">
-                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center">
+                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center">
                                   {i + 1}
                                 </span>
                                 <p className="text-foreground text-sm leading-relaxed pt-0.5">{point}</p>

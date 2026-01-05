@@ -332,10 +332,10 @@ export default function PublicInterviewPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-muted">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Loading interview...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading interview...</p>
         </div>
       </div>
     );
@@ -344,15 +344,15 @@ export default function PublicInterviewPage() {
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-muted">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <PhoneOff className="w-6 h-6 text-red-500" />
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+              <PhoneOff className="w-6 h-6 text-destructive" />
             </div>
             <h2 className="text-lg font-semibold mb-2">Unable to Load Interview</h2>
-            <p className="text-gray-500 text-sm">{error}</p>
-            <p className="text-gray-400 text-xs mt-4">
+            <p className="text-muted-foreground text-sm">{error}</p>
+            <p className="text-muted-foreground text-xs mt-4">
               This link may have expired or been revoked.
             </p>
           </CardContent>
@@ -364,11 +364,11 @@ export default function PublicInterviewPage() {
   // Name entry screen
   if (showNameEntry) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-50 to-white p-4">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-muted to-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-blue-600" />
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-primary" />
             </div>
             <CardTitle className="text-2xl">Welcome to Your Interview</CardTitle>
             <CardDescription>
@@ -379,7 +379,7 @@ export default function PublicInterviewPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Your Name
               </label>
               <Input
@@ -392,7 +392,7 @@ export default function PublicInterviewPage() {
               />
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+            <div className="bg-muted rounded-lg p-4 text-sm text-muted-foreground">
               <p className="font-medium mb-2">What to expect:</p>
               <ul className="space-y-1.5">
                 {isVideoMode ? (
@@ -448,9 +448,9 @@ export default function PublicInterviewPage() {
   // Video interview mode
   if (isVideoMode) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <div
@@ -458,12 +458,12 @@ export default function PublicInterviewPage() {
                   isConnected ? "bg-green-500" : "bg-yellow-500"
                 }`}
               />
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {isConnected ? "Connected" : "Connecting..."}
               </span>
             </div>
             {guestName && (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 Welcome, {guestName}
               </span>
             )}
@@ -519,7 +519,7 @@ export default function PublicInterviewPage() {
               </Button>
             </div>
 
-            <p className="text-center text-sm text-gray-500 mt-3">
+            <p className="text-center text-sm text-muted-foreground mt-3">
               {isMuted
                 ? "Tap to unmute and speak"
                 : isAvatarSpeaking
@@ -531,10 +531,10 @@ export default function PublicInterviewPage() {
           </div>
 
           {/* Transcript section */}
-          <div className="lg:w-1/2 flex flex-col bg-gray-900 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-gray-400" />
-              <span className="text-sm font-medium text-gray-300">Conversation</span>
+          <div className="lg:w-1/2 flex flex-col bg-card rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Conversation</span>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -549,13 +549,13 @@ export default function PublicInterviewPage() {
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
                       msg.role === "user"
                         ? "bg-blue-600 text-white"
-                        : "bg-gray-800 text-gray-100"
+                        : "bg-muted text-foreground"
                     }`}
                   >
                     <p className="text-sm">{msg.content}</p>
                     <p
                       className={`text-xs mt-1 ${
-                        msg.role === "user" ? "text-blue-200" : "text-gray-500"
+                        msg.role === "user" ? "text-blue-200" : "text-muted-foreground"
                       }`}
                     >
                       {msg.timestamp.toLocaleTimeString([], {
@@ -571,9 +571,9 @@ export default function PublicInterviewPage() {
 
             {/* Current question highlight */}
             {currentQuestion && !interviewComplete && (
-              <div className="px-4 py-3 border-t border-gray-800 bg-gray-800/50">
-                <p className="text-xs text-gray-400 mb-1">Current Question</p>
-                <p className="text-sm text-gray-200">{currentQuestion}</p>
+              <div className="px-4 py-3 border-t border-border bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-1">Current Question</p>
+                <p className="text-sm text-foreground">{currentQuestion}</p>
               </div>
             )}
           </div>
@@ -581,13 +581,13 @@ export default function PublicInterviewPage() {
 
         {/* Complete Dialog */}
         <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-          <AlertDialogContent className="bg-gray-900 border-gray-800">
+          <AlertDialogContent className="bg-card border-border">
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2 text-white">
+              <AlertDialogTitle className="flex items-center gap-2 text-foreground">
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 Interview Complete!
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-400">
+              <AlertDialogDescription className="text-muted-foreground">
                 Thank you for sharing your story. Your responses have been saved
                 and will help create amazing content.
               </AlertDialogDescription>
@@ -608,14 +608,14 @@ export default function PublicInterviewPage() {
 
   // Text interview mode
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen bg-muted py-6 px-4">
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold">Interview</h1>
             {guestName && (
-              <p className="text-sm text-gray-500">Welcome, {guestName}</p>
+              <p className="text-sm text-muted-foreground">Welcome, {guestName}</p>
             )}
           </div>
           <Badge variant="secondary">{Math.round(progress)}% complete</Badge>
@@ -630,8 +630,8 @@ export default function PublicInterviewPage() {
             {/* Messages */}
             <div className="flex-1 space-y-4 overflow-y-auto max-h-[400px] mb-4">
               {messages.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <div className="text-center text-muted-foreground py-8">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                   <p>Loading your first question...</p>
                 </div>
               ) : (
@@ -646,7 +646,7 @@ export default function PublicInterviewPage() {
                       className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                         msg.role === "user"
                           ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-900"
+                          : "bg-muted text-foreground"
                       }`}
                     >
                       {msg.role === "interviewer" && (
@@ -679,7 +679,7 @@ export default function PublicInterviewPage() {
                   }}
                 />
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-400">Cmd+Enter to send</span>
+                  <span className="text-xs text-muted-foreground">Cmd+Enter to send</span>
                   <Button onClick={handleSubmitResponse} disabled={isSending}>
                     {isSending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -747,8 +747,8 @@ function HeyGenAvatarWrapper({
 
   if (!HeyGenAvatar) {
     return (
-      <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      <div className="aspect-video bg-card rounded-lg flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }

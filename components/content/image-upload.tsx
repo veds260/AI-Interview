@@ -98,7 +98,7 @@ export default function ImageUpload({
         <img
           src={currentImage}
           alt="Uploaded"
-          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+          className="w-full h-32 object-cover rounded-lg border border-border"
         />
         <button
           onClick={handleRemove}
@@ -106,7 +106,7 @@ export default function ImageUpload({
         >
           <X className="w-4 h-4" />
         </button>
-        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+        <div className="absolute bottom-2 left-2 px-2 py-1 bg-background/60 text-foreground text-xs rounded">
           Click X to remove
         </div>
       </div>
@@ -137,17 +137,17 @@ export default function ImageUpload({
         className={`w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 transition-colors ${
           isDragging || isFocused
             ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+            : 'border-border hover:border-primary hover:bg-muted'
         }`}
       >
         <div className="flex items-center gap-2">
-          <ImagePlus className={`w-5 h-5 ${isDragging || isFocused ? 'text-blue-500' : 'text-gray-400'}`} />
-          <Clipboard className={`w-4 h-4 ${isDragging || isFocused ? 'text-blue-500' : 'text-gray-400'}`} />
+          <ImagePlus className={`w-5 h-5 ${isDragging || isFocused ? 'text-blue-500' : 'text-muted-foreground'}`} />
+          <Clipboard className={`w-4 h-4 ${isDragging || isFocused ? 'text-blue-500' : 'text-muted-foreground'}`} />
         </div>
-        <span className={`text-sm ${isDragging || isFocused ? 'text-blue-600' : 'text-gray-500'}`}>
+        <span className={`text-sm ${isDragging || isFocused ? 'text-blue-600' : 'text-muted-foreground'}`}>
           {isDragging ? 'Drop image here' : 'Click, drop, or paste image'}
         </span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-muted-foreground">
           Ctrl+V / Cmd+V to paste
         </span>
       </button>

@@ -227,7 +227,7 @@ export default function SimliAvatar({ onReady, onError }: SimliAvatarProps) {
   }, [sendAudioToSimli]);
 
   return (
-    <div className="aspect-video bg-gray-900 rounded-lg relative overflow-hidden">
+    <div className="aspect-video bg-card rounded-lg relative overflow-hidden">
       {/* Always render video/audio elements so refs are available */}
       <video
         ref={videoRef}
@@ -256,7 +256,7 @@ export default function SimliAvatar({ onReady, onError }: SimliAvatarProps) {
               <Video className="w-12 h-12 text-white" />
             </div>
             <p className="text-white text-sm">AI Interviewer</p>
-            <p className="text-gray-400 text-xs mt-1">(Mock mode: {statusMessage})</p>
+            <p className="text-muted-foreground text-xs mt-1">(Mock mode: {statusMessage})</p>
             {isSpeaking && (
               <div className="flex items-center justify-center gap-1 mt-2">
                 <Volume2 className="w-4 h-4 text-green-400 animate-pulse" />
@@ -269,7 +269,7 @@ export default function SimliAvatar({ onReady, onError }: SimliAvatarProps) {
 
       {/* Connected avatar speaking indicator */}
       {isConnected && !useMock && isSpeaking && (
-        <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-black/50 px-2 py-1 rounded">
+        <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-background/50 px-2 py-1 rounded">
           <Volume2 className="w-4 h-4 text-green-400 animate-pulse" />
           <span className="text-green-400 text-sm">Speaking</span>
         </div>

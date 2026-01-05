@@ -147,6 +147,7 @@ export const interviews = pgTable("interviews", {
 
   // Session info
   mode: interviewModeEnum("mode").notNull(),
+  audioOnly: boolean("audio_only").default(true), // For live_video mode: true = audio only, false = video avatar
   status: interviewStatusEnum("status").notNull().default("scheduled"),
   title: varchar("title", { length: 255 }),
 

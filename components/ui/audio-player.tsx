@@ -105,7 +105,7 @@ export function AudioPlayer({ src, title, compact = false }: AudioPlayerProps) {
         </Button>
 
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-xs text-gray-500 w-10">{formatTime(currentTime)}</span>
+          <span className="text-xs text-muted-foreground w-10">{formatTime(currentTime)}</span>
           <Slider
             value={[currentTime]}
             max={duration || 100}
@@ -113,7 +113,7 @@ export function AudioPlayer({ src, title, compact = false }: AudioPlayerProps) {
             onValueChange={handleSeek}
             className="flex-1"
           />
-          <span className="text-xs text-gray-500 w-10">{formatTime(duration)}</span>
+          <span className="text-xs text-muted-foreground w-10">{formatTime(duration)}</span>
         </div>
 
         <DropdownMenu>
@@ -145,7 +145,7 @@ export function AudioPlayer({ src, title, compact = false }: AudioPlayerProps) {
   }
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+    <div className="bg-muted rounded-lg p-4 space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" />
 
       {title && <p className="text-sm font-medium">{title}</p>}
@@ -167,7 +167,7 @@ export function AudioPlayer({ src, title, compact = false }: AudioPlayerProps) {
             step={0.1}
             onValueChange={handleSeek}
           />
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>

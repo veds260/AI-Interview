@@ -18,7 +18,6 @@ import {
   Video,
   PenTool,
   Archive,
-  Target,
   History,
   Film,
   HardDrive,
@@ -35,7 +34,6 @@ interface NavItem {
 const adminNavItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
   { label: "Clients", href: "/admin/clients", icon: <Users className="h-5 w-5" /> },
-  { label: "Competitors", href: "/admin/competitors", icon: <Target className="h-5 w-5" /> },
   { label: "Questions", href: "/admin/questions", icon: <ClipboardList className="h-5 w-5" /> },
   { label: "Interviews", href: "/admin/interviews", icon: <MessageSquare className="h-5 w-5" /> },
   { label: "Content Bank", href: "/admin/content", icon: <Sparkles className="h-5 w-5" /> },

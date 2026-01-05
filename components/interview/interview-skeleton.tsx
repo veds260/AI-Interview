@@ -65,14 +65,14 @@ export function InterviewSkeleton({ mode = "audio", status = "Preparing your int
         transition={{ duration: 0.4, ease: "easeOut" as const }}
       >
         <motion.h2
-          className="text-xl font-semibold text-gray-800"
+          className="text-xl font-semibold text-foreground"
           animate={{ opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
           {mode === "video" ? "Video Interview" : "Audio Interview"}
         </motion.h2>
         <motion.p
-          className="text-gray-500"
+          className="text-muted-foreground"
           key={status}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -103,16 +103,16 @@ export function InterviewSkeleton({ mode = "audio", status = "Preparing your int
 
       {/* Interview UI skeleton preview */}
       <motion.div
-        className="w-full max-w-2xl bg-white rounded-xl shadow-lg p-6 space-y-4"
+        className="w-full max-w-2xl bg-card rounded-xl shadow-lg p-6 space-y-4"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" as const }}
       >
         {/* Question area skeleton */}
         <div className="space-y-3">
-          <Skeleton className="h-4 w-24 bg-gray-200" />
-          <Skeleton className="h-6 w-full bg-gray-100" />
-          <Skeleton className="h-6 w-3/4 bg-gray-100" />
+          <Skeleton className="h-4 w-24 bg-muted" />
+          <Skeleton className="h-6 w-full bg-muted" />
+          <Skeleton className="h-6 w-3/4 bg-muted" />
         </div>
 
         {/* Waveform skeleton */}
@@ -136,9 +136,9 @@ export function InterviewSkeleton({ mode = "audio", status = "Preparing your int
 
         {/* Controls skeleton */}
         <div className="flex justify-center gap-4">
-          <Skeleton className="h-12 w-12 rounded-full bg-gray-200" />
-          <Skeleton className="h-12 w-12 rounded-full bg-gray-200" />
-          <Skeleton className="h-12 w-12 rounded-full bg-gray-200" />
+          <Skeleton className="h-12 w-12 rounded-full bg-muted" />
+          <Skeleton className="h-12 w-12 rounded-full bg-muted" />
+          <Skeleton className="h-12 w-12 rounded-full bg-muted" />
         </div>
       </motion.div>
     </motion.div>
@@ -186,9 +186,9 @@ export function QuestionTransitionSkeleton() {
           repeat: Infinity,
         }}
       >
-        <Skeleton className="h-5 w-3/4 bg-gray-200" />
+        <Skeleton className="h-5 w-3/4 bg-muted" />
       </motion.div>
-      <Skeleton className="h-5 w-1/2 bg-gray-100" />
+      <Skeleton className="h-5 w-1/2 bg-muted" />
     </motion.div>
   );
 }

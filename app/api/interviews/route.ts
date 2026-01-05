@@ -300,7 +300,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { mode, clientId } = body;
+    const { mode, clientId, audioOnly } = body;
 
     if (!mode || !["live_video", "text_chat"].includes(mode)) {
       return NextResponse.json(
@@ -731,6 +731,7 @@ export async function POST(request: Request) {
         .values({
           clientId: client?.id || null,
           mode: mode as "live_video" | "text_chat",
+          audioOnly: mode === "live_video" ? (audioOnly !== false) : null, // Default to true for voice interviews
           status: "in_progress",
           title: `Interview - ${new Date().toLocaleDateString()}`,
           startedAt: new Date(),
