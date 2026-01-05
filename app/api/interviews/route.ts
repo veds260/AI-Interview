@@ -348,7 +348,7 @@ export async function POST(request: Request) {
         .from(interviews)
         .where(eq(interviews.clientId, client.id))
         .orderBy(desc(interviews.createdAt))
-        .limit(50); // Get more interviews to avoid ANY repetition
+        .limit(200); // Get ALL interviews to avoid ANY repetition
 
       // Extract all previously asked question IDs, categories, and FULL content
       previousInterviews.forEach((interview) => {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
+import { contentExtractions } from "@/lib/db";
 
 interface ClientKnowledgeSummary {
   bio?: string;
@@ -164,6 +165,57 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching interview:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// Delete interview (admin only)
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Only admins can delete interviews
+    if (session.user.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    // Check if interview exists
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, id),
+    });
+
+    if (!interview) {
+      return NextResponse.json(
+        { error: "Interview not found" },
+        { status: 404 }
+      );
+    }
+
+    // Delete related data first (cascading manually for safety)
+    await Promise.all([
+      // Delete messages
+      db.delete(interviewMessages).where(eq(interviewMessages.interviewId, id)),
+      // Delete content extractions
+      db.delete(contentExtractions).where(eq(contentExtractions.interviewId, id)),
+    ]);
+
+    // Delete the interview
+    await db.delete(interviews).where(eq(interviews.id, id));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting interview:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

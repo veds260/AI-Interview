@@ -29,6 +29,9 @@ import {
   AudioLines,
   SkipForward,
   VolumeX,
+  Send,
+  Pause,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import HeyGenAvatar from "@/components/interview/heygen-avatar";
@@ -198,6 +201,7 @@ function VideoInterviewContent() {
   const [error, setError] = useState<string | null>(null);
   const [interviewComplete, setInterviewComplete] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [isPausedRecording, setIsPausedRecording] = useState(false); // Muted during recording
   const [heygenFallback, setHeygenFallback] = useState(false); // Track if HeyGen fell back to static UI
   const [captureError, setCaptureError] = useState<string | null>(null); // Error when speech capture fails
 
@@ -209,6 +213,7 @@ function VideoInterviewContent() {
   const audioChunksRef = useRef<Blob[]>([]);
   const preloadedAudioRef = useRef<string | null>(null); // Pre-generated audio URL
   const preloadingAudioRef = useRef<Map<string, Promise<string | null>>>(new Map()); // Audio being preloaded
+  const audioStreamRef = useRef<MediaStream | null>(null); // Audio stream for mute/unmute
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -558,7 +563,11 @@ function VideoInterviewContent() {
       mediaRecorderRef.current.onstop = null;
       mediaRecorderRef.current.stop();
       setIsRecordingAudio(false);
+      setIsPausedRecording(false);
     }
+    // Stop the stream
+    audioStreamRef.current?.getTracks().forEach(t => t.stop());
+    audioStreamRef.current = null;
     // Clear audio chunks
     audioChunksRef.current = [];
     // Clear any error
@@ -577,73 +586,111 @@ function VideoInterviewContent() {
     toast.success("Skipped");
   }, []);
 
-  // Toggle mute (for video mode) or start/stop recording (for audio mode)
-  const toggleMute = useCallback(() => {
-    // Clear any error when user taps mic
+  // Start recording audio
+  const startRecording = useCallback(() => {
     setCaptureError(null);
+    setIsPausedRecording(false);
 
-    if (audioOnly) {
-      // For audio-only, handle mic recording
-      if (isRecordingAudio) {
-        // Stop recording
-        mediaRecorderRef.current?.stop();
-        setIsRecordingAudio(false);
-      } else {
-        // Start recording
-        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-          const mediaRecorder = new MediaRecorder(stream);
-          mediaRecorderRef.current = mediaRecorder;
-          audioChunksRef.current = [];
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      audioStreamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-          mediaRecorder.ondataavailable = (e) => {
-            audioChunksRef.current.push(e.data);
-          };
+      mediaRecorder.ondataavailable = (e) => {
+        audioChunksRef.current.push(e.data);
+      };
 
-          mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-            stream.getTracks().forEach(t => t.stop());
+      mediaRecorder.start();
+      setIsRecordingAudio(true);
+    }).catch((e) => {
+      console.error("Mic access error:", e);
+      toast.error("Could not access microphone");
+    });
+  }, []);
 
-            // Transcribe using API (also uploads audio to R2 in background)
-            const formData = new FormData();
-            formData.append("audio", audioBlob, "recording.webm");
-            formData.append("interviewId", interviewId);
+  // Toggle mute/unmute during recording (pause/resume audio capture)
+  const toggleRecordingMute = useCallback(() => {
+    if (!audioStreamRef.current) return;
 
-            try {
-              const res = await fetch("/api/transcribe", {
-                method: "POST",
-                body: formData,
-              });
-              const data = await res.json();
-              if (data.text) {
-                // Pass audioKey to handleTranscript so it gets saved with the message
-                handleTranscript(data.text, true, data.audioKey);
-              } else {
-                // No text transcribed - show error
-                const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.";
-                setCaptureError(errorMessage);
-                speak(errorMessage);
-              }
-            } catch (e) {
-              console.error("Transcription error:", e);
-              const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again.";
-              setCaptureError(errorMessage);
-              speak(errorMessage);
-            }
-          };
+    const tracks = audioStreamRef.current.getAudioTracks();
+    tracks.forEach(track => {
+      track.enabled = !track.enabled;
+    });
+    setIsPausedRecording(!isPausedRecording);
+  }, [isPausedRecording]);
 
-          mediaRecorder.start();
-          setIsRecordingAudio(true);
-        }).catch((e) => {
-          console.error("Mic access error:", e);
-          toast.error("Could not access microphone");
+  // Submit the recording
+  const submitRecording = useCallback(async () => {
+    if (!mediaRecorderRef.current || !isRecordingAudio) return;
+
+    // Stop the recorder
+    mediaRecorderRef.current.stop();
+    setIsRecordingAudio(false);
+    setIsPausedRecording(false);
+
+    // Wait for onstop to fire and process
+    mediaRecorderRef.current.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      audioStreamRef.current?.getTracks().forEach(t => t.stop());
+      audioStreamRef.current = null;
+
+      // Transcribe using API
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("interviewId", interviewId);
+
+      try {
+        const res = await fetch("/api/transcribe", {
+          method: "POST",
+          body: formData,
         });
+        const data = await res.json();
+        if (data.text) {
+          handleTranscript(data.text, true, data.audioKey);
+        } else {
+          const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again, speaking a bit louder.";
+          setCaptureError(errorMessage);
+          speak(errorMessage);
+        }
+      } catch (e) {
+        console.error("Transcription error:", e);
+        const errorMessage = "I couldn't hear your response clearly. Please tap the microphone and try again.";
+        setCaptureError(errorMessage);
+        speak(errorMessage);
       }
-    } else {
-      // For video mode, use HeyGen's mute toggle
-      (window as any).heygenToggleMute?.();
-      setIsMuted(!isMuted);
-    }
-  }, [audioOnly, isMuted, isRecordingAudio, handleTranscript]);
+    };
+  }, [isRecordingAudio, interviewId, handleTranscript, speak]);
+
+  // Toggle mute for video mode (HeyGen)
+  const toggleVideoMute = useCallback(() => {
+    (window as any).heygenToggleMute?.();
+    setIsMuted(!isMuted);
+  }, [isMuted]);
+
+  // Keyboard listener for spacebar to toggle mute
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle spacebar, and not when typing in inputs
+      if (e.code !== "Space") return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      e.preventDefault();
+
+      if (audioOnly) {
+        if (isRecordingAudio) {
+          // Toggle mute during recording
+          toggleRecordingMute();
+        }
+      } else {
+        // Video mode - toggle HeyGen mute
+        toggleVideoMute();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [audioOnly, isRecordingAudio, toggleRecordingMute, toggleVideoMute]);
 
   // End interview
   const handleEndInterview = async () => {
@@ -780,73 +827,155 @@ function VideoInterviewContent() {
 
           {/* Controls */}
           <div className="flex justify-center gap-3 mt-4">
-            {/* Mic button - main action */}
-            <div className="flex flex-col items-center gap-1">
-              <Button
-                variant={(audioOnly ? isRecordingAudio : !isMuted) ? "secondary" : "destructive"}
-                size="lg"
-                onClick={toggleMute}
-                className="rounded-full w-16 h-16"
-              >
-                {(audioOnly ? !isRecordingAudio : isMuted) ? (
-                  <MicOff className="w-7 h-7" />
+            {audioOnly ? (
+              /* Audio-only mode controls */
+              <>
+                {!isRecordingAudio ? (
+                  /* Not recording - show Record button */
+                  <>
+                    {/* Skip button - shows when interviewer is speaking */}
+                    {isAvatarSpeaking && (
+                      <div className="flex flex-col items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          onClick={skipAudio}
+                          className="rounded-full w-14 h-14 border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                          title="Skip audio"
+                        >
+                          <SkipForward className="w-5 h-5" />
+                        </Button>
+                        <span className="text-xs text-orange-400">Skip</span>
+                      </div>
+                    )}
+
+                    {/* Record button */}
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="default"
+                        size="lg"
+                        onClick={startRecording}
+                        disabled={isAvatarSpeaking}
+                        className="rounded-full w-16 h-16 bg-red-600 hover:bg-red-700"
+                      >
+                        <Mic className="w-7 h-7" />
+                      </Button>
+                      <span className="text-xs text-gray-400">Record</span>
+                    </div>
+
+                    {/* Repeat button */}
+                    {!isAvatarSpeaking && (
+                      <div className="flex flex-col items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          onClick={repeatQuestion}
+                          disabled={!currentQuestion}
+                          className="rounded-full w-14 h-14"
+                          title="Repeat question"
+                        >
+                          <Volume2 className="w-5 h-5" />
+                        </Button>
+                        <span className="text-xs text-gray-400">Repeat</span>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <Mic className="w-7 h-7" />
+                  /* Recording - show Mute, Submit, Retry buttons */
+                  <>
+                    {/* Mute/Unmute button */}
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={toggleRecordingMute}
+                        className={`rounded-full w-14 h-14 ${isPausedRecording ? "border-yellow-500 text-yellow-500" : "border-green-500 text-green-500"}`}
+                        title={isPausedRecording ? "Unmute (Space)" : "Mute (Space)"}
+                      >
+                        {isPausedRecording ? <VolumeX className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                      </Button>
+                      <span className="text-xs text-gray-400">{isPausedRecording ? "Unmute" : "Mute"}</span>
+                    </div>
+
+                    {/* Submit button */}
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="default"
+                        size="lg"
+                        onClick={submitRecording}
+                        className="rounded-full w-16 h-16 bg-green-600 hover:bg-green-700"
+                        title="Submit answer"
+                      >
+                        <Send className="w-6 h-6" />
+                      </Button>
+                      <span className="text-xs text-gray-400">Submit</span>
+                    </div>
+
+                    {/* Retry button */}
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={retakeAnswer}
+                        className="rounded-full w-14 h-14 border-red-500 text-red-500 hover:bg-red-500/10"
+                        title="Discard and retry"
+                      >
+                        <RotateCcw className="w-5 h-5" />
+                      </Button>
+                      <span className="text-xs text-gray-400">Retry</span>
+                    </div>
+                  </>
                 )}
-              </Button>
-              <span className="text-xs text-gray-400">
-                {audioOnly ? (isRecordingAudio ? "Stop" : "Record") : (isMuted ? "Unmute" : "Mute")}
-              </span>
-            </div>
+              </>
+            ) : (
+              /* Video mode controls */
+              <>
+                {/* Mic button for HeyGen */}
+                <div className="flex flex-col items-center gap-1">
+                  <Button
+                    variant={!isMuted ? "secondary" : "destructive"}
+                    size="lg"
+                    onClick={toggleVideoMute}
+                    className="rounded-full w-16 h-16"
+                  >
+                    {isMuted ? <MicOff className="w-7 h-7" /> : <Mic className="w-7 h-7" />}
+                  </Button>
+                  <span className="text-xs text-gray-400">{isMuted ? "Unmute" : "Mute"}</span>
+                </div>
 
-            {/* Skip button - shows when interviewer is speaking */}
-            {isAvatarSpeaking && (
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={skipAudio}
-                  className="rounded-full w-14 h-14 border-orange-500 text-orange-500 hover:bg-orange-500/10"
-                  title="Skip audio"
-                >
-                  <SkipForward className="w-5 h-5" />
-                </Button>
-                <span className="text-xs text-orange-400">Skip</span>
-              </div>
-            )}
+                {/* Skip button - shows when interviewer is speaking */}
+                {isAvatarSpeaking && (
+                  <div className="flex flex-col items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={skipAudio}
+                      className="rounded-full w-14 h-14 border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                      title="Skip audio"
+                    >
+                      <SkipForward className="w-5 h-5" />
+                    </Button>
+                    <span className="text-xs text-orange-400">Skip</span>
+                  </div>
+                )}
 
-            {/* Repeat button - hidden when speaking */}
-            {!isAvatarSpeaking && (
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={repeatQuestion}
-                  disabled={!currentQuestion}
-                  className="rounded-full w-14 h-14"
-                  title="Repeat question"
-                >
-                  <Volume2 className="w-5 h-5" />
-                </Button>
-                <span className="text-xs text-gray-400">Repeat</span>
-              </div>
-            )}
-
-            {/* Retake button - only in audio mode */}
-            {audioOnly && !isAvatarSpeaking && (
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={retakeAnswer}
-                  disabled={!currentQuestion}
-                  className="rounded-full w-14 h-14"
-                  title="Discard and retry"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </Button>
-                <span className="text-xs text-gray-400">Retry</span>
-              </div>
+                {/* Repeat button - hidden when speaking */}
+                {!isAvatarSpeaking && (
+                  <div className="flex flex-col items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={repeatQuestion}
+                      disabled={!currentQuestion}
+                      className="rounded-full w-14 h-14"
+                      title="Repeat question"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </Button>
+                    <span className="text-xs text-gray-400">Repeat</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -857,12 +986,21 @@ function VideoInterviewContent() {
                 Interviewer speaking... tap Skip to continue
               </span>
             ) : isRecordingAudio ? (
-              <span className="text-red-400 flex items-center justify-center gap-2">
-                <Mic className="w-4 h-4 animate-pulse" />
-                Recording... tap to stop
-              </span>
+              isPausedRecording ? (
+                <span className="text-yellow-400 flex items-center justify-center gap-2">
+                  <Pause className="w-4 h-4" />
+                  Paused... press Space to unmute, or tap Submit
+                </span>
+              ) : (
+                <span className="text-red-400 flex items-center justify-center gap-2">
+                  <Mic className="w-4 h-4 animate-pulse" />
+                  Recording... press Space to pause, or tap Submit
+                </span>
+              )
+            ) : audioOnly ? (
+              <span className="text-gray-500">Tap Record to respond</span>
             ) : isMuted ? (
-              <span className="text-gray-500">Tap mic to respond</span>
+              <span className="text-gray-500">Tap mic to respond (Space)</span>
             ) : isUserSpeaking ? (
               <span className="text-green-400">Listening to you...</span>
             ) : (

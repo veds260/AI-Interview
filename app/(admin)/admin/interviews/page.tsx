@@ -52,6 +52,7 @@ import {
   Search,
   X,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,6 +110,8 @@ export default function AdminInterviewsPage() {
   const [reextractConfirmOpen, setReextractConfirmOpen] = useState(false);
   const [interviewToReextract, setInterviewToReextract] = useState<Interview | null>(null);
   const [extractingInterviewId, setExtractingInterviewId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [interviewToDelete, setInterviewToDelete] = useState<Interview | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -291,6 +294,25 @@ export default function AdminInterviewsPage() {
     },
     onError: () => {
       toast.error("Failed to revoke share link");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (interviewId: string) => {
+      const res = await fetch(`/api/interviews/${interviewId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete interview");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
+      toast.success("Interview deleted");
+      setDeleteConfirmOpen(false);
+      setInterviewToDelete(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete interview");
     },
   });
 
@@ -641,6 +663,18 @@ export default function AdminInterviewsPage() {
                           }}
                         >
                           <Share2 className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            setInterviewToDelete(interview);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1082,6 +1116,69 @@ export default function AdminInterviewsPage() {
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
               Re-extract Content
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Interview?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the interview and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800">
+                The following will be permanently deleted:
+              </p>
+              <ul className="text-sm text-red-700 mt-2 list-disc list-inside space-y-1">
+                <li>Interview record and all messages</li>
+                <li>{interviewToDelete?.extractionsCount || 0} content extractions</li>
+                <li>All Q&A history</li>
+              </ul>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p><strong>Interview:</strong> {interviewToDelete?.title || `Interview ${interviewToDelete?.id?.slice(0, 8)}`}</p>
+              <p><strong>Client:</strong> {interviewToDelete?.clientName || "Unknown"}</p>
+              <p><strong>Questions:</strong> {interviewToDelete?.questionsCount || 0}</p>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                Note: Deleting this interview will remove it from the client&apos;s context, so future interviews may ask similar questions again.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setInterviewToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (interviewToDelete) {
+                  deleteMutation.mutate(interviewToDelete.id);
+                }
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete Interview
             </Button>
           </DialogFooter>
         </DialogContent>
