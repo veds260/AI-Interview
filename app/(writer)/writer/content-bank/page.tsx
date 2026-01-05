@@ -410,13 +410,13 @@ function ContentBankContent() {
                 <div className="flex items-center justify-between pt-3 border-t">
                   <div className="flex gap-2">
                     {extraction.suggestedFormats?.includes('tweet') && (
-                      <div className="p-1.5 bg-blue-50 rounded-md">
-                        <Twitter className="h-4 w-4 text-blue-500" />
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <Twitter className="h-4 w-4 text-primary" />
                       </div>
                     )}
                     {extraction.linkedinDraft && (
-                      <div className="p-1.5 bg-blue-50 rounded-md">
-                        <Linkedin className="h-4 w-4 text-blue-700" />
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <Linkedin className="h-4 w-4 text-primary" />
                       </div>
                     )}
                   </div>
@@ -582,7 +582,7 @@ function ContentBankContent() {
 
                   {/* LinkedIn Tab */}
                   <TabsContent value="linkedin" className="m-0 h-full">
-                    <div className="bg-gradient-to-b from-blue-50/30 to-muted p-8 min-h-full">
+                    <div className="bg-muted p-8 min-h-full">
                       <div className="max-w-xl mx-auto space-y-6">
                         {isEditing ? (
                           <div className="bg-card rounded-xl p-6 border shadow-sm space-y-4">
@@ -685,10 +685,10 @@ function ContentBankContent() {
                   {/* Details Tab */}
                   <TabsContent value="details" className="m-0 p-6 space-y-6">
                     {/* Key Quote */}
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                    <div className="bg-primary/5 rounded-xl p-6 border border-primary/20">
                       <div className="flex justify-between items-start mb-3">
                         <h4 className="font-semibold text-foreground flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-blue-600" />
+                          <Sparkles className="h-4 w-4 text-primary" />
                           Key Quote
                         </h4>
                         <Button
@@ -719,7 +719,7 @@ function ContentBankContent() {
                           <div className="bg-muted rounded-lg p-4 space-y-3">
                             {selectedExtraction.threadOutline.map((point, i) => (
                               <div key={i} className="flex gap-3">
-                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center">
+                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center">
                                   {i + 1}
                                 </span>
                                 <p className="text-foreground text-sm leading-relaxed pt-0.5">{point}</p>
