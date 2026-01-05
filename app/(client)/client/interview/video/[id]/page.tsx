@@ -575,12 +575,61 @@ function VideoInterviewContent() {
     }
   }, [isRecordingAudio, currentQuestion, speak]);
 
-  // Skip/stop the current audio playback
+  // Skip current question (move to next without answering)
+  const skipQuestion = useCallback(async () => {
+    if (processingResponseRef.current) return;
+    processingResponseRef.current = true;
+
+    try {
+      // Submit empty skip response
+      const res = await fetch(`/api/interviews/${interviewId}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: "[SKIPPED]", skipped: true }),
+      });
+
+      if (!res.ok) throw new Error("Failed to skip");
+
+      const data = await res.json();
+
+      if (data.completed) {
+        setInterviewComplete(true);
+        setShowCompleteDialog(true);
+      } else if (data.nextQuestion) {
+        setCurrentQuestion(data.nextQuestion);
+        setProgress(data.progress || progress);
+
+        if (data.nextQuestionAudioUrl) {
+          preloadedAudioRef.current = data.nextQuestionAudioUrl;
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "interviewer", content: data.nextQuestion, timestamp: new Date() },
+        ]);
+
+        speak(data.nextQuestion);
+      }
+    } catch (error) {
+      console.error("Error skipping question:", error);
+      toast.error("Failed to skip question");
+    } finally {
+      processingResponseRef.current = false;
+    }
+  }, [interviewId, progress, speak]);
+
+  // Skip/stop the current audio playback, or skip question if not playing
   const skipAudio = useCallback(() => {
-    stopCurrentAudio();
-    setIsAvatarSpeaking(false);
-    toast.success("Skipped");
-  }, []);
+    if (isAvatarSpeaking) {
+      // Stop audio if playing
+      stopCurrentAudio();
+      setIsAvatarSpeaking(false);
+      toast.success("Audio skipped");
+    } else {
+      // Skip to next question
+      skipQuestion();
+    }
+  }, [isAvatarSpeaking, skipQuestion]);
 
   // Start recording audio
   const startRecording = useCallback(() => {
@@ -829,21 +878,19 @@ function VideoInterviewContent() {
                 {!isRecordingAudio ? (
                   /* Not recording - show Record button */
                   <>
-                    {/* Skip button - shows when interviewer is speaking */}
-                    {isAvatarSpeaking && (
-                      <div className="flex flex-col items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          onClick={skipAudio}
-                          className="rounded-full w-14 h-14 border-orange-500 text-orange-500 hover:bg-orange-500/10"
-                          title="Skip audio"
-                        >
-                          <SkipForward className="w-5 h-5" />
-                        </Button>
-                        <span className="text-xs text-orange-400">Skip</span>
-                      </div>
-                    )}
+                    {/* Skip button - always visible, skips audio or skips question */}
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={skipAudio}
+                        className={`rounded-full w-14 h-14 ${isAvatarSpeaking ? "border-orange-500 text-orange-500 hover:bg-orange-500/10" : "border-gray-500 text-gray-400 hover:bg-gray-500/10"}`}
+                        title={isAvatarSpeaking ? "Skip audio" : "Skip question"}
+                      >
+                        <SkipForward className="w-5 h-5" />
+                      </Button>
+                      <span className={`text-xs ${isAvatarSpeaking ? "text-orange-400" : "text-gray-400"}`}>Skip</span>
+                    </div>
 
                     {/* Record button */}
                     <div className="flex flex-col items-center gap-1">
@@ -859,7 +906,7 @@ function VideoInterviewContent() {
                       <span className="text-xs text-gray-400">Record</span>
                     </div>
 
-                    {/* Repeat button */}
+                    {/* Repeat button - only when not speaking */}
                     {!isAvatarSpeaking && (
                       <div className="flex flex-col items-center gap-1">
                         <Button
@@ -926,6 +973,20 @@ function VideoInterviewContent() {
             ) : (
               /* Video mode controls */
               <>
+                {/* Skip button - always visible */}
+                <div className="flex flex-col items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={skipAudio}
+                    className={`rounded-full w-14 h-14 ${isAvatarSpeaking ? "border-orange-500 text-orange-500 hover:bg-orange-500/10" : "border-gray-500 text-gray-400 hover:bg-gray-500/10"}`}
+                    title={isAvatarSpeaking ? "Skip audio" : "Skip question"}
+                  >
+                    <SkipForward className="w-5 h-5" />
+                  </Button>
+                  <span className={`text-xs ${isAvatarSpeaking ? "text-orange-400" : "text-gray-400"}`}>Skip</span>
+                </div>
+
                 {/* Mic button for HeyGen */}
                 <div className="flex flex-col items-center gap-1">
                   <Button
@@ -938,22 +999,6 @@ function VideoInterviewContent() {
                   </Button>
                   <span className="text-xs text-gray-400">{isMuted ? "Unmute" : "Mute"}</span>
                 </div>
-
-                {/* Skip button - shows when interviewer is speaking */}
-                {isAvatarSpeaking && (
-                  <div className="flex flex-col items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={skipAudio}
-                      className="rounded-full w-14 h-14 border-orange-500 text-orange-500 hover:bg-orange-500/10"
-                      title="Skip audio"
-                    >
-                      <SkipForward className="w-5 h-5" />
-                    </Button>
-                    <span className="text-xs text-orange-400">Skip</span>
-                  </div>
-                )}
 
                 {/* Repeat button - hidden when speaking */}
                 {!isAvatarSpeaking && (

@@ -227,7 +227,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { response, audioKey } = body;
+    const { response, audioKey, skipped } = body;
 
     if (!response?.trim()) {
       return NextResponse.json(
@@ -235,6 +235,8 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const isSkipped = skipped === true || response === "[SKIPPED]";
 
     // Fetch interview first (needed for clientId)
     const interview = await db.query.interviews.findFirst({
@@ -312,51 +314,62 @@ export async function POST(
       ? currentQuestionData.category
       : null;
 
-    // Save both messages in PARALLEL (they're independent)
-    await Promise.all([
-      db.insert(interviewMessages).values({
+    // Save messages (skip client message if question was skipped)
+    if (isSkipped) {
+      // Only save the interviewer question for skipped
+      await db.insert(interviewMessages).values({
         interviewId: id,
         role: "interviewer",
         content: actualQuestion,
         questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
         targetedContentType: validCategory as any,
-      }),
-      db.insert(interviewMessages).values({
-        interviewId: id,
-        role: "client",
-        content: response.trim(),
-        audioUrl: audioKey || null,
-      }),
-    ]);
+      });
+    } else {
+      // Save both messages in PARALLEL (they're independent)
+      await Promise.all([
+        db.insert(interviewMessages).values({
+          interviewId: id,
+          role: "interviewer",
+          content: actualQuestion,
+          questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
+          targetedContentType: validCategory as any,
+        }),
+        db.insert(interviewMessages).values({
+          interviewId: id,
+          role: "client",
+          content: response.trim(),
+          audioUrl: audioKey || null,
+        }),
+      ]);
+    }
 
-    // Update questions asked
+    // Update questions asked (mark as skipped if applicable)
     const questionsAsked = (interview.questionsAsked as object[]) || [];
-    questionsAsked.push({
-      questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
-      question: actualQuestion,
-      response: response.trim(),
-      category: currentQuestionData?.category,
-      timestamp: new Date().toISOString(),
-      isFollowUp: isAnsweringFollowUp,
-    });
+    if (!isSkipped) {
+      questionsAsked.push({
+        questionId: isAnsweringFollowUp ? undefined : currentQuestionData?.id,
+        question: actualQuestion,
+        response: response.trim(),
+        category: currentQuestionData?.category,
+        timestamp: new Date().toISOString(),
+        isFollowUp: isAnsweringFollowUp,
+      });
+    }
 
-    // FAST RESPONSE ARCHITECTURE:
-    // 1. If there's a pending follow-up (generated in background last cycle), use it
-    // 2. Otherwise, immediately return the next question
-    // 3. Start generating the follow-up in background for the NEXT cycle
-
+    // For skipped questions: always move to next, no follow-ups
+    // For answered questions: check for follow-ups
     const followUpCount = state.followUpCount || 0;
     let nextQuestion: string | null = null;
     let isFollowUp = false;
 
-    // Check if we have a pending follow-up from background generation
-    if (state.pendingFollowUp && followUpCount === 0) {
+    // Only use follow-ups for non-skipped questions
+    if (!isSkipped && state.pendingFollowUp && followUpCount === 0) {
       nextQuestion = state.pendingFollowUp;
       isFollowUp = true;
     }
 
-    // Calculate next index
-    const shouldMoveToNext = !isFollowUp;
+    // Calculate next index - always move forward for skipped
+    const shouldMoveToNext = isSkipped || !isFollowUp;
     const nextIndex = shouldMoveToNext ? currentIndex + 1 : currentIndex;
     const completed = nextIndex >= totalQuestions;
 
@@ -392,7 +405,8 @@ export async function POST(
 
     // BACKGROUND: Generate follow-up for the NEXT question cycle (don't await)
     // This runs async so it doesn't block the response
-    if (!isFollowUp && response.trim().length > 50 && !completed) {
+    // Skip follow-up generation for skipped questions
+    if (!isSkipped && !isFollowUp && response.trim().length > 50 && !completed) {
       // Get previous questions to avoid repetition
       const previousQuestions = questionsAsked
         .slice(-5)
