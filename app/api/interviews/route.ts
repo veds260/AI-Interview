@@ -450,9 +450,9 @@ export async function POST(request: Request) {
       console.log("[Questions] All unique questions exhausted - using open fallbacks");
       const fallbackQuestions = [
         {
-          id: "fallback-1",
+          id: undefined, // No ID - these are dynamic fallbacks
           question: "What's been on your mind lately that you haven't had a chance to talk about?",
-          category: "open_ended" as const,
+          category: "lessons" as const, // Valid enum value
           difficulty: "easy" as const,
           topics: ["general"],
           expectedClipPotential: 8,
@@ -464,7 +464,7 @@ export async function POST(request: Request) {
           updatedAt: new Date(),
         },
         {
-          id: "fallback-2",
+          id: undefined,
           question: "What's something most people misunderstand about what you do?",
           category: "hot_take" as const,
           difficulty: "easy" as const,
@@ -478,9 +478,9 @@ export async function POST(request: Request) {
           updatedAt: new Date(),
         },
         {
-          id: "fallback-3",
+          id: undefined,
           question: "What's a question you wish more people would ask you?",
-          category: "open_ended" as const,
+          category: "values" as const, // Valid enum value
           difficulty: "easy" as const,
           topics: ["reflection"],
           expectedClipPotential: 8,
@@ -492,7 +492,7 @@ export async function POST(request: Request) {
           updatedAt: new Date(),
         },
         {
-          id: "fallback-4",
+          id: undefined,
           question: "What's the most counterintuitive lesson you've learned in your work?",
           category: "lessons" as const,
           difficulty: "medium" as const,
