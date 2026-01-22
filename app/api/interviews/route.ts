@@ -36,6 +36,82 @@ interface GeneratedQuestion {
 const questionCache = new Map<string, { questions: GeneratedQuestion[]; timestamp: number }>();
 const CACHE_TTL_MS = 0; // Disabled - always generate fresh questions
 
+// Safe JSON parser with error recovery for AI-generated JSON
+function safeParseJSON(jsonString: string): GeneratedQuestion[] | null {
+  // First, try direct parsing
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    // Continue to fixes
+  }
+
+  let fixed = jsonString;
+
+  // Fix 1: Remove trailing commas before ] or }
+  fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+
+  // Fix 2: Fix unescaped quotes in strings (common AI mistake)
+  // Match strings and escape internal quotes
+  fixed = fixed.replace(/"([^"]*?)"/g, (match, content) => {
+    // Don't fix if it looks like a proper JSON string already
+    if (!content.includes('"')) return match;
+    // Escape unescaped internal quotes
+    const escaped = content.replace(/(?<!\\)"/g, '\\"');
+    return `"${escaped}"`;
+  });
+
+  // Fix 3: Remove any text before the first [ or after the last ]
+  const startBracket = fixed.indexOf('[');
+  const endBracket = fixed.lastIndexOf(']');
+  if (startBracket !== -1 && endBracket !== -1 && endBracket > startBracket) {
+    fixed = fixed.substring(startBracket, endBracket + 1);
+  }
+
+  // Fix 4: Try to fix truncated JSON by adding missing brackets
+  const openBrackets = (fixed.match(/\[/g) || []).length;
+  const closeBrackets = (fixed.match(/\]/g) || []).length;
+  const openBraces = (fixed.match(/\{/g) || []).length;
+  const closeBraces = (fixed.match(/\}/g) || []).length;
+
+  // Add missing closing braces/brackets
+  for (let i = 0; i < openBraces - closeBraces; i++) {
+    fixed += '}';
+  }
+  for (let i = 0; i < openBrackets - closeBrackets; i++) {
+    fixed += ']';
+  }
+
+  // Second attempt after fixes
+  try {
+    return JSON.parse(fixed);
+  } catch {
+    // Continue to more aggressive fixes
+  }
+
+  // Fix 5: Try to extract valid question objects individually
+  try {
+    const questionPattern = /\{\s*"question"\s*:\s*"[^"]+"\s*,\s*"category"\s*:\s*"[^"]+"\s*(?:,\s*"reasoning"\s*:\s*"[^"]*")?\s*\}/g;
+    const matches = fixed.match(questionPattern);
+    if (matches && matches.length > 0) {
+      const questions = matches.map(m => {
+        try {
+          return JSON.parse(m);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+      if (questions.length > 0) {
+        console.log(`[Questions] Recovered ${questions.length} questions from malformed JSON`);
+        return questions as GeneratedQuestion[];
+      }
+    }
+  } catch {
+    // Give up
+  }
+
+  return null;
+}
+
 // Check if we have enough context to generate custom questions
 function hasRichContext(
   kb: KnowledgeBase | undefined,
@@ -207,11 +283,21 @@ Return JSON array with 10-12 questions:
       success: true,
     });
 
-    // Parse JSON from response
+    // Parse JSON from response with error recovery
     const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
+    if (!jsonMatch) {
+      console.error(`[Questions] No JSON array found in response for ${clientName}, retrying...`);
+      // Retry once with a more explicit prompt
+      return retryQuestionGeneration(apiKey, contextPrompt, clientName, clientId);
+    }
 
-    const questions = JSON.parse(jsonMatch[0]) as GeneratedQuestion[];
+    const questions = safeParseJSON(jsonMatch[0]);
+    if (!questions || questions.length === 0) {
+      console.error(`[Questions] Failed to parse JSON for ${clientName}, retrying...`);
+      console.error(`[Questions] Raw response:`, content.substring(0, 500));
+      // Retry once with a more explicit prompt
+      return retryQuestionGeneration(apiKey, contextPrompt, clientName, clientId);
+    }
     console.log(`[Questions] Generated ${questions.length} custom questions for ${clientName}`);
 
     // Cache the generated questions
@@ -223,6 +309,93 @@ Return JSON array with 10-12 questions:
     return questions;
   } catch (error) {
     console.error("Failed to generate custom questions:", error);
+    return [];
+  }
+}
+
+// Retry function with stricter JSON formatting instructions
+async function retryQuestionGeneration(
+  apiKey: string,
+  contextPrompt: string,
+  clientName: string,
+  clientId?: string
+): Promise<GeneratedQuestion[]> {
+  console.log(`[Questions] Retry attempt for ${clientName}`);
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "anthropic/claude-3-haiku",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "system",
+            content: `You generate interview questions. Return ONLY valid JSON, no other text.
+
+CRITICAL JSON RULES:
+- Start response with [ and end with ]
+- No trailing commas
+- Escape quotes inside strings with \\"
+- No text before or after the JSON array
+
+Format: [{"question": "text here", "category": "origin_story"}]
+Valid categories: origin_story, failure_story, hot_take, lessons, prediction, tactical`,
+          },
+          {
+            role: "user",
+            content: contextPrompt + "\n\nGenerate exactly 10 interview questions. Return ONLY the JSON array, nothing else. Start with [ and end with ].",
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      console.error(`[Questions] Retry failed with HTTP ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    // Track retry API call
+    await trackApiCall({
+      clientId,
+      provider: "openrouter",
+      model: "anthropic/claude-3-haiku",
+      endpoint: "generate-questions-retry",
+      inputTokens: data.usage?.prompt_tokens || 0,
+      outputTokens: data.usage?.completion_tokens || 0,
+      durationMs: 0,
+      success: true,
+    });
+
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error(`[Questions] Retry: No JSON array found`);
+      return [];
+    }
+
+    const questions = safeParseJSON(jsonMatch[0]);
+    if (!questions || questions.length === 0) {
+      console.error(`[Questions] Retry: Still failed to parse JSON`);
+      return [];
+    }
+
+    console.log(`[Questions] Retry successful: ${questions.length} questions for ${clientName}`);
+
+    // Cache the generated questions
+    if (clientId && questions.length > 0) {
+      questionCache.set(clientId, { questions, timestamp: Date.now() });
+    }
+
+    return questions;
+  } catch (error) {
+    console.error(`[Questions] Retry error:`, error);
     return [];
   }
 }
