@@ -201,6 +201,22 @@ export async function DELETE(
       );
     }
 
+    // Reset timesUsed on questions that were asked in this interview
+    const questionsAsked = (interview.questionsAsked as Array<{ questionId?: string }>) || [];
+    for (const qa of questionsAsked) {
+      if (qa.questionId) {
+        const q = await db.query.questionBank.findFirst({
+          where: eq(questionBank.id, qa.questionId),
+        });
+        if (q && (q.timesUsed || 0) > 0) {
+          await db
+            .update(questionBank)
+            .set({ timesUsed: (q.timesUsed || 1) - 1 })
+            .where(eq(questionBank.id, qa.questionId));
+        }
+      }
+    }
+
     // Delete related messages
     await db.delete(interviewMessages).where(eq(interviewMessages.interviewId, id));
 
