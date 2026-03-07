@@ -745,9 +745,8 @@ export async function POST(request: Request) {
       .values({
         clientId: client?.id || null,
         mode: mode as "live_video" | "text_chat",
-        status: "in_progress",
-        title: `Interview - ${new Date().toLocaleDateString()}`,
-        startedAt: new Date(),
+        status: "scheduled",
+        title: `Interview - ${client?.name || "Guest"} - ${new Date().toLocaleDateString()}`,
         questionsAsked: [],
         sessionState: {
           questions: sessionQuestions,

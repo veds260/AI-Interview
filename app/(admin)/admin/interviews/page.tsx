@@ -48,6 +48,7 @@ import {
   X,
   Trash2,
   Mic,
+  Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,6 +101,9 @@ export default function AdminInterviewsPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [interviewToDelete, setInterviewToDelete] = useState<Interview | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createClientId, setCreateClientId] = useState("");
+  const [createMode, setCreateMode] = useState("text_chat");
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -188,6 +192,46 @@ export default function AdminInterviewsPage() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: async ({ clientId, mode }: { clientId: string; mode: string }) => {
+      const res = await fetch("/api/interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId, mode }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to create interview");
+      }
+      return res.json();
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
+      setCreateDialogOpen(false);
+      toast.success("Interview created");
+      // Auto-generate share link
+      try {
+        const shareRes = await fetch(`/api/interviews/${data.id}/share`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expiresInDays: 30 }),
+        });
+        if (shareRes.ok) {
+          const shareData = await shareRes.json();
+          queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
+          setShareUrl(shareData.shareUrl);
+          setSelectedInterview({ ...data, shareToken: shareData.shareToken, shareTokenExpiresAt: shareData.expiresAt } as Interview);
+          setShareDialogOpen(true);
+        }
+      } catch {
+        // Share link generation failed, user can do it manually
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (interviewId: string) => {
       const res = await fetch(`/api/interviews/${interviewId}`, {
@@ -263,11 +307,17 @@ export default function AdminInterviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Interviews</h1>
-        <p className="text-muted-foreground mt-1">
-          View and manage all interview sessions
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Interviews</h1>
+          <p className="text-muted-foreground mt-1">
+            View and manage all interview sessions
+          </p>
+        </div>
+        <Button onClick={() => { setCreateClientId(""); setCreateMode("text_chat"); setCreateDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Interview
+        </Button>
       </div>
 
       {/* Stats */}
@@ -692,6 +742,73 @@ export default function AdminInterviewsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShareDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Interview Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Interview</DialogTitle>
+            <DialogDescription>
+              Select a client and mode. A shareable link will be generated automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={createClientId} onValueChange={setCreateClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientsData?.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Mode</Label>
+              <Select value={createMode} onValueChange={setCreateMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text_chat">Text Chat</SelectItem>
+                  <SelectItem value="live_video">Audio</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {createMode === "live_video"
+                  ? "Questions spoken aloud via TTS, answers recorded via microphone"
+                  : "Text-based Q&A chat interface"}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!createClientId) {
+                  toast.error("Please select a client");
+                  return;
+                }
+                createMutation.mutate({ clientId: createClientId, mode: createMode });
+              }}
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Create & Generate Link
             </Button>
           </DialogFooter>
         </DialogContent>
