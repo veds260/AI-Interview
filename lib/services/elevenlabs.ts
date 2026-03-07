@@ -5,16 +5,15 @@
 
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
-// Best voices for interview style:
-// en-US-AndrewNeural (Male, warm professional)
-// en-US-BrianNeural (Male, conversational)
-// en-US-EmmaNeural (Female, clear)
-// en-US-AvaNeural (Female, natural)
-// en-GB-RyanNeural (Male, British, polished)
-// en-GB-SoniaNeural (Female, British)
-// en-AU-WilliamMultilingualNeural (Male, Australian)
+// Best voices (Multilingual = newer, more natural generation):
+// en-US-AndrewMultilingualNeural - Male, warm, confident, authentic (BEST for interviewer)
+// en-US-AvaMultilingualNeural - Female, expressive, caring, friendly
+// en-US-EmmaMultilingualNeural - Female, community favorite for natural flow
+// en-US-BrianMultilingualNeural - Male, approachable, casual
+// en-GB-RyanNeural - Male, British, polished (least robotic per users)
+// en-GB-SoniaNeural - Female, British, warm
 
-const DEFAULT_VOICE = process.env.TTS_VOICE || 'en-US-AndrewNeural';
+const DEFAULT_VOICE = process.env.TTS_VOICE || 'en-US-AndrewMultilingualNeural';
 
 class TTSService {
   private voice: string;
