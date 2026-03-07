@@ -1,90 +1,67 @@
 /**
- * ElevenLabs API Integration
  * Text-to-Speech for audio interview mode
+ * Uses Microsoft Edge Neural TTS (free, no API key needed)
  */
 
-export interface ElevenLabsConfig {
-  apiKey: string;
-  voiceId?: string;
-}
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
-export interface VoiceSettings {
-  stability: number;
-  similarity_boost: number;
-}
+// Best voices for interview style:
+// en-US-AndrewNeural (Male, warm professional)
+// en-US-BrianNeural (Male, conversational)
+// en-US-EmmaNeural (Female, clear)
+// en-US-AvaNeural (Female, natural)
+// en-GB-RyanNeural (Male, British, polished)
+// en-GB-SoniaNeural (Female, British)
+// en-AU-WilliamMultilingualNeural (Male, Australian)
 
-class ElevenLabsService {
-  private apiKey: string;
-  private voiceId: string;
-  private baseUrl = "https://api.elevenlabs.io/v1";
+const DEFAULT_VOICE = process.env.TTS_VOICE || 'en-US-AndrewNeural';
 
-  constructor(config?: ElevenLabsConfig) {
-    this.apiKey = config?.apiKey || process.env.ELEVENLABS_API_KEY || "";
-    this.voiceId = config?.voiceId || process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
+class TTSService {
+  private voice: string;
+
+  constructor() {
+    this.voice = DEFAULT_VOICE;
   }
 
   isConfigured(): boolean {
-    return !!this.apiKey;
+    return true; // Edge TTS needs no API key
   }
 
-  async textToSpeech(
-    text: string,
-    settings?: VoiceSettings
-  ): Promise<ArrayBuffer | null> {
-    if (!this.isConfigured()) {
-      console.error("[ElevenLabs] NOT CONFIGURED - ELEVENLABS_API_KEY missing!");
-      return null;
-    }
-
+  async textToSpeech(text: string): Promise<ArrayBuffer | null> {
     const startTime = Date.now();
 
     try {
-      const response = await fetch(
-        `${this.baseUrl}/text-to-speech/${this.voiceId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "xi-api-key": this.apiKey,
-            "Accept": "audio/mpeg",
-          },
-          body: JSON.stringify({
-            text,
-            model_id: "eleven_turbo_v2",
-            voice_settings: settings || {
-              stability: 0.5,
-              similarity_boost: 0.75,
-            },
-          }),
-        }
-      );
+      const tts = new MsEdgeTTS();
+      await tts.setMetadata(this.voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
 
+      const { audioStream } = tts.toStream(text);
+
+      const chunks: Buffer[] = [];
+      audioStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      await new Promise<void>((resolve, reject) => {
+        audioStream.on('end', resolve);
+        audioStream.on('error', reject);
+      });
+
+      const buffer = Buffer.concat(chunks);
       const duration = Date.now() - startTime;
+      console.log(`[TTS] ${this.voice}: ${buffer.byteLength} bytes in ${duration}ms`);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[ElevenLabs] ERROR ${response.status} (${duration}ms):`, errorText);
-        return null;
-      }
-
-      const buffer = await response.arrayBuffer();
-      console.log(`[ElevenLabs] SUCCESS: ${buffer.byteLength} bytes in ${duration}ms`);
-
-      return buffer;
+      return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
     } catch (error) {
-      console.error("[ElevenLabs] EXCEPTION:", error);
+      console.error("[TTS] ERROR:", error);
       return null;
     }
   }
 
-  setVoiceId(voiceId: string) {
-    this.voiceId = voiceId;
+  setVoice(voice: string) {
+    this.voice = voice;
   }
 
-  getApiKey(): string {
-    return this.apiKey;
+  getVoice(): string {
+    return this.voice;
   }
 }
 
-export const elevenlabs = new ElevenLabsService();
-export default ElevenLabsService;
+export const elevenlabs = new TTSService();
+export default TTSService;
