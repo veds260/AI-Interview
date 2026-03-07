@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, interviews, clients, questionBank, users, competitors } from "@/lib/db";
-import { desc, eq, and, isNull, notInArray, sql } from "drizzle-orm";
+import { db, interviews, clients, questionBank, users } from "@/lib/db";
+import { desc, eq, and, isNull, notInArray } from "drizzle-orm";
 import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
-import { elevenlabs } from "@/lib/services/elevenlabs";
-import { scrapeCompetitor } from "@/lib/services/twitter";
-
-const SCRAPE_STALE_DAYS = 2; // Re-scrape competitors older than 2 days
 
 interface KnowledgeBase {
   bio?: string;
@@ -32,13 +28,11 @@ interface GeneratedQuestion {
 }
 
 // Disable question cache - always generate fresh to avoid repetition
-// Each interview should get unique questions based on what's already been asked
 const questionCache = new Map<string, { questions: GeneratedQuestion[]; timestamp: number }>();
-const CACHE_TTL_MS = 0; // Disabled - always generate fresh questions
+const CACHE_TTL_MS = 0;
 
 // Safe JSON parser with error recovery for AI-generated JSON
 function safeParseJSON(jsonString: string): GeneratedQuestion[] | null {
-  // First, try direct parsing
   try {
     return JSON.parse(jsonString);
   } catch {
@@ -47,33 +41,25 @@ function safeParseJSON(jsonString: string): GeneratedQuestion[] | null {
 
   let fixed = jsonString;
 
-  // Fix 1: Remove trailing commas before ] or }
   fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
 
-  // Fix 2: Fix unescaped quotes in strings (common AI mistake)
-  // Match strings and escape internal quotes
   fixed = fixed.replace(/"([^"]*?)"/g, (match, content) => {
-    // Don't fix if it looks like a proper JSON string already
     if (!content.includes('"')) return match;
-    // Escape unescaped internal quotes
     const escaped = content.replace(/(?<!\\)"/g, '\\"');
     return `"${escaped}"`;
   });
 
-  // Fix 3: Remove any text before the first [ or after the last ]
   const startBracket = fixed.indexOf('[');
   const endBracket = fixed.lastIndexOf(']');
   if (startBracket !== -1 && endBracket !== -1 && endBracket > startBracket) {
     fixed = fixed.substring(startBracket, endBracket + 1);
   }
 
-  // Fix 4: Try to fix truncated JSON by adding missing brackets
   const openBrackets = (fixed.match(/\[/g) || []).length;
   const closeBrackets = (fixed.match(/\]/g) || []).length;
   const openBraces = (fixed.match(/\{/g) || []).length;
   const closeBraces = (fixed.match(/\}/g) || []).length;
 
-  // Add missing closing braces/brackets
   for (let i = 0; i < openBraces - closeBraces; i++) {
     fixed += '}';
   }
@@ -81,14 +67,12 @@ function safeParseJSON(jsonString: string): GeneratedQuestion[] | null {
     fixed += ']';
   }
 
-  // Second attempt after fixes
   try {
     return JSON.parse(fixed);
   } catch {
     // Continue to more aggressive fixes
   }
 
-  // Fix 5: Try to extract valid question objects individually
   try {
     const questionPattern = /\{\s*"question"\s*:\s*"[^"]+"\s*,\s*"category"\s*:\s*"[^"]+"\s*(?:,\s*"reasoning"\s*:\s*"[^"]*")?\s*\}/g;
     const matches = fixed.match(questionPattern);
@@ -112,7 +96,6 @@ function safeParseJSON(jsonString: string): GeneratedQuestion[] | null {
   return null;
 }
 
-// Check if we have enough context to generate custom questions
 function hasRichContext(
   kb: KnowledgeBase | undefined,
   previousInterviews: PreviousInterviewContent[],
@@ -125,7 +108,6 @@ function hasRichContext(
   const hasCompetitorTopics = competitorTopics.length > 0;
   const hasTweets = (kb?.typefullyTweets?.length || 0) > 0;
 
-  // Need at least 2 sources of context for good questions
   const contextSources = [
     hasBio,
     hasProducts,
@@ -138,7 +120,6 @@ function hasRichContext(
   return contextSources >= 2;
 }
 
-// Generate custom questions using AI based on client context
 async function generateCustomQuestions(
   clientName: string,
   kb: KnowledgeBase | undefined,
@@ -150,7 +131,6 @@ async function generateCustomQuestions(
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return [];
 
-  // Check cache first (use clientId as key)
   if (clientId) {
     const cached = questionCache.get(clientId);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -159,7 +139,6 @@ async function generateCustomQuestions(
     }
   }
 
-  // Build context sections
   let contextPrompt = `You are generating interview questions for ${clientName}.\n\n`;
 
   if (kb?.bio) {
@@ -183,7 +162,6 @@ async function generateCustomQuestions(
     contextPrompt += `=== TRENDING TOPICS IN THEIR SPACE ===\n${competitorTopics.slice(0, 10).join(", ")}\n\n`;
   }
 
-  // Extract themes already covered to avoid repetition
   const coveredThemes: string[] = [];
   if (previousInterviews.length > 0 || alreadyAskedQuestions.length > 0) {
     contextPrompt += `=== TOPICS/THEMES ALREADY COVERED (DO NOT ASK ABOUT THESE AGAIN) ===\n`;
@@ -191,7 +169,6 @@ async function generateCustomQuestions(
 
     previousInterviews.slice(0, 3).forEach((interview) => {
       interview.keyInsights.slice(0, 5).forEach(insight => {
-        // Extract the question part
         const qMatch = insight.match(/Q: "([^"]+)"/);
         if (qMatch) {
           contextPrompt += `- ${qMatch[1]}\n`;
@@ -283,11 +260,9 @@ Return JSON array with 10-12 questions:
       success: true,
     });
 
-    // Parse JSON from response with error recovery
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.error(`[Questions] No JSON array found in response for ${clientName}, retrying...`);
-      // Retry once with a more explicit prompt
       return retryQuestionGeneration(apiKey, contextPrompt, clientName, clientId);
     }
 
@@ -295,12 +270,10 @@ Return JSON array with 10-12 questions:
     if (!questions || questions.length === 0) {
       console.error(`[Questions] Failed to parse JSON for ${clientName}, retrying...`);
       console.error(`[Questions] Raw response:`, content.substring(0, 500));
-      // Retry once with a more explicit prompt
       return retryQuestionGeneration(apiKey, contextPrompt, clientName, clientId);
     }
     console.log(`[Questions] Generated ${questions.length} custom questions for ${clientName}`);
 
-    // Cache the generated questions
     if (clientId && questions.length > 0) {
       questionCache.set(clientId, { questions, timestamp: Date.now() });
       console.log(`[Questions] Cached questions for ${clientName}`);
@@ -313,7 +286,6 @@ Return JSON array with 10-12 questions:
   }
 }
 
-// Retry function with stricter JSON formatting instructions
 async function retryQuestionGeneration(
   apiKey: string,
   contextPrompt: string,
@@ -362,7 +334,6 @@ Valid categories: origin_story, failure_story, hot_take, lessons, prediction, ta
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Track retry API call
     await trackApiCall({
       clientId,
       provider: "openrouter",
@@ -388,7 +359,6 @@ Valid categories: origin_story, failure_story, hot_take, lessons, prediction, ta
 
     console.log(`[Questions] Retry successful: ${questions.length} questions for ${clientName}`);
 
-    // Cache the generated questions
     if (clientId && questions.length > 0) {
       questionCache.set(clientId, { questions, timestamp: Date.now() });
     }
@@ -407,53 +377,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const clientId = searchParams.get("clientId");
-
-    let allInterviews;
-
-    if (session.user.role === "admin") {
-      // Admins see all interviews with client name
-      allInterviews = await db
-        .select({
-          id: interviews.id,
-          clientId: interviews.clientId,
-          clientName: clients.name,
-          mode: interviews.mode,
-          status: interviews.status,
-          title: interviews.title,
-          questionsCount: interviews.questionsCount,
-          extractionsCount: interviews.extractionsCount,
-          startedAt: interviews.startedAt,
-          completedAt: interviews.completedAt,
-          createdAt: interviews.createdAt,
-          transcript: interviews.transcript,
-          recordingUrl: interviews.recordingUrl,
-          questionsAsked: interviews.questionsAsked,
-          shareToken: interviews.shareToken,
-          shareTokenExpiresAt: interviews.shareTokenExpiresAt,
-          sessionState: interviews.sessionState,
-        })
-        .from(interviews)
-        .leftJoin(clients, eq(interviews.clientId, clients.id))
-        .orderBy(desc(interviews.createdAt));
-    } else {
-      // Clients see their own interviews
-      // First find the client record for this user
-      const client = await db.query.clients.findFirst({
-        where: eq(clients.userId, session.user.id),
-      });
-
-      if (!client) {
-        return NextResponse.json([]);
-      }
-
-      allInterviews = await db
-        .select()
-        .from(interviews)
-        .where(eq(interviews.clientId, client.id))
-        .orderBy(desc(interviews.createdAt));
-    }
+    const allInterviews = await db
+      .select({
+        id: interviews.id,
+        clientId: interviews.clientId,
+        clientName: clients.name,
+        mode: interviews.mode,
+        status: interviews.status,
+        title: interviews.title,
+        questionsCount: interviews.questionsCount,
+        startedAt: interviews.startedAt,
+        completedAt: interviews.completedAt,
+        createdAt: interviews.createdAt,
+        transcript: interviews.transcript,
+        transcriptMarkdown: interviews.transcriptMarkdown,
+        questionsAsked: interviews.questionsAsked,
+        shareToken: interviews.shareToken,
+        shareTokenExpiresAt: interviews.shareTokenExpiresAt,
+        sessionState: interviews.sessionState,
+      })
+      .from(interviews)
+      .leftJoin(clients, eq(interviews.clientId, clients.id))
+      .orderBy(desc(interviews.createdAt));
 
     return NextResponse.json(allInterviews);
   } catch (error) {
@@ -473,7 +418,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { mode, clientId, audioOnly } = body;
+    const { mode, clientId } = body;
 
     if (!mode || !["live_video", "text_chat"].includes(mode)) {
       return NextResponse.json(
@@ -482,26 +427,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find or create client for this user
-    let client = await db.query.clients.findFirst({
-      where: eq(clients.userId, session.user.id),
-    });
-
-    // If client role and no client record, create one
-    if (!client && session.user.role === "client") {
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-      });
-
-      const [newClient] = await db
-        .insert(clients)
-        .values({
-          userId: session.user.id,
-          name: user?.name || session.user.email?.split("@")[0] || "Unknown",
-        })
-        .returning();
-      client = newClient;
-    }
+    // Find client if specified
+    let client = clientId
+      ? await db.query.clients.findFirst({ where: eq(clients.id, clientId) })
+      : null;
 
     // Get previously asked question IDs and content for this client
     let previouslyAskedQuestionIds: string[] = [];
@@ -509,7 +438,6 @@ export async function POST(request: Request) {
     let previousInterviewContent: PreviousInterviewContent[] = [];
 
     if (client) {
-      // Get ALL previous interviews (not just completed) to avoid repeating questions
       const previousInterviews = await db
         .select({
           questionsAsked: interviews.questionsAsked,
@@ -520,9 +448,8 @@ export async function POST(request: Request) {
         .from(interviews)
         .where(eq(interviews.clientId, client.id))
         .orderBy(desc(interviews.createdAt))
-        .limit(200); // Get ALL interviews to avoid ANY repetition
+        .limit(200);
 
-      // Extract all previously asked question IDs, categories, and FULL content
       previousInterviews.forEach((interview) => {
         const asked = interview.questionsAsked as Array<{
           questionId?: string;
@@ -540,7 +467,6 @@ export async function POST(request: Request) {
             coveredCategories.push(qa.category);
             topicsDiscussed.push(qa.category);
           }
-          // Include FULL Q&A pair for context (not just snippets)
           if (qa.question && qa.response && qa.response.length > 30) {
             keyInsights.push(`Q: "${qa.question}" → A: "${qa.response}"`);
           }
@@ -549,7 +475,7 @@ export async function POST(request: Request) {
         if (keyInsights.length > 0) {
           previousInterviewContent.push({
             topic: interview.title || undefined,
-            keyInsights: keyInsights, // Include ALL Q&As, not just top 3
+            keyInsights,
             topicsDiscussed: [...new Set(topicsDiscussed)],
           });
         }
@@ -562,7 +488,6 @@ export async function POST(request: Request) {
       interview.keyInsights.forEach(insight => {
         const qMatch = insight.match(/Q: "([^"]+)"/);
         if (qMatch) {
-          // Normalize: lowercase, trim, remove punctuation for comparison
           allPreviouslyAskedTexts.add(qMatch[1].toLowerCase().trim().replace(/[?!.,]/g, ''));
         }
       });
@@ -575,7 +500,6 @@ export async function POST(request: Request) {
       client ? eq(questionBank.clientId, client.id) : isNull(questionBank.clientId),
     ];
 
-    // Add exclusion for previously asked questions if any exist
     if (previouslyAskedQuestionIds.length > 0) {
       baseConditions.push(notInArray(questionBank.id, previouslyAskedQuestionIds));
     }
@@ -584,16 +508,15 @@ export async function POST(request: Request) {
       .select()
       .from(questionBank)
       .where(and(...baseConditions))
-      .orderBy(sql`RANDOM()`)
-      .limit(40); // Get more to filter out text duplicates
+      .orderBy(desc(questionBank.createdAt))
+      .limit(40);
 
-    // Filter out questions whose text was already asked (even if ID is different)
     questions = questions.filter(q => {
       const normalizedQ = q.question.toLowerCase().trim().replace(/[?!.,]/g, '');
       return !allPreviouslyAskedTexts.has(normalizedQ);
     }).slice(0, 20);
 
-    // If no client-specific questions (or all exhausted), get global ones
+    // If no client-specific questions, get global ones
     if (questions.length === 0) {
       const globalConditions = [
         eq(questionBank.isActive, true),
@@ -608,24 +531,23 @@ export async function POST(request: Request) {
         .select()
         .from(questionBank)
         .where(and(...globalConditions))
-        .orderBy(sql`RANDOM()`)
+        .orderBy(desc(questionBank.createdAt))
         .limit(40);
 
-      // Filter by text too
       questions = globalQuestions.filter(q => {
         const normalizedQ = q.question.toLowerCase().trim().replace(/[?!.,]/g, '');
         return !allPreviouslyAskedTexts.has(normalizedQ);
       }).slice(0, 20);
     }
 
-    // If still no questions (all exhausted), use open-ended fallbacks that work for anyone
+    // If still no questions, use open-ended fallbacks
     if (questions.length === 0) {
       console.log("[Questions] All unique questions exhausted - using open fallbacks");
       const fallbackQuestions = [
         {
-          id: undefined, // No ID - these are dynamic fallbacks
+          id: undefined,
           question: "What's been on your mind lately that you haven't had a chance to talk about?",
-          category: "lessons" as const, // Valid enum value
+          category: "lessons" as const,
           difficulty: "easy" as const,
           topics: ["general"],
           expectedClipPotential: 8,
@@ -653,7 +575,7 @@ export async function POST(request: Request) {
         {
           id: undefined,
           question: "What's a question you wish more people would ask you?",
-          category: "values" as const, // Valid enum value
+          category: "values" as const,
           difficulty: "easy" as const,
           topics: ["reflection"],
           expectedClipPotential: 8,
@@ -737,57 +659,6 @@ export async function POST(request: Request) {
       console.log(`Inserted ${questions.length} starter questions`);
     }
 
-    // Get competitor topics to inform question prioritization
-    let competitorTopics: string[] = [];
-    if (client) {
-      const clientCompetitors = await db
-        .select({
-          id: competitors.id,
-          twitterHandle: competitors.twitterHandle,
-          topics: competitors.topics,
-          lastScrapedAt: competitors.lastScrapedAt,
-        })
-        .from(competitors)
-        .where(eq(competitors.clientId, client.id));
-
-      competitorTopics = clientCompetitors
-        .flatMap((c) => c.topics || [])
-        .filter((t) => t);
-
-      // Auto-scrape stale competitors in background (don't block interview start)
-      const staleThreshold = new Date(Date.now() - SCRAPE_STALE_DAYS * 24 * 60 * 60 * 1000);
-      const staleCompetitors = clientCompetitors.filter(
-        (c) => c.twitterHandle && (!c.lastScrapedAt || c.lastScrapedAt < staleThreshold)
-      );
-
-      if (staleCompetitors.length > 0) {
-        console.log(`[Competitors] Auto-scraping ${staleCompetitors.length} stale competitors in background`);
-
-        // Fire-and-forget: scrape in background, don't await
-        Promise.all(
-          staleCompetitors.map(async (comp) => {
-            try {
-              const data = await scrapeCompetitor(comp.twitterHandle!);
-              if (data?.topics) {
-                await db
-                  .update(competitors)
-                  .set({
-                    topics: data.topics,
-                    avgEngagement: String(data.avgEngagement),
-                    recentTweets: data.topTweetsForStorage,
-                    lastScrapedAt: new Date(),
-                  })
-                  .where(eq(competitors.id, comp.id));
-                console.log(`[Competitors] Scraped ${comp.twitterHandle}: ${data.topics.length} topics, ${data.topTweetsForStorage?.length || 0} top tweets`);
-              }
-            } catch (err) {
-              console.error(`[Competitors] Failed to scrape ${comp.twitterHandle}:`, err);
-            }
-          })
-        ).catch((err) => console.error("[Competitors] Background scrape error:", err));
-      }
-    }
-
     // Prepare client context for the session
     const kb = client?.knowledgeBase as KnowledgeBase | undefined;
     const clientKnowledgeSummary = kb ? {
@@ -799,21 +670,15 @@ export async function POST(request: Request) {
       recentTweets: kb.typefullyTweets?.slice(0, 5).map(t => t.content),
     } : undefined;
 
-    // Extract already asked question texts
     const alreadyAskedQuestionTexts = previousInterviewContent
       .flatMap(p => p.keyInsights)
       .map(insight => insight.split("→")[0]?.replace('Q: "', '').replace('"', '').trim())
       .filter(Boolean);
 
-    // ============================================
-    // SMART QUESTION SELECTION
-    // ============================================
-    // If we have rich context, generate custom questions
-    // Otherwise, fall back to question bank
-    // ============================================
-
+    // Smart question selection: generate custom if rich context, else use bank
     let sessionQuestions: Array<{ id?: string; question: string; category: string }> = [];
     let useCustomQuestions = false;
+    const competitorTopics: string[] = [];
 
     if (client && hasRichContext(kb, previousInterviewContent, competitorTopics)) {
       console.log(`[Questions] Rich context found for ${client.name}, generating custom questions...`);
@@ -834,13 +699,11 @@ export async function POST(request: Request) {
           category: q.category,
         }));
 
-        // Mix in 2-3 questions from bank for variety (if available)
         if (questions.length > 0) {
           const bankMix = questions
             .slice(0, 3)
             .map(q => ({ id: q.id, question: q.question, category: q.category || "general" }));
 
-          // Insert bank questions at positions 4, 8, 12 for variety
           bankMix.forEach((bq, i) => {
             const insertPos = Math.min((i + 1) * 4, sessionQuestions.length);
             sessionQuestions.splice(insertPos, 0, bq);
@@ -855,7 +718,6 @@ export async function POST(request: Request) {
     if (!useCustomQuestions) {
       console.log(`[Questions] Using question bank (no rich context or generation failed)`);
 
-      // Prioritize categories not yet covered in previous interviews
       const uniqueCoveredCategories = [...new Set(coveredCategories)];
       let selectedQuestions = questions;
 
@@ -866,22 +728,6 @@ export async function POST(request: Request) {
 
           if (aUncovered && !bUncovered) return -1;
           if (!aUncovered && bUncovered) return 1;
-
-          const aMatchesCompetitor = (a.topics || []).some((t) =>
-            competitorTopics.some((ct) =>
-              ct.toLowerCase().includes(t.toLowerCase()) ||
-              t.toLowerCase().includes(ct.toLowerCase())
-            )
-          );
-          const bMatchesCompetitor = (b.topics || []).some((t) =>
-            competitorTopics.some((ct) =>
-              ct.toLowerCase().includes(t.toLowerCase()) ||
-              t.toLowerCase().includes(ct.toLowerCase())
-            )
-          );
-
-          if (aMatchesCompetitor && !bMatchesCompetitor) return -1;
-          if (!aMatchesCompetitor && bMatchesCompetitor) return 1;
 
           return 0;
         });
@@ -894,56 +740,29 @@ export async function POST(request: Request) {
       }));
     }
 
-    // Get the first question text for pre-generating audio
-    const firstQuestion = sessionQuestions[0]?.question || "";
+    const [newInterview] = await db
+      .insert(interviews)
+      .values({
+        clientId: client?.id || null,
+        mode: mode as "live_video" | "text_chat",
+        status: "in_progress",
+        title: `Interview - ${new Date().toLocaleDateString()}`,
+        startedAt: new Date(),
+        questionsAsked: [],
+        sessionState: {
+          questions: sessionQuestions,
+          currentIndex: 0,
+          useCustomQuestions,
+          questionIds: sessionQuestions.filter(q => q.id).map(q => q.id),
+          clientContext: clientKnowledgeSummary,
+          previousInterviews: previousInterviewContent.slice(0, 5),
+          competitorTopics: competitorTopics.slice(0, 10),
+          alreadyAskedQuestionTexts: alreadyAskedQuestionTexts.slice(0, 50),
+        },
+      })
+      .returning();
 
-    // Pre-generate first question's audio in PARALLEL with DB insert (for instant playback)
-    const [newInterview, firstQuestionAudio] = await Promise.all([
-      db
-        .insert(interviews)
-        .values({
-          clientId: client?.id || null,
-          mode: mode as "live_video" | "text_chat",
-          audioOnly: mode === "live_video" ? (audioOnly !== false) : null, // Default to true for voice interviews
-          status: "in_progress",
-          title: `Interview - ${new Date().toLocaleDateString()}`,
-          startedAt: new Date(),
-          questionsAsked: [],
-          sessionState: {
-            // Store full question objects (with or without IDs)
-            questions: sessionQuestions,
-            currentIndex: 0,
-            useCustomQuestions,
-            // Keep questionIds for backwards compatibility (only for bank questions)
-            questionIds: sessionQuestions.filter(q => q.id).map(q => q.id),
-            // Context for follow-ups
-            clientContext: clientKnowledgeSummary,
-            previousInterviews: previousInterviewContent.slice(0, 5),
-            competitorTopics: competitorTopics.slice(0, 10),
-            alreadyAskedQuestionTexts: alreadyAskedQuestionTexts.slice(0, 50),
-          },
-        })
-        .returning()
-        .then(result => result[0]),
-      // Pre-generate audio for first question (runs in parallel)
-      firstQuestion && elevenlabs.isConfigured()
-        ? elevenlabs.textToSpeech(firstQuestion).then(buffer => {
-            if (buffer) {
-              const base64 = Buffer.from(buffer).toString("base64");
-              return `data:audio/mpeg;base64,${base64}`;
-            }
-            return null;
-          }).catch(() => null)
-        : Promise.resolve(null),
-    ]);
-
-    console.log(`[Interview] Created with ${firstQuestionAudio ? "pre-generated" : "no"} audio`);
-
-    // Return interview with pre-generated audio URL
-    return NextResponse.json({
-      ...newInterview,
-      firstQuestionAudioUrl: firstQuestionAudio,
-    }, { status: 201 });
+    return NextResponse.json(newInterview, { status: 201 });
   } catch (error) {
     console.error("Error creating interview:", error);
     return NextResponse.json(

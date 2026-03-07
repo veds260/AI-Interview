@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { db, interviews, questionBank, clients } from "@/lib/db";
-import { eq, gt, and, isNotNull } from "drizzle-orm";
+import { eq, gt, and } from "drizzle-orm";
+
+interface SessionState {
+  questionIds?: string[];
+  questions?: Array<{ id?: string; question: string; category: string }>;
+  currentIndex?: number;
+}
 
 // Get interview by share token (no auth required)
 export async function GET(
@@ -10,7 +16,6 @@ export async function GET(
   try {
     const { token } = await params;
 
-    // Find interview with valid share token
     const interview = await db.query.interviews.findFirst({
       where: and(
         eq(interviews.shareToken, token),
@@ -40,20 +45,24 @@ export async function GET(
     }
 
     // Get current question
-    const state = interview.sessionState as {
-      questionIds?: string[];
-      currentIndex?: number;
-    };
+    const state = interview.sessionState as SessionState;
+    const currentIndex = state?.currentIndex || 0;
 
     let currentQuestion = null;
-    if (state?.questionIds && state.questionIds.length > 0) {
-      const currentQuestionId = state.questionIds[state.currentIndex || 0];
+    // Try questions array first (new format), fall back to questionIds (legacy)
+    if (state?.questions && state.questions.length > 0 && currentIndex < state.questions.length) {
+      currentQuestion = state.questions[currentIndex].question;
+    } else if (state?.questionIds && state.questionIds.length > 0 && currentIndex < state.questionIds.length) {
+      const currentQuestionId = state.questionIds[currentIndex];
       const question = await db.query.questionBank.findFirst({
         where: eq(questionBank.id, currentQuestionId),
       });
       currentQuestion = question?.question || null;
     }
 
+    const totalQuestions = state?.questions?.length || state?.questionIds?.length || 0;
+
+    // Don't expose transcript or full Q&A to the client
     return NextResponse.json({
       interview: {
         id: interview.id,
@@ -62,16 +71,12 @@ export async function GET(
         title: interview.title,
         guestName: interview.guestName,
         questionsCount: interview.questionsCount,
-        sessionState: interview.sessionState,
-        transcript: interview.transcript,
-        questionsAsked: interview.questionsAsked,
-        recordingUrl: interview.recordingUrl,
         completedAt: interview.completedAt,
       },
       currentQuestion,
       client: clientInfo,
-      progress: state?.questionIds
-        ? ((state.currentIndex || 0) / state.questionIds.length) * 100
+      progress: totalQuestions > 0
+        ? (currentIndex / totalQuestions) * 100
         : 0,
     });
   } catch (error) {
@@ -92,7 +97,6 @@ export async function PATCH(
     const { token } = await params;
     const { guestName } = await request.json();
 
-    // Find interview with valid share token
     const interview = await db.query.interviews.findFirst({
       where: and(
         eq(interviews.shareToken, token),
@@ -107,12 +111,16 @@ export async function PATCH(
       );
     }
 
-    // Update guest name and start interview if needed
+    // Resume if paused, start if scheduled
+    const newStatus = ["scheduled", "paused"].includes(interview.status)
+      ? "in_progress"
+      : interview.status;
+
     await db
       .update(interviews)
       .set({
         guestName,
-        status: interview.status === "scheduled" ? "in_progress" : interview.status,
+        status: newStatus,
         startedAt: interview.startedAt || new Date(),
         updatedAt: new Date(),
       })

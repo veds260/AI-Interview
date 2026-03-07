@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
 import { eq, asc } from "drizzle-orm";
-import { contentExtractions } from "@/lib/db";
 
 interface ClientKnowledgeSummary {
   bio?: string;
@@ -202,13 +201,8 @@ export async function DELETE(
       );
     }
 
-    // Delete related data first (cascading manually for safety)
-    await Promise.all([
-      // Delete messages
-      db.delete(interviewMessages).where(eq(interviewMessages.interviewId, id)),
-      // Delete content extractions
-      db.delete(contentExtractions).where(eq(contentExtractions.interviewId, id)),
-    ]);
+    // Delete related messages
+    await db.delete(interviewMessages).where(eq(interviewMessages.interviewId, id));
 
     // Delete the interview
     await db.delete(interviews).where(eq(interviews.id, id));

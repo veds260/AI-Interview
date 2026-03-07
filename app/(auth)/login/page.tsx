@@ -116,13 +116,7 @@ function LoginForm() {
         </form>
 
         <div className="mt-8 text-center text-sm">
-          <span className="text-muted-foreground">New here? </span>
-          <Link
-            href="/register"
-            className="text-red-500 hover:text-red-400 font-medium transition-colors"
-          >
-            Create an account
-          </Link>
+          <span className="text-muted-foreground">Admin access only</span>
         </div>
       </CardContent>
     </Card>

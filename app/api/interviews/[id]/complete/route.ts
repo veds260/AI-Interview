@@ -16,6 +16,45 @@ interface KnowledgeBase {
   }>;
 }
 
+// Generate clean markdown transcript from Q&A pairs
+function generateTranscriptMarkdown(
+  questionsAsked: Array<{ question: string; response: string; category?: string; isFollowUp?: boolean }>,
+  clientName: string | null,
+  interviewDate: Date,
+  mode: string,
+  guestName: string | null,
+  durationSeconds: number | null
+): string {
+  const date = interviewDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const displayMode = mode === "live_video" ? "Audio" : "Text";
+  const name = guestName || clientName || "Unknown";
+
+  let md = `# Interview Transcript\n\n`;
+  md += `**Interviewee:** ${name}\n`;
+  md += `**Date:** ${date}\n`;
+  md += `**Mode:** ${displayMode}\n`;
+  if (durationSeconds) {
+    const mins = Math.floor(durationSeconds / 60);
+    md += `**Duration:** ${mins} minute${mins !== 1 ? "s" : ""}\n`;
+  }
+  md += `**Questions answered:** ${questionsAsked.length}\n`;
+  md += `\n---\n\n`;
+
+  questionsAsked.forEach((qa, i) => {
+    const label = qa.isFollowUp ? `Follow-up` : `Q${i + 1}`;
+    md += `## ${label}: ${qa.question}\n\n`;
+    md += `${qa.response}\n\n`;
+  });
+
+  return md;
+}
+
 // Extract insights from interview using AI
 async function extractInsights(
   questionsAsked: Array<{ question: string; response: string; category?: string }>
@@ -69,7 +108,6 @@ Return JSON only:
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -114,52 +152,66 @@ export async function POST(
       : Date.now();
     const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
 
+    // Get client name for transcript
+    let clientName: string | null = null;
+    if (interview.clientId) {
+      const client = await db.query.clients.findFirst({
+        where: eq(clients.id, interview.clientId),
+      });
+      clientName = client?.name || null;
+    }
+
+    // Generate markdown transcript
+    const questionsAsked = (interview.questionsAsked as Array<{
+      question: string;
+      response: string;
+      category?: string;
+      isFollowUp?: boolean;
+    }>) || [];
+
+    const transcriptMarkdown = generateTranscriptMarkdown(
+      questionsAsked,
+      clientName,
+      new Date(),
+      interview.mode,
+      interview.guestName,
+      durationSeconds
+    );
+
     await db
       .update(interviews)
       .set({
         status: "completed",
         completedAt: new Date(),
         totalDurationSeconds: durationSeconds,
+        transcriptMarkdown,
         updatedAt: new Date(),
       })
       .where(eq(interviews.id, id));
 
-    // Extract insights from interview and update client knowledge base
-    if (interview.clientId && interview.questionsAsked) {
-      const questionsAsked = interview.questionsAsked as Array<{
-        question: string;
-        response: string;
-        category?: string;
-      }>;
+    // Extract insights and update client knowledge base (background, non-blocking)
+    if (interview.clientId && questionsAsked.length > 0) {
+      extractInsights(questionsAsked).then(async ({ insights, topics }) => {
+        if (insights.length === 0 && topics.length === 0) return;
 
-      const { insights, topics } = await extractInsights(questionsAsked);
-
-      if (insights.length > 0 || topics.length > 0) {
-        // Get current client knowledge base
         const client = await db.query.clients.findFirst({
-          where: eq(clients.id, interview.clientId),
+          where: eq(clients.id, interview.clientId!),
         });
 
         if (client) {
           const currentKb = (client.knowledgeBase as KnowledgeBase) || {};
           const interviewInsights = currentKb.interviewInsights || [];
 
-          // Add new insights
           interviewInsights.push({
             date: new Date().toISOString(),
             insights,
             topics,
           });
 
-          // Update client knowledge base
           await db
             .update(clients)
             .set({
-              knowledgeBase: {
-                ...currentKb,
-                interviewInsights,
-              },
-              // Also update topics of expertise if we found new ones
+              knowledgeBase: { ...currentKb, interviewInsights },
               topicsOfExpertise: [
                 ...new Set([
                   ...(client.topicsOfExpertise || []),
@@ -168,16 +220,17 @@ export async function POST(
               ],
               updatedAt: new Date(),
             })
-            .where(eq(clients.id, interview.clientId));
+            .where(eq(clients.id, interview.clientId!));
         }
-      }
+      }).catch((err) => {
+        console.error("Failed to extract insights:", err);
+      });
     }
-
-    // TODO: Trigger content extraction job here
 
     return NextResponse.json({
       success: true,
       message: "Interview completed",
+      transcriptMarkdown,
     });
   } catch (error) {
     console.error("Error completing interview:", error);

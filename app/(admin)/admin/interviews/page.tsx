@@ -37,22 +37,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
-  Play,
   FileText,
-  Video,
   MessageSquare,
   Eye,
-  Download,
   Copy,
-  UserPlus,
-  ExternalLink,
   Share2,
   Link,
   Check,
   Search,
   X,
-  RefreshCw,
   Trash2,
+  Mic,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,12 +62,11 @@ interface Interview {
   status: string;
   title: string | null;
   questionsCount: number | null;
-  extractionsCount: number | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
   transcript: string | null;
-  recordingUrl: string | null;
+  transcriptMarkdown: string | null;
   questionsAsked: any[];
   shareToken: string | null;
   shareTokenExpiresAt: string | null;
@@ -93,23 +87,17 @@ const STATUS_OPTIONS = [
 
 const MODE_OPTIONS = [
   { value: "all", label: "All Modes" },
-  { value: "live_video", label: "Live Video" },
-  { value: "text", label: "Text" },
+  { value: "live_video", label: "Audio" },
+  { value: "text_chat", label: "Text" },
 ];
 
 export default function AdminInterviewsPage() {
   const queryClient = useQueryClient();
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [extractConfirmOpen, setExtractConfirmOpen] = useState(false);
-  const [interviewToExtract, setInterviewToExtract] = useState<Interview | null>(null);
-  const [reextractConfirmOpen, setReextractConfirmOpen] = useState(false);
-  const [interviewToReextract, setInterviewToReextract] = useState<Interview | null>(null);
-  const [extractingInterviewId, setExtractingInterviewId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [interviewToDelete, setInterviewToDelete] = useState<Interview | null>(null);
 
@@ -119,7 +107,6 @@ export default function AdminInterviewsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [modeFilter, setModeFilter] = useState("all");
 
-  // Fetch clients for filter
   const { data: clientsData } = useQuery<Client[]>({
     queryKey: ["clients-list"],
     queryFn: async () => {
@@ -139,26 +126,17 @@ export default function AdminInterviewsPage() {
     },
   });
 
-  // Filter interviews
   const filteredInterviews = useMemo(() => {
     return interviews.filter((interview) => {
-      // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesTitle = interview.title?.toLowerCase().includes(query);
         const matchesClient = interview.clientName?.toLowerCase().includes(query);
         if (!matchesTitle && !matchesClient) return false;
       }
-
-      // Client filter
       if (clientFilter !== "all" && interview.clientId !== clientFilter) return false;
-
-      // Status filter
       if (statusFilter !== "all" && interview.status !== statusFilter) return false;
-
-      // Mode filter
       if (modeFilter !== "all" && interview.mode !== modeFilter) return false;
-
       return true;
     });
   }, [interviews, searchQuery, clientFilter, statusFilter, modeFilter]);
@@ -171,93 +149,6 @@ export default function AdminInterviewsPage() {
   };
 
   const hasActiveFilters = searchQuery || clientFilter !== "all" || statusFilter !== "all" || modeFilter !== "all";
-
-  const { data: writers = [] } = useQuery<any[]>({
-    queryKey: ["writers"],
-    queryFn: async () => {
-      const res = await fetch("/api/writers");
-      if (!res.ok) throw new Error("Failed to fetch writers");
-      return res.json();
-    },
-    enabled: assignDialogOpen,
-  });
-
-  const extractMutation = useMutation({
-    mutationFn: async (interviewId: string) => {
-      setExtractingInterviewId(interviewId);
-      const res = await fetch("/api/extractions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interviewId }),
-      });
-      if (!res.ok) throw new Error("Failed to extract content");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
-      toast.success(`Extracted ${data.count} content pieces.`);
-      setExtractConfirmOpen(false);
-      setInterviewToExtract(null);
-      setExtractingInterviewId(null);
-    },
-    onError: () => {
-      toast.error("Failed to extract content");
-      setExtractingInterviewId(null);
-    },
-  });
-
-  const reextractMutation = useMutation({
-    mutationFn: async (interviewId: string) => {
-      setExtractingInterviewId(interviewId);
-      const res = await fetch("/api/extractions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interviewId, reextract: true }),
-      });
-      if (!res.ok) throw new Error("Failed to re-extract content");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-interviews"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-extractions"] });
-      toast.success(`Re-extracted ${data.count} content pieces.`);
-      setReextractConfirmOpen(false);
-      setInterviewToReextract(null);
-      setExtractingInterviewId(null);
-    },
-    onError: () => {
-      toast.error("Failed to re-extract content");
-      setExtractingInterviewId(null);
-    },
-  });
-
-  const handleExtractClick = (interview: Interview) => {
-    if (interview.status !== "completed") {
-      setInterviewToExtract(interview);
-      setExtractConfirmOpen(true);
-    } else {
-      extractMutation.mutate(interview.id);
-    }
-  };
-
-  const assignMutation = useMutation({
-    mutationFn: async ({ interviewId, writerId }: { interviewId: string; writerId: string }) => {
-      const res = await fetch("/api/assignments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interviewId, writerId }),
-      });
-      if (!res.ok) throw new Error("Failed to assign");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast.success("Interview assigned to writer");
-      setAssignDialogOpen(false);
-    },
-    onError: () => {
-      toast.error("Failed to assign interview");
-    },
-  });
 
   const shareMutation = useMutation({
     mutationFn: async (interviewId: string) => {
@@ -338,9 +229,13 @@ export default function AdminInterviewsPage() {
     }
   };
 
+  const getModeLabel = (mode: string) => {
+    return mode === "live_video" ? "Audio" : "Text";
+  };
+
   const getModeIcon = (mode: string) => {
     return mode === "live_video" ? (
-      <Video className="h-4 w-4" />
+      <Mic className="h-4 w-4" />
     ) : (
       <MessageSquare className="h-4 w-4" />
     );
@@ -351,54 +246,19 @@ export default function AdminInterviewsPage() {
     toast.success("Copied to clipboard");
   };
 
-  const exportInterview = (interview: Interview) => {
-    const exportData = {
-      title: interview.title,
-      mode: interview.mode,
-      status: interview.status,
-      completedAt: interview.completedAt,
-      questionsCount: interview.questionsCount,
-      transcript: interview.transcript,
-      questionsAsked: interview.questionsAsked,
-    };
+  const getTranscriptText = (interview: Interview): string | null => {
+    if (interview.transcriptMarkdown) return interview.transcriptMarkdown;
+    if (interview.transcript) return interview.transcript;
+    if (!interview.questionsAsked?.length) return null;
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
+    // Generate from Q&A pairs as fallback
+    let md = `# Interview Transcript\n\n`;
+    md += `**Title:** ${interview.title || "Interview"}\n`;
+    md += `**Date:** ${interview.completedAt ? new Date(interview.completedAt).toLocaleDateString() : "N/A"}\n\n---\n\n`;
+    interview.questionsAsked.forEach((qa: any, i: number) => {
+      md += `## Q${i + 1}: ${qa.question}\n\n${qa.response}\n\n`;
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `interview-${interview.id.slice(0, 8)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Interview exported");
-  };
-
-  const exportTranscript = (interview: Interview) => {
-    if (!interview.questionsAsked?.length) {
-      toast.error("No transcript available");
-      return;
-    }
-
-    let transcript = `Interview: ${interview.title || interview.id}\n`;
-    transcript += `Date: ${interview.completedAt ? new Date(interview.completedAt).toLocaleString() : "N/A"}\n`;
-    transcript += `Mode: ${interview.mode.replace("_", " ")}\n`;
-    transcript += `\n${"=".repeat(50)}\n\n`;
-
-    (interview.questionsAsked as any[]).forEach((qa, idx) => {
-      transcript += `Q${idx + 1}: ${qa.question}\n\n`;
-      transcript += `A: ${qa.response}\n\n`;
-      transcript += `${"-".repeat(30)}\n\n`;
-    });
-
-    const blob = new Blob([transcript], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `transcript-${interview.id.slice(0, 8)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Transcript exported");
+    return md;
   };
 
   return (
@@ -406,7 +266,7 @@ export default function AdminInterviewsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Interviews</h1>
         <p className="text-muted-foreground mt-1">
-          View, extract content, and manage all interview sessions
+          View and manage all interview sessions
         </p>
       </div>
 
@@ -442,11 +302,11 @@ export default function AdminInterviewsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Extracted</CardTitle>
+            <CardTitle className="text-sm font-medium">With Transcript</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {filteredInterviews.filter((i) => (i.extractionsCount || 0) > 0).length}
+              {filteredInterviews.filter((i) => i.transcriptMarkdown || i.transcript).length}
             </div>
           </CardContent>
         </Card>
@@ -529,7 +389,7 @@ export default function AdminInterviewsPage() {
             <p className="text-sm text-muted-foreground text-center py-8">
               {hasActiveFilters
                 ? "No interviews match your filters."
-                : "No interviews yet. Clients will appear here after they complete interviews."}
+                : "No interviews yet. Create one and share the link with a client."}
             </p>
           ) : (
             <Table>
@@ -540,7 +400,6 @@ export default function AdminInterviewsPage() {
                   <TableHead>Mode</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Questions</TableHead>
-                  <TableHead>Extractions</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -550,7 +409,7 @@ export default function AdminInterviewsPage() {
                   <TableRow key={interview.id}>
                     <TableCell>
                       <span className="font-medium text-sm">
-                        {interview.clientName || "—"}
+                        {interview.clientName || "-"}
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">
@@ -559,29 +418,13 @@ export default function AdminInterviewsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getModeIcon(interview.mode)}
-                        <span className="capitalize text-sm">
-                          {interview.mode.replace("_", " ")}
+                        <span className="text-sm">
+                          {getModeLabel(interview.mode)}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(interview.status)}</TableCell>
                     <TableCell>{interview.questionsCount || 0}</TableCell>
-                    <TableCell>
-                      {extractingInterviewId === interview.id ? (
-                        <Badge className="bg-blue-500/20 text-blue-400 animate-pulse">
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Extracting...
-                        </Badge>
-                      ) : (interview.extractionsCount || 0) > 0 ? (
-                        <Badge variant="success">
-                          {interview.extractionsCount} Available
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground border-border">
-                          Not extracted
-                        </Badge>
-                      )}
-                    </TableCell>
                     <TableCell>
                       {new Date(interview.createdAt).toLocaleDateString()}
                     </TableCell>
@@ -594,59 +437,24 @@ export default function AdminInterviewsPage() {
                             setSelectedInterview(interview);
                             setViewDialogOpen(true);
                           }}
+                          title="View details"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
 
-                        {["completed", "in_progress", "paused"].includes(interview.status) && (
-                          <>
-                            {(interview.extractionsCount || 0) === 0 ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleExtractClick(interview)}
-                                disabled={extractMutation.isPending || extractingInterviewId === interview.id}
-                                title="Extract content"
-                              >
-                                <Play className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setInterviewToReextract(interview);
-                                    setReextractConfirmOpen(true);
-                                  }}
-                                  disabled={reextractMutation.isPending || extractingInterviewId === interview.id}
-                                  title="Re-extract with full context"
-                                >
-                                  <RefreshCw className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setSelectedInterview(interview);
-                                    setAssignDialogOpen(true);
-                                  }}
-                                  title="Assign to writer"
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </>
+                        {getTranscriptText(interview) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const text = getTranscriptText(interview);
+                              if (text) copyToClipboard(text);
+                            }}
+                            title="Copy transcript"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                         )}
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => exportTranscript(interview)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
 
                         <Button
                           size="sm"
@@ -661,6 +469,7 @@ export default function AdminInterviewsPage() {
                             }
                             setShareDialogOpen(true);
                           }}
+                          title="Share link"
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
@@ -673,6 +482,7 @@ export default function AdminInterviewsPage() {
                             setInterviewToDelete(interview);
                             setDeleteConfirmOpen(true);
                           }}
+                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -694,12 +504,12 @@ export default function AdminInterviewsPage() {
               {selectedInterview?.title || "Interview Details"}
             </DialogTitle>
             <DialogDescription>
-              View interview content and transcript
+              View interview transcript
             </DialogDescription>
           </DialogHeader>
 
           {selectedInterview && (
-            <Tabs defaultValue="overview" className="mt-4">
+            <Tabs defaultValue="transcript" className="mt-4">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="qa">Q&A</TabsTrigger>
@@ -716,18 +526,12 @@ export default function AdminInterviewsPage() {
                     <h4 className="font-medium text-sm text-muted-foreground">Mode</h4>
                     <p className="flex items-center gap-2">
                       {getModeIcon(selectedInterview.mode)}
-                      <span className="capitalize">
-                        {selectedInterview.mode.replace("_", " ")}
-                      </span>
+                      <span>{getModeLabel(selectedInterview.mode)}</span>
                     </p>
                   </div>
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground">Questions</h4>
                     <p>{selectedInterview.questionsCount || 0}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-sm text-muted-foreground">Extractions</h4>
-                    <p>{selectedInterview.extractionsCount || 0}</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
@@ -736,21 +540,6 @@ export default function AdminInterviewsPage() {
                         ? new Date(selectedInterview.completedAt).toLocaleString()
                         : "N/A"}
                     </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-sm text-muted-foreground">Recording</h4>
-                    {selectedInterview.recordingUrl ? (
-                      <a
-                        href={selectedInterview.recordingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center gap-1"
-                      >
-                        <ExternalLink className="h-4 w-4" /> View Recording
-                      </a>
-                    ) : (
-                      <p className="text-muted-foreground">No recording</p>
-                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -790,46 +579,28 @@ export default function AdminInterviewsPage() {
               <TabsContent value="transcript">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Full Transcript</h4>
-                    <div className="flex gap-2">
-                      {selectedInterview.transcript && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(selectedInterview.transcript!)}
-                        >
-                          <Copy className="h-4 w-4 mr-1" /> Copy
-                        </Button>
-                      )}
+                    <h4 className="font-medium">Markdown Transcript</h4>
+                    {getTranscriptText(selectedInterview) && (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => exportTranscript(selectedInterview)}
+                        onClick={() => {
+                          const text = getTranscriptText(selectedInterview);
+                          if (text) copyToClipboard(text);
+                        }}
                       >
-                        <Download className="h-4 w-4 mr-1" /> Export
+                        <Copy className="h-4 w-4 mr-1" /> Copy Transcript
                       </Button>
-                    </div>
+                    )}
                   </div>
                   <ScrollArea className="h-80 border rounded p-4">
-                    {selectedInterview.transcript ? (
+                    {getTranscriptText(selectedInterview) ? (
                       <pre className="whitespace-pre-wrap text-sm">
-                        {selectedInterview.transcript}
+                        {getTranscriptText(selectedInterview)}
                       </pre>
-                    ) : selectedInterview.questionsAsked?.length ? (
-                      <div className="space-y-4">
-                        {(selectedInterview.questionsAsked as any[]).map((qa, idx) => (
-                          <div key={idx}>
-                            <p className="font-medium">Q: {qa.question}</p>
-                            <p className="mt-1">A: {qa.response}</p>
-                            {idx < (selectedInterview.questionsAsked?.length || 0) - 1 && (
-                              <hr className="my-3" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
                     ) : (
                       <p className="text-muted-foreground text-center py-8">
-                        No transcript available
+                        No transcript available yet. Complete the interview first.
                       </p>
                     )}
                   </ScrollArea>
@@ -842,87 +613,6 @@ export default function AdminInterviewsPage() {
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
               Close
             </Button>
-            {selectedInterview && ["completed", "in_progress", "paused"].includes(selectedInterview.status) && (
-              <>
-                {(selectedInterview.extractionsCount || 0) === 0 ? (
-                  <Button
-                    onClick={() => {
-                      setViewDialogOpen(false);
-                      handleExtractClick(selectedInterview);
-                    }}
-                    disabled={extractMutation.isPending}
-                  >
-                    {extractMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="h-4 w-4 mr-2" />
-                    )}
-                    Extract Content
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      setViewDialogOpen(false);
-                      setAssignDialogOpen(true);
-                    }}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Assign to Writer
-                  </Button>
-                )}
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Dialog */}
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign to Writer</DialogTitle>
-            <DialogDescription>
-              Select a writer to assign this interview content to
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {writers.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">
-                No writers available. Add writers first.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {writers.map((writer) => (
-                  <Button
-                    key={writer.id}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      if (selectedInterview) {
-                        assignMutation.mutate({
-                          interviewId: selectedInterview.id,
-                          writerId: writer.id,
-                        });
-                      }
-                    }}
-                    disabled={assignMutation.isPending}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {writer.name || writer.email}
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {writer.assignmentsCount?.inProgress || 0} active
-                    </span>
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
-              Cancel
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -933,7 +623,7 @@ export default function AdminInterviewsPage() {
           <DialogHeader>
             <DialogTitle>Share Interview</DialogTitle>
             <DialogDescription>
-              Generate a shareable link for clients to view this interview
+              Generate a shareable link for this interview
             </DialogDescription>
           </DialogHeader>
 
@@ -980,7 +670,7 @@ export default function AdminInterviewsPage() {
                   <Link className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground">
-                  No share link exists for this interview. Generate one to share with clients.
+                  No share link exists. Generate one to send to the interviewee.
                 </p>
                 <Button
                   className="w-full"
@@ -1007,120 +697,6 @@ export default function AdminInterviewsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Extract Confirmation Dialog */}
-      <Dialog open={extractConfirmOpen} onOpenChange={setExtractConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Extract from Incomplete Interview?</DialogTitle>
-            <DialogDescription>
-              This interview is currently {interviewToExtract?.status === "in_progress" ? "in progress" : "paused"}.
-              Extracting content will mark this interview as <strong>completed</strong> and it cannot be continued.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 space-y-3">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-sm text-yellow-800">
-                The client will no longer be able to continue this interview after extraction.
-              </p>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p><strong>Interview:</strong> {interviewToExtract?.title || `Interview ${interviewToExtract?.id?.slice(0, 8)}`}</p>
-              <p><strong>Questions answered:</strong> {interviewToExtract?.questionsCount || 0}</p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setExtractConfirmOpen(false);
-                setInterviewToExtract(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (interviewToExtract) {
-                  extractMutation.mutate(interviewToExtract.id);
-                }
-              }}
-              disabled={extractMutation.isPending}
-            >
-              {extractMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4 mr-2" />
-              )}
-              Extract & Complete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Re-extract Confirmation Dialog */}
-      <Dialog open={reextractConfirmOpen} onOpenChange={setReextractConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Re-extract Content?</DialogTitle>
-            <DialogDescription>
-              This will delete all existing extracted content for this interview and re-generate it using the full knowledge base context.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 space-y-3">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                The new extraction will use:
-              </p>
-              <ul className="text-sm text-blue-700 mt-2 list-disc list-inside space-y-1">
-                <li>Client&apos;s full knowledge base (bio, products, talking points)</li>
-                <li>Competitor topics for timely content</li>
-                <li>All other Q&As from this interview for context</li>
-                <li>Voice style guidelines</li>
-              </ul>
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-sm text-yellow-800">
-                Warning: This will permanently delete {interviewToReextract?.extractionsCount || 0} existing content pieces.
-              </p>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p><strong>Interview:</strong> {interviewToReextract?.title || `Interview ${interviewToReextract?.id?.slice(0, 8)}`}</p>
-              <p><strong>Client:</strong> {interviewToReextract?.clientName || "Unknown"}</p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setReextractConfirmOpen(false);
-                setInterviewToReextract(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (interviewToReextract) {
-                  reextractMutation.mutate(interviewToReextract.id);
-                }
-              }}
-              disabled={reextractMutation.isPending}
-            >
-              {reextractMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Re-extract Content
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
@@ -1138,19 +714,13 @@ export default function AdminInterviewsPage() {
               </p>
               <ul className="text-sm text-red-700 mt-2 list-disc list-inside space-y-1">
                 <li>Interview record and all messages</li>
-                <li>{interviewToDelete?.extractionsCount || 0} content extractions</li>
-                <li>All Q&A history</li>
+                <li>All Q&A history and transcript</li>
               </ul>
             </div>
             <div className="text-sm text-muted-foreground">
               <p><strong>Interview:</strong> {interviewToDelete?.title || `Interview ${interviewToDelete?.id?.slice(0, 8)}`}</p>
               <p><strong>Client:</strong> {interviewToDelete?.clientName || "Unknown"}</p>
               <p><strong>Questions:</strong> {interviewToDelete?.questionsCount || 0}</p>
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-sm text-yellow-800">
-                Note: Deleting this interview will remove it from the client&apos;s context, so future interviews may ask similar questions again.
-              </p>
             </div>
           </div>
 

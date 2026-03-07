@@ -3,7 +3,6 @@ import { auth } from "@/lib/auth";
 import { db, interviews, interviewMessages, questionBank, clients } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { trackApiCall, estimateTokens } from "@/lib/utils/api-tracker";
-import { elevenlabs } from "@/lib/services/elevenlabs";
 
 interface ClientKnowledgeSummary {
   bio?: string;
@@ -124,8 +123,10 @@ CRITICAL RULES:
 - Keep under 20 words
 - If their answer is short/vague, ask them to elaborate on what they DID say
 - NO generic questions like "how did that feel?" or "tell me more"
+- If their answer is about the interview itself (complaints, confusion, requests to repeat/skip), return "SKIP"
+- If their answer doesn't contain any substantive content to follow up on, return "SKIP"
 
-Return ONLY the question, nothing else.`,
+Return ONLY the question (or "SKIP"), nothing else.`,
           },
         ],
       }),
@@ -167,6 +168,56 @@ Return ONLY the question, nothing else.`,
     console.error("Failed to generate follow-up:", error);
     return null;
   }
+}
+
+// Detect meta-responses (complaints about interview, process questions, off-topic)
+// Returns true if the response is about the interview process rather than actual content
+function isMetaResponse(response: string): boolean {
+  const lowerResponse = response.toLowerCase();
+
+  // Patterns that indicate meta-commentary about the interview
+  const metaPatterns = [
+    // Complaints about repetition
+    /already (answered|said|mentioned|told you)/,
+    /just (answered|said|mentioned|told you)/,
+    /previous (question|answer)/,
+    /repeating (this|the|same)/,
+    /why (are we|am i|do you|did you) repeat/,
+    /same question/,
+    /asked (me |this )?before/,
+    /didn't i (just )?answer/,
+    // Questions about the interview process
+    /what('s| is) (the point|this for)/,
+    /why (are you|do you) asking/,
+    /can we (move on|skip|next)/,
+    /how (many|long|much more)/,
+    // Confusion/frustration about the interview
+    /i('m| am) confused/,
+    /don't understand (the question|what you mean)/,
+    /what do you mean/,
+    /can you (clarify|explain|rephrase)/,
+    // Very short dismissive responses
+    /^(yes|no|maybe|i guess|sure|okay|ok|fine|whatever)\.?$/,
+    // Off-topic commentary
+    /this interview/,
+    /these questions/,
+    /your question/,
+  ];
+
+  for (const pattern of metaPatterns) {
+    if (pattern.test(lowerResponse)) {
+      console.log(`[Meta-response detected] Pattern matched: ${pattern}`);
+      return true;
+    }
+  }
+
+  // Also reject very short responses that are unlikely to be meaningful
+  if (response.trim().length < 20) {
+    console.log(`[Meta-response detected] Response too short: ${response.length} chars`);
+    return true;
+  }
+
+  return false;
 }
 
 // Quick personalization - no API call, instant response
@@ -412,8 +463,9 @@ export async function POST(
 
     // BACKGROUND: Generate follow-up for the NEXT question cycle (don't await)
     // This runs async so it doesn't block the response
-    // Skip follow-up generation for skipped questions
-    if (!isSkipped && !isFollowUp && response.trim().length > 50 && !completed) {
+    // Skip follow-up generation for skipped questions or meta-responses
+    const isMeta = isMetaResponse(response);
+    if (!isSkipped && !isFollowUp && response.trim().length > 50 && !completed && !isMeta) {
       // Get previous questions to avoid repetition
       const previousQuestions = questionsAsked
         .slice(-5)
@@ -435,7 +487,8 @@ export async function POST(
         },
         { interviewId: id, clientId: interview.clientId || undefined }
       ).then(async (followUp) => {
-        if (followUp) {
+        // Check if AI returned SKIP or an invalid follow-up
+        if (followUp && followUp.trim().toUpperCase() !== "SKIP" && followUp.length > 10) {
           // Store the generated follow-up in session state for next cycle
           const currentInterview = await db.query.interviews.findFirst({
             where: eq(interviews.id, id),
@@ -454,15 +507,16 @@ export async function POST(
               .where(eq(interviews.id, id));
             console.log("[Background] Follow-up generated and stored:", followUp.substring(0, 50));
           }
+        } else {
+          console.log("[Background] Follow-up skipped:", followUp);
         }
       }).catch((err) => {
         console.error("[Background] Failed to generate follow-up:", err);
       });
     }
 
-    // Run DB update and audio generation in PARALLEL for speed
-    // No timeout - let ElevenLabs complete fully to avoid browser TTS fallback
-    const [, , nextQuestionAudioUrl] = await Promise.all([
+    // Run DB updates in parallel
+    await Promise.all([
       // 1. Update interview state
       db
         .update(interviews)
@@ -488,22 +542,6 @@ export async function POST(
             .set({ timesUsed: sql`COALESCE(times_used, 0) + 1` })
             .where(eq(questionBank.id, currentQuestionData.id))
         : Promise.resolve(),
-
-      // 3. Generate audio for next question (no timeout - must complete)
-      nextQuestion && elevenlabs.isConfigured() && !completed
-        ? elevenlabs.textToSpeech(nextQuestion).then(buffer => {
-            if (buffer) {
-              const base64 = Buffer.from(buffer).toString("base64");
-              console.log("[Respond] Audio generated:", buffer.byteLength, "bytes");
-              return `data:audio/mpeg;base64,${base64}`;
-            }
-            console.warn("[Respond] ElevenLabs returned no audio buffer");
-            return null;
-          }).catch(err => {
-            console.error("[Respond] Audio generation failed:", err);
-            return null;
-          })
-        : Promise.resolve(null),
     ]);
 
     if (completed) {
@@ -531,7 +569,6 @@ export async function POST(
     return NextResponse.json({
       completed: false,
       nextQuestion,
-      nextQuestionAudioUrl,
       isFollowUp,
       progress: progressPercent,
       questionsAnswered: answeredCount,

@@ -3,7 +3,7 @@ import { JWT as DefaultJWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   interface User extends DefaultUser {
-    role?: "admin" | "client" | "writer";
+    role?: "admin";
   }
 
   interface Session {
@@ -12,7 +12,7 @@ declare module "next-auth" {
       email: string;
       name?: string | null;
       image?: string | null;
-      role: "admin" | "client" | "writer";
+      role: "admin";
     } & DefaultSession["user"];
   }
 }
@@ -20,6 +20,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
-    role: "admin" | "client" | "writer";
+    role: "admin";
   }
 }

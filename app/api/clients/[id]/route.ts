@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { clients, competitors, interviews } from "@/lib/db/schema";
+import { clients, interviews } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 
 // GET /api/clients/[id] - Get single client with related data
@@ -25,14 +25,6 @@ export async function GET(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Get related competitors
-    const clientCompetitors = await db
-      .select()
-      .from(competitors)
-      .where(eq(competitors.clientId, id))
-      .orderBy(desc(competitors.createdAt));
-
-    // Get related interviews
     const clientInterviews = await db
       .select()
       .from(interviews)
@@ -41,15 +33,11 @@ export async function GET(
 
     return NextResponse.json({
       ...client,
-      competitors: clientCompetitors,
       interviews: clientInterviews,
     });
   } catch (error) {
     console.error("Error fetching client:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch client" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch client" }, { status: 500 });
   }
 }
 
@@ -67,7 +55,6 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    // Check if client exists
     const existingClient = await db
       .select()
       .from(clients)
@@ -78,9 +65,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
-    // Basic fields
     if (body.name !== undefined) updateData.name = body.name;
     if (body.brandName !== undefined) updateData.brandName = body.brandName;
     if (body.twitterHandle !== undefined) {
@@ -92,8 +78,6 @@ export async function PATCH(
     if (body.topicsOfExpertise !== undefined) updateData.topicsOfExpertise = body.topicsOfExpertise;
     if (body.voiceStyle !== undefined) updateData.voiceStyle = body.voiceStyle;
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
-
-    // Knowledge base (JSON field)
     if (body.knowledgeBase !== undefined) updateData.knowledgeBase = body.knowledgeBase;
 
     updateData.updatedAt = new Date();
@@ -107,10 +91,7 @@ export async function PATCH(
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Error updating client:", error);
-    return NextResponse.json(
-      { error: "Failed to update client" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update client" }, { status: 500 });
   }
 }
 
@@ -126,15 +107,11 @@ export async function DELETE(
     }
 
     const { id } = await params;
-
     await db.delete(clients).where(eq(clients.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting client:", error);
-    return NextResponse.json(
-      { error: "Failed to delete client" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete client" }, { status: 500 });
   }
 }

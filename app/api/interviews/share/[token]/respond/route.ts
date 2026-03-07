@@ -291,6 +291,29 @@ export async function POST(
     }
 
     if (completed) {
+      // Generate markdown transcript
+      let clientName: string | null = null;
+      if (interview.clientId) {
+        const clientData = await db.query.clients.findFirst({
+          where: eq(clients.id, interview.clientId),
+        });
+        clientName = clientData?.name || null;
+      }
+
+      const date = new Date();
+      const dateStr = date.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      const name = interview.guestName || clientName || "Unknown";
+
+      let md = `# Interview Transcript\n\n**Interviewee:** ${name}\n**Date:** ${dateStr}\n**Mode:** Text\n**Questions answered:** ${questionsAsked.length}\n\n---\n\n`;
+      questionsAsked.forEach((qa: any, i: number) => {
+        md += `## Q${i + 1}: ${qa.question}\n\n${qa.response}\n\n`;
+      });
+
+      await db
+        .update(interviews)
+        .set({ transcriptMarkdown: md })
+        .where(eq(interviews.id, interview.id));
+
       return NextResponse.json({
         completed: true,
         message: "Interview completed",

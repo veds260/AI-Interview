@@ -34,7 +34,6 @@ import {
   Trash2,
   FileText,
   MessageSquare,
-  Target,
   BookOpen,
   User,
   Upload,
@@ -71,7 +70,6 @@ interface Client {
   knowledgeBase: KnowledgeBase | null;
   isActive: boolean;
   createdAt: string;
-  competitors: any[];
   interviews: any[];
 }
 
@@ -368,16 +366,6 @@ export default function ClientDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Competitors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{client.competitors?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
               Topics
             </CardTitle>
           </CardHeader>
@@ -403,10 +391,6 @@ export default function ClientDetailPage() {
           <TabsTrigger value="interviews">
             <MessageSquare className="h-4 w-4 mr-2" />
             Interviews
-          </TabsTrigger>
-          <TabsTrigger value="competitors">
-            <Target className="h-4 w-4 mr-2" />
-            Competitors
           </TabsTrigger>
         </TabsList>
 
@@ -869,57 +853,6 @@ export default function ClientDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* Competitors Tab */}
-        <TabsContent value="competitors" className="mt-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Tracked Competitors</CardTitle>
-                  <CardDescription>
-                    Twitter accounts being analyzed for voice/style
-                  </CardDescription>
-                </div>
-                <Link href="/admin/competitors">
-                  <Button size="sm" variant="outline">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Competitor
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {client.competitors?.length ? (
-                <div className="space-y-2">
-                  {client.competitors.map((comp: any) => (
-                    <div
-                      key={comp.id}
-                      className="flex items-center justify-between p-3 border rounded"
-                    >
-                      <div>
-                        <p className="font-medium">@{comp.twitterHandle}</p>
-                        {comp.name && (
-                          <p className="text-sm text-muted-foreground">{comp.name}</p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {comp.topics?.slice(0, 2).map((topic: string) => (
-                          <Badge key={topic} variant="outline">
-                            {topic}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center py-8 text-muted-foreground">
-                  No competitors tracked yet
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Add Item Dialog */}

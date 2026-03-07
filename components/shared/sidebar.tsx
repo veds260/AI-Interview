@@ -10,19 +10,10 @@ import {
   LayoutDashboard,
   Users,
   MessageSquare,
-  FileText,
   Settings,
   LogOut,
   ClipboardList,
-  UserCircle,
-  Video,
-  PenTool,
-  Archive,
-  History,
-  Film,
-  HardDrive,
   DollarSign,
-  Sparkles,
 } from "lucide-react";
 
 interface NavItem {
@@ -36,46 +27,13 @@ const adminNavItems: NavItem[] = [
   { label: "Clients", href: "/admin/clients", icon: <Users className="h-5 w-5" /> },
   { label: "Questions", href: "/admin/questions", icon: <ClipboardList className="h-5 w-5" /> },
   { label: "Interviews", href: "/admin/interviews", icon: <MessageSquare className="h-5 w-5" /> },
-  { label: "Content Bank", href: "/admin/content", icon: <Sparkles className="h-5 w-5" /> },
-  { label: "Video Clips", href: "/admin/clips", icon: <HardDrive className="h-5 w-5" /> },
-  { label: "Writers", href: "/admin/writers", icon: <PenTool className="h-5 w-5" /> },
   { label: "API Costs", href: "/admin/costs", icon: <DollarSign className="h-5 w-5" /> },
   { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
-];
-
-const clientNavItems: NavItem[] = [
-  { label: "Dashboard", href: "/client", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { label: "Start Interview", href: "/client/interview/start", icon: <Video className="h-5 w-5" /> },
-  { label: "My Interviews", href: "/client/interviews", icon: <History className="h-5 w-5" /> },
-  { label: "My Content", href: "/client/content", icon: <Sparkles className="h-5 w-5" /> },
-  { label: "My Clips", href: "/client/clips", icon: <Film className="h-5 w-5" /> },
-  { label: "Profile", href: "/client/profile", icon: <UserCircle className="h-5 w-5" /> },
-];
-
-const writerNavItems: NavItem[] = [
-  { label: "Dashboard", href: "/writer", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { label: "Assignments", href: "/writer/assignments", icon: <ClipboardList className="h-5 w-5" /> },
-  { label: "Content Bank", href: "/writer/content-bank", icon: <Archive className="h-5 w-5" /> },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = session?.user?.role;
-
-  let navItems: NavItem[] = [];
-  let title = "Compound Interviewer";
-
-  if (role === "admin") {
-    navItems = adminNavItems;
-    title = "Admin";
-  } else if (role === "client") {
-    navItems = clientNavItems;
-    title = "Founder Portal";
-  } else if (role === "writer") {
-    navItems = writerNavItems;
-    title = "Writer Dashboard";
-  }
 
   return (
     <div className="flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
@@ -91,9 +49,9 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => {
+        {adminNavItems.map((item) => {
           const isActive = pathname === item.href ||
-            (item.href !== "/admin" && item.href !== "/client" && item.href !== "/writer" && pathname.startsWith(item.href));
+            (item.href !== "/admin" && pathname.startsWith(item.href));
 
           return (
             <Link
