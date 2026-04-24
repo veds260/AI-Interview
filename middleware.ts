@@ -19,8 +19,9 @@ export default auth((req) => {
   // Admin routes
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
 
-  // Allow public access to shared interview routes
-  if (isSharedPage || isSharedApi) {
+  // Internal API routes — auth handled inside the route via x-internal-api-key
+  const isInternalApi = nextUrl.pathname.startsWith('/api/internal/');
+  if (isSharedPage || isSharedApi || isInternalApi) {
     return NextResponse.next();
   }
 
